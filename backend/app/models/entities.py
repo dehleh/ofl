@@ -206,6 +206,7 @@ class Offer(Base):
     interest_rate_pct = Column(Float, nullable=False)
     monthly_repayment = Column(Float, nullable=False)
     issued_at = Column(DateTime, default=utc_now)
+    created_at = Column(DateTime, default=utc_now)
     expiry = Column(DateTime, nullable=False)
     status = Column(String(30), default="ISSUED")  # ISSUED, ACCEPTED, REJECTED, EXPIRED, RENEGOTIATING
     acceptance_evidence = Column(Text, nullable=True)
@@ -225,6 +226,7 @@ class ConditionItem(Base):
     verified_by = Column(String(100), nullable=True)
     status = Column(String(30), default="PENDING")  # PENDING, SATISFIED, WAIVED
     verified_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
     
     credit_case = relationship("CreditCase", back_populates="conditions")
 
