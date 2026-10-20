@@ -1,0 +1,178 @@
+"""
+Intake Router: Direct OFL Applications (>₦2m) and BESTO Inbound Webhook/Batch (PRD FR-01, Section 17.1 - 17.4)
+"""
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+from typing import List, Dict, Any, Optional
+import hashlib
+
+from ...database import get_db, utc_now
+from ...config import settings
+from ...models import (
+    Customer, Application, CreditCase, Document, 
+    FinancialAssessment, IntegrationEvent, CaseState, IntakeChannel
+)
+from ...schemas.schemas import DirectApplicationCreate, BestoInboundPayload
+from ...core.financial_engine import FinancialEngine
+from ...integrations.besto_adapter import BestoAdapter
+
+router = APIRouter(prefix="/intake", tags=["Application Intake"])
+
+@router.post("/direct", status_code=status.HTTP_201_CREATED)
+def submit_direct_application(
+    payload: DirectApplicationCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Submits a high-value direct loan application (> ₦2,000,000) through OFL Portal.
+    Rejects or redirects <= ₦2,000,000 applications to BESTO (PRD Section 17.1).
+    """
+    if payload.amount <= settings.BESTO_MAX_AMOUNT:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": "CANONICAL_ROUTING_REDIRECTION",
+                "message": (
+                    f"Loan applications of ₦{payload.amount:,.2f} (<= ₦2,000,000) belong to the BESTO lower-value origination channel. "
+                    "Please submit via BESTO or use the BESTO Ingestion endpoint."
+                ),
+                "threshold_boundary": settings.BESTO_MAX_AMOUNT,
+                "recommended_channel": "BESTO"
+            }
+        )
+        
+    # Check or create Customer
+    customer = None
+    if payload.bvn:
+        customer = db.query(Customer).filter(Customer.bvn == payload.bvn).first()
+        
+    if not customer:
+        customer = Customer(
+            customer_type=payload.applicant_type,
+            name=payload.applicant_name,
+            email=payload.email,
+            phone=payload.phone,
+            bvn=payload.bvn,
+            nin=payload.nin,
+            rc_number=payload.rc_number,
+            external_references={"channel": "OFL_DIRECT"}
+        )
+        db.add(customer)
+        db.flush()
+        
+    # Create Application
+    application = Application(
+        customer_id=customer.id,
+        amount=payload.amount,
+        currency="NGN",
+        tenor=payload.tenor_months,
+        purpose=payload.purpose,
+        intake_channel=IntakeChannel.OFL_DIRECT.value,
+        status="SUBMITTED",
+        applicant_type=payload.applicant_type,
+        raw_payload=payload.model_dump()
+    )
+    db.add(application)
+    db.flush()
+    
+    # Generate Case Number
+    case_count = db.query(CreditCase).count() + 1
+    case_number = f"OFL-{utc_now().year}-{case_count:05d}"
+    
+    # Create CreditCase (Initial stage: KYC Pending / Analyst Review)
+    credit_case = CreditCase(
+        application_id=application.id,
+        case_number=case_number,
+        state=CaseState.KYC_PENDING.value,
+        revision=1,
+        assigned_owner="Credit Analyst Queue"
+    )
+    db.add(credit_case)
+    db.flush()
+    
+    # Attach initial uploaded documents if provided
+    if payload.documents:
+        for doc in payload.documents:
+            d = Document(
+                case_id=credit_case.id,
+                document_type=doc.get("type", "BANK_STATEMENT"),
+                object_key=doc.get("object_key", f"direct/{case_number}/{doc.get('name', 'file')}"),
+                checksum=hashlib.sha256(doc.get("name", "file").encode()).hexdigest()[:32],
+                version=1,
+                scan_status="CLEAN",
+                original_filename=doc.get("name", "document.pdf"),
+                content_summary=doc.get("summary", "Attached during direct application submission")
+            )
+            db.add(d)
+            
+    # Compute Initial Deterministic Financial Assessment (FR-05)
+    financial_inputs = {
+        "requested_amount": payload.amount,
+        "tenor_months": payload.tenor_months,
+        "applicant_type": payload.applicant_type,
+        "verified_monthly_income": payload.monthly_income,
+        "existing_monthly_debt": payload.existing_monthly_debt,
+        "estimated_monthly_expenses": payload.estimated_monthly_expenses,
+        "collateral_value": payload.collateral_value
+    }
+    evaluation = FinancialEngine.evaluate(financial_inputs)
+    
+    financial_assessment = FinancialAssessment(
+        case_id=credit_case.id,
+        formula_version=evaluation["formula_version"],
+        input_snapshot=financial_inputs,
+        calculated_ratios=evaluation["calculated_ratios"],
+        policy_flags=evaluation["policy_flags"],
+        performed_by="Deterministic Financial Rules Engine"
+    )
+    db.add(financial_assessment)
+    
+    db.commit()
+    db.refresh(credit_case)
+    
+    return {
+        "message": "Direct OFL application submitted successfully.",
+        "case_number": credit_case.case_number,
+        "case_id": credit_case.id,
+        "state": credit_case.state,
+        "financial_summary": evaluation["calculated_ratios"],
+        "policy_flags": evaluation["policy_flags"]
+    }
+
+@router.post("/besto", status_code=status.HTTP_200_OK)
+def ingest_besto_application(
+    payload: BestoInboundPayload,
+    db: Session = Depends(get_db)
+):
+    """
+    Webhook/API endpoint for inbound BESTO applications (₦300k - ₦2m).
+    Enforces idempotency on (source_system, source_application_id) and quarantine handling.
+    """
+    ok, result = BestoAdapter.ingest_payload(db, payload.model_dump())
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result
+        )
+    return result
+
+@router.get("/besto/quarantine")
+def list_quarantined_payloads(db: Session = Depends(get_db)):
+    """
+    Returns list of quarantined BESTO submissions for ops inspection (Section 17.4).
+    """
+    events = db.query(IntegrationEvent).filter(
+        IntegrationEvent.external_system == "BESTO",
+        IntegrationEvent.status == "FAILED"
+    ).order_by(IntegrationEvent.created_at.desc()).all()
+    
+    return [
+        {
+            "id": e.id,
+            "idempotency_key": e.idempotency_key,
+            "error_details": e.error_details,
+            "attempt_count": e.attempt_count,
+            "created_at": e.created_at.isoformat()
+        }
+        for e in events
+    ]

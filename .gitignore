@@ -1,0 +1,17 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.db
+ofl.db
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/node_modules/
+.DS_Store
+
+# Logs
+*.log
+.env
