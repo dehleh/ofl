@@ -60,3 +60,36 @@
    - **Material Change (YES)**: `TransitionService.invalidate_approvals_if_material_change()` invalidates affected prior approvals, bumps case revision, and restarts applicable approval chain.
    - **Non-Material Change (NO)**: Preserves prior approvals and returns to required reviewer with original comments.
    - Verified via `test_convergence_material_change_invalidates_approvals` and `test_convergence_non_material_change_preserves_approvals`.
+
+### Section 17.6 Enterprise Robustness & Production Improvements
+*Automated Verification Module:* `backend/tests/test_enterprise_improvements.py` (6/6 Unit & Integration Tests Passed)
+
+1. **Enterprise Identity & Access Management (OAuth2 / JWT / RBAC) (`UAT-ENT-01`)**:
+   - High-security signed HS256 JWT Bearer tokens with 12-hour session expiry and role scopes (`ANALYST`, `HRM`, `BCC`, `MD`, `TREASURY`, `IT_OWNER`).
+   - Enterprise Staff Directory authentication with PIN verification (`POST /api/v1/auth/login`) and Google Workspace / Entra ID token exchange (`POST /api/v1/auth/sso-callback`).
+   - Route-level RBAC enforcement via `require_roles` dependency and current identity inspection (`GET /api/v1/auth/me`).
+   - Verified via `test_enterprise_iam_login_and_token_validation` and `test_enterprise_iam_invalid_credentials`.
+
+2. **Inbound Webhook Cryptographic Verification (HMAC SHA-256) (`UAT-ENT-02`)**:
+   - Header `X-Signature-SHA256` constant-time cryptographic verification on inbound BESTO webhook endpoints (`POST /api/v1/intake/besto`).
+   - Prevents payload tampering and unauthorized third-party injection. Tampered payloads return `401 Unauthorized`.
+   - Verified via `test_inbound_webhook_hmac_verification`.
+
+3. **Scanned Statement OCR via Google Cloud Document AI Fallback (`UAT-ENT-03`)**:
+   - Automatic heuristic detection of scanned photocopy PDFs (< 80 extractable characters).
+   - Seamless fallback synthesis invoking Google Cloud Document AI / Vision OCR engine with turnover and bank transaction extraction.
+   - Verified via `test_scanned_statement_ocr_fallback`.
+
+4. **Asynchronous Background Task Queue & Job Tracker (`UAT-ENT-04`)**:
+   - Decoupled worker threads and `JobManager` registry avoiding HTTP 504 timeouts on heavy OCR, Document AI, and Vertex AI CAM synthesis.
+   - Live status polling via `GET /api/v1/jobs/{job_id}` and task inventory via `GET /api/v1/jobs`.
+   - Verified via `test_asynchronous_background_job_queue`.
+
+5. **Multi-Channel Outbound Notifications (SMS & Email Dispatch Service) (`UAT-ENT-05`)**:
+   - Transactional SMS alerts (Termii Nigeria / Twilio) and official email dispatch (SendGrid / Google Workspace SMTP) on exception rework requests, offer issuances, and disbursement confirmations.
+   - Comprehensive audit logging streamed to Google Cloud Logging and queryable via `GET /api/v1/telemetry/notifications`.
+   - Verified via `test_multi_channel_notifications_and_telemetry`.
+
+6. **Production Database Schema Versioning via Alembic Migrations (`UAT-ENT-06`)**:
+   - Configured Alembic environment connected to canonical SQLAlchemy model metadata.
+   - Initial canonical migration generated and verified with zero drift (`alembic upgrade head`).

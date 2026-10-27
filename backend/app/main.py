@@ -17,6 +17,8 @@ from .api.v1.treasury_router import router as treasury_router
 from .api.v1.exceptions_router import router as exceptions_router
 from .api.v1.telemetry_router import router as telemetry_router
 from .api.v1.audit_router import router as audit_router
+from .api.v1.auth_router import router as auth_router
+from .api.v1.jobs_router import router as jobs_router
 
 def seed_initial_demo_data():
     """
@@ -364,6 +366,8 @@ app.include_router(treasury_router, prefix="/api/v1")
 app.include_router(exceptions_router, prefix="/api/v1")
 app.include_router(telemetry_router, prefix="/api/v1")
 app.include_router(audit_router, prefix="/api/v1")
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(jobs_router, prefix="/api/v1")
 
 @app.get("/health")
 def health_check():

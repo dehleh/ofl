@@ -22,6 +22,7 @@ from ...schemas.schemas import (
     ExceptionResolveRequest
 )
 from ...core.state_machine import TransitionService
+from ...integrations.notification_service import NotificationService
 
 router = APIRouter(prefix="/exceptions", tags=["Exceptions Management"])
 
@@ -393,13 +394,24 @@ def execute_exception_action(
     elif action_type == "SEND_APPLICANT_REQUEST":
         ex.applicant_action_required = True
         ex.status = "OPEN"
+        doc_list = (payload.details or {}).get("documents", [])
         existing_payload["applicant_request"] = {
             "requested_by": payload.actor,
             "requested_at": utc_now().isoformat(),
             "message": payload.notes,
-            "requested_documents": (payload.details or {}).get("documents", [])
+            "requested_documents": doc_list
         }
         ex.action_payload = existing_payload
+
+        # Trigger Multi-Channel SMS + Email notification
+        cust = credit_case.application.customer
+        NotificationService.notify_applicant_correction_requested(
+            case_number=credit_case.case_number,
+            customer_phone=cust.phone or "+2348024799952",
+            customer_email=cust.email or "borrower@example.ng",
+            reason=payload.notes,
+            requested_docs=doc_list
+        )
 
     elif action_type == "APPLICANT_RESPONSE":
         ex.applicant_action_required = False

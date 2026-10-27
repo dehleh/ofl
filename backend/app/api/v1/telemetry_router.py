@@ -128,3 +128,14 @@ def get_gcp_infrastructure_status():
         }
     }
 
+@router.get("/notifications")
+def get_notification_telemetry(limit: int = 50):
+    """
+    Returns multi-channel delivery audit logs (SMS via Termii & Email via SendGrid).
+    """
+    from ...integrations.notification_service import NotificationService
+    return {
+        "total_dispatched": len(NotificationService.get_delivery_logs()),
+        "delivery_logs": NotificationService.get_delivery_logs(limit=limit)
+    }
+

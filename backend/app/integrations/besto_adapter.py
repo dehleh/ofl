@@ -175,7 +175,7 @@ class BestoAdapter:
             db.add(kyc_exception)
             
         # Ingest Document Manifest if present
-        for doc_item in payload.get("document_manifest", []):
+        for doc_item in (payload.get("document_manifest") or []):
             doc = Document(
                 case_id=credit_case.id,
                 document_type=doc_item.get("type", "BANK_STATEMENT"),

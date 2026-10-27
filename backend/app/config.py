@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     MOCK_NAV_INTEGRATION: bool = True
     MOCK_LOANDISC_INTEGRATION: bool = True
 
+    # Enterprise Security & Webhooks
+    WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "OPTICOM_DEFAULT_WEBHOOK_SECRET_2026")
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "OFL-ENTERPRISE-CREDIT-SECRET-KEY-2026-X99")
+
     model_config = SettingsConfigDict(case_sensitive=True)
 
 settings = Settings()

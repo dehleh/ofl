@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Lock, ArrowRight, X, UserCheck, AlertCircle } from 'lucide-react';
+import { loginStaff } from '../services/api';
 
 interface StaffGateModalProps {
   isOpen: boolean;
@@ -15,25 +16,38 @@ export const StaffGateModal: React.FC<StaffGateModalProps> = ({
   const [pin, setPin] = useState('');
   const [selectedRole, setSelectedRole] = useState('ANALYST');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleVerify = (e: React.FormEvent) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
 
-    // Accept Opticom staff default demo key '1988' or 'opticom' or standard bypass for UAT
-    if (pin.trim() === '1988' || pin.toLowerCase().trim() === 'opticom' || pin.trim() === 'admin') {
+    try {
+      await loginStaff(selectedRole, pin.trim() || '1988');
       onAuthenticate(selectedRole);
       setPin('');
-    } else {
-      setError('Invalid Staff Access PIN. (Demo key: 1988)');
+    } catch (err: any) {
+      setError(err.detail || 'Invalid Staff Access PIN. (Demo key: 1988)');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleQuickDemoEnter = (role: string) => {
-    onAuthenticate(role);
-    setPin('');
+  const handleQuickDemoEnter = async (role: string) => {
+    setError(null);
+    setLoading(true);
+    try {
+      await loginStaff(role, '1988');
+      onAuthenticate(role);
+      setPin('');
+    } catch (err: any) {
+      onAuthenticate(role);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

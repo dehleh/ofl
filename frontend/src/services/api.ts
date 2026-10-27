@@ -3,13 +3,62 @@
  */
 const API_BASE = '/api/v1';
 
+export function getAuthHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
+  const token = localStorage.getItem('ofl_jwt_token');
+  const headers: Record<string, string> = { ...extraHeaders };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+export async function loginStaff(usernameOrRole: string, pin: string = '1988') {
+  const res = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username_or_role: usernameOrRole, pin_or_password: pin })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  if (json.access_token) {
+    localStorage.setItem('ofl_jwt_token', json.access_token);
+    localStorage.setItem('ofl_user_profile', JSON.stringify(json.user));
+  }
+  return json;
+}
+
+export async function fetchCurrentUser() {
+  const res = await fetch(`${API_BASE}/auth/me`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function fetchNotificationLogs() {
+  const res = await fetch(`${API_BASE}/telemetry/notifications`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch notification logs');
+  return res.json();
+}
+
+export async function fetchBackgroundJobs(caseId?: string) {
+  const url = caseId ? `${API_BASE}/jobs?case_id=${encodeURIComponent(caseId)}` : `${API_BASE}/jobs`;
+  const res = await fetch(url, { headers: getAuthHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch background jobs');
+  return res.json();
+}
+
 export async function fetchCases(params: { stage?: string; channel?: string; search?: string } = {}) {
   const query = new URLSearchParams();
   if (params.stage && params.stage !== 'ALL') query.append('stage', params.stage);
   if (params.channel && params.channel !== 'ALL') query.append('channel', params.channel);
   if (params.search) query.append('search', params.search);
   
-  const res = await fetch(`${API_BASE}/cases?${query.toString()}`);
+  const res = await fetch(`${API_BASE}/cases?${query.toString()}`, {
+    headers: getAuthHeaders()
+  });
   if (!res.ok) throw new Error('Failed to fetch credit cases');
   return res.json();
 }

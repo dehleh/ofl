@@ -11,6 +11,7 @@ from ...models import CreditCase, Offer, ConditionItem, CaseState, AuditEvent
 from ...schemas.schemas import OfferGenerateRequest, OfferActionRequest, ConditionUpdateRequest
 from ...core.state_machine import TransitionService
 from ...core.financial_engine import FinancialEngine
+from ...integrations.notification_service import NotificationService
 
 router = APIRouter(prefix="/cases/{case_id}", tags=["Offer & Conditions Precedent"])
 
@@ -63,6 +64,17 @@ def generate_credit_offer(
     db.add(offer)
     db.commit()
     db.refresh(offer)
+
+    # Multi-channel notification to borrower
+    cust = credit_case.application.customer
+    NotificationService.notify_offer_issued(
+        case_number=credit_case.case_number,
+        customer_phone=cust.phone or "+2348024799952",
+        customer_email=cust.email or "borrower@example.ng",
+        approved_amount=amount,
+        tenor_months=tenor,
+        monthly_repayment=monthly_repayment
+    )
     
     return {
         "message": "Offer generated successfully.",

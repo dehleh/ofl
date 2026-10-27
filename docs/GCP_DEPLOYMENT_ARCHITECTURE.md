@@ -185,3 +185,38 @@ python run_dev.py
 - Web Portal: [http://localhost:5173](http://localhost:5173)
 - FastAPI Swagger Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - GCP Infrastructure Status: [http://127.0.0.1:8000/api/v1/telemetry/gcp-infrastructure](http://127.0.0.1:8000/api/v1/telemetry/gcp-infrastructure)
+
+---
+
+## 8. Enterprise Production Enhancements & Resilience Patterns
+
+The enterprise deployment includes 6 core resilience patterns implemented for banking-grade reliability:
+
+### 8.1 Enterprise IAM & Role-Based Access Control (RBAC)
+- **Token Format**: Signed HS256 JWT Bearer tokens with 12-hour session lifespan.
+- **SSO Federation**: Google Workspace / Microsoft Entra ID enterprise token exchange (`POST /api/v1/auth/sso-callback`).
+- **Pre-provisioned Staff Roles**: `ANALYST`, `HRM`, `BCC`, `MD`, `TREASURY`, `IT_OWNER`.
+- **Enforcement**: Dependency-injected `require_roles([Role...])` protecting sensitive credit approval and disbursement pathways.
+
+### 8.2 Inbound Webhook HMAC SHA-256 Verification
+- **Header**: `X-Signature-SHA256` computed over the raw request payload bytes using the enterprise secret key.
+- **Verification**: Constant-time `hmac.compare_digest` to eliminate timing attack vectors. Unsigned/tampered requests in production return `401 Unauthorized`.
+
+### 8.3 Scanned Statement OCR via Google Cloud Document AI
+- **Trigger**: Heuristic text-density analyzer detecting photocopy / low-character statements (< 80 characters extracted).
+- **Processing**: Fallback to Google Cloud Document AI / Vision API processing for optical character recognition and transaction table extraction.
+- **Audit Tagging**: Analysis metadata tagged with `ocr_engine: GOOGLE_DOCUMENT_AI_FALLBACK`.
+
+### 8.4 Asynchronous Background Job Tracker
+- **Worker Architecture**: Decoupled asynchronous thread pool / Cloud Tasks compatibility.
+- **Job Registry**: `JobManager` maintaining task states (`QUEUED`, `PROCESSING`, `COMPLETED`, `FAILED`) and live completion percentages.
+- **Client Polling**: Non-blocking client polling via `GET /api/v1/jobs/{job_id}`.
+
+### 8.5 Multi-Channel Transactional Notifications (SMS & Email)
+- **SMS Gateway**: Termii Nigeria / Twilio transactional SMS for borrower OTPs, exception rework requests, and RTGS disbursement alerts.
+- **Email Gateway**: SendGrid Enterprise / Google Workspace SMTP for formal credit sanction notices and offer letters.
+- **Audit Logging**: Every dispatch logged and streamed to Google Cloud Logging (`GET /api/v1/telemetry/notifications`).
+
+### 8.6 Schema Migrations via Alembic
+- **Versioning**: Alembic environment tracking schema revisions for Cloud SQL PostgreSQL 16.
+- **Execution**: Automated `alembic upgrade head` in Cloud Build CI/CD pipeline prior to traffic redirection.

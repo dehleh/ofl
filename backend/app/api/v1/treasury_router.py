@@ -10,6 +10,7 @@ from ...models import CreditCase
 from ...schemas.schemas import TreasuryDisbursementRequest
 from ...integrations.nav_adapter import NavTreasuryAdapter
 from ...integrations.loandisc_adapter import LoanDiscAdapter
+from ...integrations.notification_service import NotificationService
 
 router = APIRouter(prefix="/cases/{case_id}/treasury", tags=["Treasury & LOAN-DISC"])
 
@@ -57,6 +58,16 @@ def record_nav_disbursement(
     if not ok:
         raise HTTPException(status_code=400, detail=result["error"])
         
+    # Multi-channel notification to borrower confirming disbursement
+    cust = credit_case.application.customer
+    NotificationService.notify_case_disbursed(
+        case_number=credit_case.case_number,
+        customer_phone=cust.phone or "+2348024799952",
+        customer_email=cust.email or "borrower@example.ng",
+        amount=payload.amount,
+        nav_reference=payload.nav_reference
+    )
+
     return result
 
 @router.post("/sync-loandisc")

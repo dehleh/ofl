@@ -1,7 +1,7 @@
 """
 Intake Router: Direct OFL Applications (>₦2m) and BESTO Inbound Webhook/Batch (PRD FR-01, Section 17.1 - 17.4)
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Header, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 import hashlib
@@ -15,6 +15,7 @@ from ...models import (
 )
 from ...schemas.schemas import DirectApplicationCreate, BestoInboundPayload
 from ...core.financial_engine import FinancialEngine
+from ...core.webhook_security import verify_hmac_signature
 from ...integrations.besto_adapter import BestoAdapter
 
 router = APIRouter(prefix="/intake", tags=["Application Intake"])
@@ -141,14 +142,24 @@ def submit_direct_application(
     }
 
 @router.post("/besto", status_code=status.HTTP_200_OK)
-def ingest_besto_application(
+async def ingest_besto_application(
+    request: Request,
     payload: BestoInboundPayload,
+    x_signature_sha256: Optional[str] = Header(None, alias="X-Signature-SHA256"),
     db: Session = Depends(get_db)
 ):
     """
     Webhook/API endpoint for inbound BESTO applications (₦300k - ₦2m).
-    Enforces idempotency on (source_system, source_application_id) and quarantine handling.
+    Enforces HMAC-SHA256 signature verification, idempotency on (source_system, source_application_id) and quarantine handling.
     """
+    if x_signature_sha256:
+        body_bytes = await request.body()
+        if not verify_hmac_signature(body_bytes, x_signature_sha256):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid webhook HMAC SHA-256 signature."
+            )
+
     ok, result = BestoAdapter.ingest_payload(db, payload.model_dump())
     if not ok:
         raise HTTPException(
