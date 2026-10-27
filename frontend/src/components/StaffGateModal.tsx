@@ -105,6 +105,7 @@ export const StaffGateModal: React.FC<StaffGateModalProps> = ({
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
             >
+              <option value="ADMIN">System Administrator (Full Settings & Config)</option>
               <option value="ANALYST">Credit Analyst (Dossier & CAM Synthesis)</option>
               <option value="HRM">Head of Risk Management (Mandate Review)</option>
               <option value="BCC">Board Credit Committee (High-Value Sanctions)</option>
@@ -137,20 +138,27 @@ export const StaffGateModal: React.FC<StaffGateModalProps> = ({
           <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '0.5rem', textAlign: 'center' }}>
             Instant Evaluation Access
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
             <button 
               className="btn btn-secondary btn-sm" 
               onClick={() => handleQuickDemoEnter('ANALYST')}
               style={{ fontSize: '0.75rem' }}
             >
-              Enter as Analyst
+              Analyst
             </button>
             <button 
               className="btn btn-secondary btn-sm" 
               onClick={() => handleQuickDemoEnter('HRM')}
               style={{ fontSize: '0.75rem' }}
             >
-              Enter as HRM
+              HRM
+            </button>
+            <button 
+              className="btn btn-secondary btn-sm" 
+              onClick={() => handleQuickDemoEnter('ADMIN')}
+              style={{ fontSize: '0.75rem' }}
+            >
+              Admin
             </button>
           </div>
         </div>

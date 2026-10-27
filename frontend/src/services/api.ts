@@ -309,3 +309,96 @@ export async function trackApplication(caseNumber: string) {
   if (!res.ok) throw json;
   return json;
 }
+
+// ==========================================
+// Opticom Admin & Configuration Service APIs
+// ==========================================
+
+export async function fetchAdminConfig() {
+  const res = await fetch(`${API_BASE}/admin/config`, {
+    headers: getAuthHeaders()
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function updateAdminConfig(key: string, value: Record<string, any>) {
+  const res = await fetch(`${API_BASE}/admin/config/${encodeURIComponent(key)}`, {
+    method: 'PUT',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ value })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function sendTestEmail(recipient: string, configOverride?: Record<string, any>) {
+  const res = await fetch(`${API_BASE}/admin/test-email`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ recipient, config_override: configOverride })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function fetchStaffUsers() {
+  const res = await fetch(`${API_BASE}/admin/users`, {
+    headers: getAuthHeaders()
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function createStaffUser(userData: {
+  username: string;
+  email: string;
+  name: string;
+  role: string;
+  department?: string;
+  pin?: string;
+  permissions?: string[];
+}) {
+  const res = await fetch(`${API_BASE}/admin/users`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(userData)
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function updateStaffUser(userId: string, userData: {
+  name?: string;
+  email?: string;
+  role?: string;
+  department?: string;
+  is_active?: boolean;
+  pin?: string;
+  permissions?: string[];
+}) {
+  const res = await fetch(`${API_BASE}/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'PUT',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(userData)
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function deactivateStaffUser(userId: string) {
+  const res = await fetch(`${API_BASE}/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+

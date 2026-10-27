@@ -29,6 +29,14 @@ class TokenPayload(BaseModel):
 
 # Pre-provisioned Opticom enterprise staff directory
 STAFF_DIRECTORY: Dict[str, Dict[str, Any]] = {
+    "admin": {
+        "id": "USR-OFL-000",
+        "email": "admin@opticom.ng",
+        "name": "Opticom System Administrator",
+        "role": "ADMIN",
+        "pin": "1988",
+        "permissions": ["admin:config", "admin:users", "admin:audit", "*"]
+    },
     "analyst": {
         "id": "USR-OFL-001",
         "email": "tunde.adebayo@opticom.ng",

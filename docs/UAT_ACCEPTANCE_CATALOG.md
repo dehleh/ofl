@@ -93,3 +93,36 @@
 6. **Production Database Schema Versioning via Alembic Migrations (`UAT-ENT-06`)**:
    - Configured Alembic environment connected to canonical SQLAlchemy model metadata.
    - Initial canonical migration generated and verified with zero drift (`alembic upgrade head`).
+
+### Section 17.7 Opticom Administrative Configuration & User Management
+*Automated Verification Module:* `backend/tests/test_admin_config.py` (4/4 Unit & Integration Tests Passed)
+
+1. **Staff User Lifecycle & Account Management (`UAT-ADM-01`)**:
+   - Create new staff and administrator accounts with department and role permissions (`POST /api/v1/admin/users`).
+   - Modify roles, departments, access PINs, and active statuses (`PUT /api/v1/admin/users/{id}`).
+   - Immediate login authentication for newly created staff users (`POST /api/v1/auth/login`).
+   - Verified via `test_staff_user_lifecycle_and_authentication`.
+
+2. **Enterprise SSO / SSID Federation Configuration (`UAT-ADM-02`)**:
+   - Manage Identity Provider (Google Workspace, Microsoft Entra ID / Azure AD, Okta), Tenant ID / SSID, Client ID, Client Secret, and Redirect URI.
+   - Configurable auto-provisioning and default staff role assignments.
+   - Verified via `test_get_system_configurations`.
+
+3. **Multi-Factor Authentication (MFA) & Session Policy (`UAT-ADM-03`)**:
+   - Enforce step-up security verification (`HIGH_RISK_ONLY` for BCC, MD, Treasury; `ALL_STAFF`; or `NONE`).
+   - Configurable session lifespan (default: 720 minutes) and maximum failed login attempts before lockout.
+   - Verified via `test_get_system_configurations`.
+
+4. **Custom Corporate Outbound Email Client & SMTP Configuration (`UAT-ADM-04`)**:
+   - Custom SMTP server integration (Microsoft 365, Exchange, Private Postfix) with Host, Port (587, 465, 25), Security (`STARTTLS`, `SSL_TLS`, `NONE`), and credentials.
+   - Preserves masked passwords and sensitive secrets during updates.
+   - Verified via `test_update_email_client_configuration`.
+
+5. **Real-time Diagnostic Test Email Verification (`UAT-ADM-05`)**:
+   - Dispatch live verification test emails with instant diagnostics (round-trip latency, handshake security, delivery status).
+   - Verified via `test_diagnostic_test_email`.
+
+6. **Credit Policy & Webhook Secrets Management (`UAT-ADM-06`)**:
+   - Runtime configuration of BESTO boundary limits (₦2M), OFL Direct threshold (>₦2M), and approval limits (Analyst ₦2M, HRM ₦5M, BCC ₦15M).
+   - Inbound HMAC webhook secret rotation with audit logging.
+

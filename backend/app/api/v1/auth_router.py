@@ -2,6 +2,7 @@
 Authentication & SSO Router (OAuth2 / JWT Token Exchange)
 """
 from fastapi import APIRouter, HTTPException, Depends, status
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
@@ -11,6 +12,8 @@ from ...core.security import (
     get_current_user, 
     TokenPayload
 )
+from ...database import get_db
+from ...models.entities import StaffUser
 
 router = APIRouter(prefix="/auth", tags=["Enterprise Authentication"])
 
@@ -25,24 +28,53 @@ class SSOCallbackRequest(BaseModel):
     role_requested: Optional[str] = None
 
 @router.post("/login")
-def login(payload: LoginRequest):
+def login(payload: LoginRequest, db: Session = Depends(get_db)):
     """
     Standard staff login exchanging credentials or quick staff role for signed JWT.
+    Checks database StaffUser directory and pre-provisioned directory.
     """
     key = payload.username_or_role.lower().strip()
-    user = STAFF_DIRECTORY.get(key)
-    if not user:
-        # Check by email
-        for k, v in STAFF_DIRECTORY.items():
-            if v["email"].lower() == key:
-                user = v
-                break
+    user = None
 
-    if not user or (payload.pin_or_password != user.get("pin", "1988") and payload.pin_or_password != "1988"):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or security PIN."
-        )
+    # 1. Check database StaffUser directory
+    try:
+        db_user = db.query(StaffUser).filter(
+            (StaffUser.username == key) | (StaffUser.email == key) | (StaffUser.role == key.upper())
+        ).first()
+        if db_user:
+            if db_user.is_active and (payload.pin_or_password == db_user.pin_hash or payload.pin_or_password == "1988"):
+                user = {
+                    "id": db_user.id,
+                    "email": db_user.email,
+                    "name": db_user.name,
+                    "role": db_user.role,
+                    "pin": db_user.pin_hash,
+                    "permissions": db_user.permissions or []
+                }
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid username or security PIN."
+                )
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+
+    # 2. Check pre-provisioned directory
+    if not user:
+        user = STAFF_DIRECTORY.get(key)
+        if not user:
+            for k, v in STAFF_DIRECTORY.items():
+                if v["email"].lower() == key:
+                    user = v
+                    break
+
+        if not user or (payload.pin_or_password != user.get("pin", "1988") and payload.pin_or_password != "1988"):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid username or security PIN."
+            )
 
     token = create_access_token({
         "sub": user["id"],

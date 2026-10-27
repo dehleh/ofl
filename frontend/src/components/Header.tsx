@@ -55,6 +55,7 @@ export const Header: React.FC<HeaderProps> = ({ currentPersona, onPersonaChange,
             value={currentPersona}
             onChange={(e) => onPersonaChange(e.target.value)}
           >
+            <option value="ADMIN">System Administrator (Settings & Config)</option>
             <option value="ANALYST">Credit Analyst (Recommend & Review)</option>
             <option value="HRM">Head of Risk Management (HRM Limit &le; ₦5m)</option>
             <option value="BCC">BCC / Authoriser (Limit &le; ₦15m)</option>

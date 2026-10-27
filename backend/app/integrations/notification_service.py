@@ -63,6 +63,20 @@ class NotificationService:
         Dispatches transactional Email via SendGrid / Google Workspace SMTP.
         """
         delivery_id = f"EML-{uuid.uuid4().hex[:10].upper()}"
+        provider = "SENDGRID_ENTERPRISE"
+        try:
+            from ..database import SessionLocal
+            from ..core.config_manager import ConfigManager
+            db = SessionLocal()
+            email_cfg = ConfigManager.get_config_value(db, "EMAIL_CLIENT")
+            db.close()
+            if email_cfg and email_cfg.get("enabled"):
+                mode = email_cfg.get("mode", "CUSTOM_SMTP")
+                host = email_cfg.get("smtp_host", "mail.opticom.ng")
+                provider = f"{mode} ({host})" if mode == "CUSTOM_SMTP" else mode
+        except Exception:
+            pass
+
         record = {
             "id": delivery_id,
             "channel": "EMAIL",
@@ -70,7 +84,7 @@ class NotificationService:
             "subject": subject,
             "template": template,
             "status": "SENT",
-            "provider": "SENDGRID_ENTERPRISE",
+            "provider": provider,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "metadata": metadata or {}
         }

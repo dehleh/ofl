@@ -7,9 +7,10 @@ import { BestoIngestionLab } from './screens/BestoIngestionLab';
 import { ExceptionManager } from './screens/ExceptionManager';
 import { AuditTelemetry } from './screens/AuditTelemetry';
 import { PublicCustomerPortal } from './screens/PublicCustomerPortal';
+import { AdminConfigPortal } from './screens/AdminConfigPortal';
 import { StaffGateModal } from './components/StaffGateModal';
 import { fetchTelemetry, fetchExceptions } from './services/api';
-import { Inbox, FilePlus, Database, AlertCircle, BarChart3, Lock } from 'lucide-react';
+import { Inbox, FilePlus, Database, AlertCircle, BarChart3, Lock, Settings } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [portalMode, setPortalMode] = useState<'PUBLIC_CLIENT' | 'INTERNAL_STAFF'>(() => {
@@ -17,7 +18,7 @@ export const App: React.FC = () => {
   });
   const [isStaffGateOpen, setIsStaffGateOpen] = useState<boolean>(false);
   const [currentPersona, setCurrentPersona] = useState<string>('ANALYST');
-  const [currentScreen, setCurrentScreen] = useState<'QUEUE' | 'WORKSPACE' | 'INTAKE' | 'BESTO_LAB' | 'EXCEPTIONS' | 'AUDIT'>('QUEUE');
+  const [currentScreen, setCurrentScreen] = useState<'QUEUE' | 'WORKSPACE' | 'INTAKE' | 'BESTO_LAB' | 'EXCEPTIONS' | 'AUDIT' | 'ADMIN'>('QUEUE');
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [backendOnline, setBackendOnline] = useState<boolean>(true);
   const [openExceptionsCount, setOpenExceptionsCount] = useState<number>(0);
@@ -131,6 +132,13 @@ export const App: React.FC = () => {
             >
               <BarChart3 size={16} /> Audit Trail & GCP Telemetry
             </button>
+
+            <button
+              className={`nav-item ${currentScreen === 'ADMIN' ? 'active' : ''}`}
+              onClick={() => setCurrentScreen('ADMIN')}
+            >
+              <Settings size={16} /> Admin & Settings
+            </button>
           </div>
 
           <main className="main-content">
@@ -170,6 +178,10 @@ export const App: React.FC = () => {
 
             {currentScreen === 'AUDIT' && (
               <AuditTelemetry />
+            )}
+
+            {currentScreen === 'ADMIN' && (
+              <AdminConfigPortal />
             )}
           </main>
         </div>

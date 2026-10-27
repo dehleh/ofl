@@ -305,3 +305,34 @@ class AuditEvent(Base):
     correlation_id = Column(String(100), nullable=False, index=True)
     reason = Column(Text, nullable=True)
     details = Column(JSON, default=dict)
+
+class SystemConfiguration(Base):
+    __tablename__ = "system_configurations"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    category = Column(String(50), nullable=False, index=True)  # SSO, MFA, EMAIL, SMS, POLICY
+    key = Column(String(100), unique=True, nullable=False, index=True)
+    value = Column(JSON, nullable=False, default=dict)
+    is_secret = Column(Boolean, default=False)
+    description = Column(Text, nullable=True)
+    updated_by = Column(String(100), default="SYSTEM_INITIALIZER")
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+class StaffUser(Base):
+    __tablename__ = "staff_users"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    role = Column(String(50), nullable=False)  # ANALYST, HRM, BCC, MD, TREASURY, IT_OWNER, BDO, ADMIN
+    department = Column(String(100), default="Credit Operations")
+    pin_hash = Column(String(255), default="1988")
+    is_active = Column(Boolean, default=True)
+    permissions = Column(JSON, default=list)
+    mfa_enabled = Column(Boolean, default=False)
+    mfa_secret = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+    last_login_at = Column(DateTime, nullable=True)
+

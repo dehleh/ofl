@@ -220,3 +220,29 @@ The enterprise deployment includes 6 core resilience patterns implemented for ba
 ### 8.6 Schema Migrations via Alembic
 - **Versioning**: Alembic environment tracking schema revisions for Cloud SQL PostgreSQL 16.
 - **Execution**: Automated `alembic upgrade head` in Cloud Build CI/CD pipeline prior to traffic redirection.
+
+---
+
+## 9. Administrative Configuration, Identity Federation & Custom Email Integration
+
+The Opticom Administrative System provides internal operational control without requiring code re-deployments:
+
+### 9.1 Staff User Account Management & RBAC
+- **Directory**: Persistent `staff_users` table storing corporate email, username, role, department, active status, and permissions.
+- **Immediate Authentication**: Newly created staff accounts can authenticate immediately via `/api/v1/auth/login` to obtain signed JWT tokens.
+- **RBAC Matrix**: Dynamic mapping to `ANALYST`, `HRM`, `BCC`, `MD`, `TREASURY`, `IT_OWNER`, and `ADMIN`.
+
+### 9.2 Enterprise SSO / SSID Federation
+- **Providers**: Google Workspace, Microsoft Entra ID (Azure AD), Okta, and Custom SAML 2.0 / OIDC.
+- **Credentials**: Tenant ID / SSID Domain, OAuth2 Client ID, Client Secret, and Authorized Callback URI.
+- **Auto-Provisioning**: Automated account synthesis for authenticated corporate email domains (`@opticom.ng`).
+
+### 9.3 Multi-Factor Authentication (MFA) Policy Engine
+- **Enforcement Levels**: `HIGH_RISK_ONLY` (enforced on BCC sanctions, MD approvals, and Treasury disbursements), `ALL_STAFF` (mandatory on every shift), or `NONE` (voluntary).
+- **Session Policies**: Configurable token expiration (default: 720 minutes) and automatic account lockout after failed attempts.
+
+### 9.4 Custom Corporate Outbound Email Client & SMTP Integration
+- **Flexibility**: Outbound email notification subsystem supports both managed Cloud gateways (SendGrid Enterprise) and Opticom's private corporate mail servers (Microsoft 365, Exchange, Private Postfix).
+- **Transport Security**: Configurable `STARTTLS` (Port 587), `SSL/TLS` (Port 465), or plain intranet (Port 25).
+- **Live Diagnostic Tooling**: Integrated `POST /api/v1/admin/test-email` allowing administrators to test server reachability, handshake latency, and delivery confirmation before saving.
+
