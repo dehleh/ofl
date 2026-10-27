@@ -5,9 +5,10 @@ interface HeaderProps {
   currentPersona: string;
   onPersonaChange: (persona: string) => void;
   backendOnline: boolean;
+  onExitToPublicClient?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentPersona, onPersonaChange, backendOnline }) => {
+export const Header: React.FC<HeaderProps> = ({ currentPersona, onPersonaChange, backendOnline, onExitToPublicClient }) => {
   return (
     <header className="app-header">
       <div className="brand-badge">
@@ -25,15 +26,25 @@ export const Header: React.FC<HeaderProps> = ({ currentPersona, onPersonaChange,
           />
           <div>
             <div className="brand-logo-text">Opticom Finance</div>
-            <div className="brand-tagline">LENDING • LEASING • INVESTING &bull; RC: 347832</div>
+            <div className="brand-tagline">INTERNAL RISK MANAGEMENT & UNDERWRITING GATE &bull; RC: 347832</div>
           </div>
         </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        {onExitToPublicClient && (
+          <button 
+            className="btn btn-secondary btn-sm"
+            onClick={onExitToPublicClient}
+            style={{ fontSize: '0.78rem' }}
+          >
+            ← Public Customer App
+          </button>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: backendOnline ? 'var(--color-success)' : 'var(--color-danger)' }}>
           <Activity size={14} className={backendOnline ? 'pulse' : ''} />
-          <span>{backendOnline ? 'Azure API Connected' : 'API Connecting...'}</span>
+          <span>{backendOnline ? 'GCP API Connected' : 'API Connecting...'}</span>
         </div>
 
         <div className="persona-switcher">

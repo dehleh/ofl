@@ -57,6 +57,7 @@ class CAMUpdateRequest(BaseModel):
     risk_and_mitigants: Optional[str] = None
     policy_exceptions: Optional[str] = None
     recommendation: Optional[str] = None
+    cam_data: Optional[Dict[str, Any]] = None
     analyst_sign_off: bool = False
     actor: str = "Credit Analyst"
 
@@ -82,7 +83,27 @@ class TreasuryDisbursementRequest(BaseModel):
     confirmation_evidence: str = Field(..., min_length=5)
     actor: str = "Treasury Officer"
 
+class ExceptionRaiseRequest(BaseModel):
+    case_id: str
+    category: str = Field(..., description="Flowchart category: TECHNICAL_FAILURE, INTERNAL_CORRECTION, REJECTION_RECOMMENDATION, RISK_RECONSIDERATION, WITHDRAWAL_EXPIRY, APPLICANT_CORRECTION")
+    originator_role: str = Field("ANALYST", description="APPLICANT, ANALYST, HRM, BCC, MD, SYSTEM")
+    originator_name: Optional[str] = None
+    reason: str = Field(..., min_length=3)
+    comments: Optional[str] = None
+    sla_hours: Optional[int] = None
+    action_payload: Optional[Dict[str, Any]] = None
+
+class ExceptionActionRequest(BaseModel):
+    action_type: str = Field(..., description="RETRY_TECHNICAL, SEND_APPLICANT_REQUEST, APPLICANT_RESPONSE, ANALYST_VALIDATE, REJECTION_DECISION, HRM_COORDINATE, WITHDRAWAL_DECISION")
+    actor: str = "Credit Staff"
+    decision: Optional[str] = None  # "REJECT", "FURTHER_ASSESSMENT", "CLOSE", "RENEW"
+    notes: Optional[str] = None
+    details: Optional[Dict[str, Any]] = None
+
 class ExceptionResolveRequest(BaseModel):
     resolution_notes: str = Field(..., min_length=5)
     resolved_by: str = "Assigned Owner"
     return_to_stage: Optional[str] = None
+    is_material_change: bool = False
+    new_terms: Optional[Dict[str, Any]] = None
+    resolution_category: Optional[str] = None

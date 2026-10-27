@@ -18,7 +18,7 @@ ALLOWED_TRANSITIONS: Dict[str, List[str]] = {
     CaseState.DRAFT.value: [CaseState.SUBMITTED.value, CaseState.WITHDRAWN.value],
     CaseState.SUBMITTED.value: [CaseState.KYC_PENDING.value, CaseState.ANALYST_REVIEW.value, CaseState.REJECTED.value, CaseState.WITHDRAWN.value],
     CaseState.KYC_PENDING.value: [CaseState.ANALYST_REVIEW.value, CaseState.REJECTED.value, CaseState.WITHDRAWN.value],
-    CaseState.ANALYST_REVIEW.value: [CaseState.HRM_REVIEW.value, CaseState.KYC_PENDING.value, CaseState.WITHDRAWN.value],
+    CaseState.ANALYST_REVIEW.value: [CaseState.HRM_REVIEW.value, CaseState.KYC_PENDING.value, CaseState.REJECTED.value, CaseState.WITHDRAWN.value],
     CaseState.HRM_REVIEW.value: [CaseState.BCC_REVIEW.value, CaseState.MD_DECISION.value, CaseState.OFFER_PENDING.value, CaseState.ANALYST_REVIEW.value, CaseState.REJECTED.value],
     CaseState.BCC_REVIEW.value: [CaseState.MD_DECISION.value, CaseState.OFFER_PENDING.value, CaseState.HRM_REVIEW.value, CaseState.REJECTED.value],
     CaseState.MD_DECISION.value: [CaseState.OFFER_PENDING.value, CaseState.HRM_REVIEW.value, CaseState.REJECTED.value],
@@ -66,8 +66,8 @@ class TransitionService:
             return False, f"Invalid state transition from '{from_state}' to '{to_state}'."
         
         # Segregation of duties & role authorization checks
-        if to_state in [CaseState.REJECTED.value] and role not in ["HRM", "BCC", "MD", "ADMIN"]:
-            return False, f"Role '{role}' is not authorized to execute final rejection (FR-10). Only HRM, BCC, or MD may reject."
+        if to_state in [CaseState.REJECTED.value] and role not in ["HRM", "BCC", "MD", "ADMIN", "AUTHORISED_DECISION_MAKER"]:
+            return False, f"Role '{role}' is not authorized to execute final rejection (FR-10). Only HRM, BCC, MD, or Authorised Decision-Maker may reject."
             
         if to_state == CaseState.READY_FOR_DISBURSEMENT.value:
             # Check conditions precedent (FR-14)

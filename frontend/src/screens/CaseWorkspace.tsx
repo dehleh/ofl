@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, FileText, CheckCircle, AlertTriangle, ShieldCheck,
-  Send, RefreshCw, Cpu, UserCheck, CheckSquare, DollarSign, ExternalLink
+  Send, RefreshCw, Cpu, UserCheck, CheckSquare, DollarSign, ExternalLink,
+  ShieldAlert, Clock, PlusCircle
 } from 'lucide-react';
 import {
   fetchCaseWorkspace, generateAICam, updateCam, submitApprovalDecision,
   generateOffer, takeOfferAction, updateCondition, confirmNavDisbursement,
-  syncLoanDisc
+  syncLoanDisc, raiseException
 } from '../services/api';
+import { OpticomCamDocument } from '../components/OpticomCamDocument';
+import { BankStatementAnalyzerCard } from '../components/BankStatementAnalyzerCard';
 
 interface CaseWorkspaceProps {
   caseId: string;
@@ -18,7 +21,7 @@ interface CaseWorkspaceProps {
 export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPersona, onBack }) => {
   const [workspace, setWorkspace] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'DOSSIER' | 'FINANCIALS' | 'CAM' | 'APPROVALS' | 'OFFER_CONDITIONS' | 'TREASURY'>('DOSSIER');
+  const [activeTab, setActiveTab] = useState<'DOSSIER' | 'FINANCIALS' | 'CAM' | 'APPROVALS' | 'OFFER_CONDITIONS' | 'TREASURY' | 'EXCEPTIONS'>('DOSSIER');
   
   // State for actions
   const [actionLoading, setActionLoading] = useState(false);
@@ -35,6 +38,39 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
 
   // Selected CAM version for editing/viewing
   const [selectedCamIndex, setSelectedCamIndex] = useState(0);
+
+  // Flowchart Exception Modal State
+  const [showRaiseModal, setShowRaiseModal] = useState(false);
+  const [raiseCategory, setRaiseCategory] = useState('INTERNAL_CORRECTION');
+  const [raiseReason, setRaiseReason] = useState('');
+  const [raiseComments, setRaiseComments] = useState('');
+  const [raiseSla, setRaiseSla] = useState(24);
+
+  const handleRaiseExceptionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!raiseReason.trim() || !workspace) return;
+    setActionLoading(true);
+    try {
+      await raiseException({
+        case_id: workspace.case.id,
+        category: raiseCategory,
+        originator_role: currentPersona,
+        originator_name: `${currentPersona} Officer`,
+        reason: raiseReason.trim(),
+        comments: raiseComments.trim(),
+        sla_hours: Number(raiseSla)
+      });
+      setMessageBanner({ type: 'success', text: `Exception recorded under category: ${raiseCategory.replace(/_/g, ' ')}` });
+      setShowRaiseModal(false);
+      setRaiseReason('');
+      setRaiseComments('');
+      await loadWorkspace();
+    } catch (err: any) {
+      setMessageBanner({ type: 'error', text: err.detail || err.message || 'Failed to record exception' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const loadWorkspace = async () => {
     setLoading(true);
@@ -237,6 +273,13 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowRaiseModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--accent-gold)' }}
+            >
+              <ShieldAlert size={14} /> Record Exception
+            </button>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Workflow State:</span>
             <span className="status-pill pill-green" style={{ fontSize: '0.9rem', padding: '0.4rem 0.9rem' }}>
               {caseData.state}
@@ -244,6 +287,21 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
           </div>
         </div>
       </div>
+
+      {/* Active Exception Flag Banner */}
+      {exceptions.filter((e: any) => e.status !== 'RESOLVED').length > 0 && (
+        <div className="flag-banner flag-HIGH" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ShieldAlert size={18} />
+            <span>
+              <strong>Active Credit Exception:</strong> {exceptions.find((e: any) => e.status !== 'RESOLVED')?.category.replace(/_/g, ' ')} &bull; {exceptions.find((e: any) => e.status !== 'RESOLVED')?.reason} ({exceptions.find((e: any) => e.status !== 'RESOLVED')?.owner})
+            </span>
+          </div>
+          <button className="btn btn-secondary btn-sm" onClick={() => setActiveTab('EXCEPTIONS')} style={{ fontSize: '0.75rem' }}>
+            View Exception Details
+          </button>
+        </div>
+      )}
 
       {/* Alert banner */}
       {messageBanner && (
@@ -254,24 +312,27 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
       )}
 
       {/* Dossier Tabs */}
-      <div className="nav-bar" style={{ padding: '0.5rem 0', background: 'transparent', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.5rem' }}>
+      <div className="nav-bar" style={{ padding: '0.5rem 0', background: 'transparent', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.5rem', overflowX: 'auto', display: 'flex', gap: '0.35rem' }}>
         <button className={`nav-item ${activeTab === 'DOSSIER' ? 'active' : ''}`} onClick={() => setActiveTab('DOSSIER')}>
-          1. Dossier & Documents ({documents.length})
+          1. Dossier ({documents.length})
         </button>
         <button className={`nav-item ${activeTab === 'FINANCIALS' ? 'active' : ''}`} onClick={() => setActiveTab('FINANCIALS')}>
-          2. Financial Analysis & Rules {flags.length > 0 && <span className="nav-badge alert">{flags.length}</span>}
+          2. Financial Analysis {flags.length > 0 && <span className="nav-badge alert">{flags.length}</span>}
         </button>
         <button className={`nav-item ${activeTab === 'CAM' ? 'active' : ''}`} onClick={() => setActiveTab('CAM')}>
-          3. AI CAM Assistant ({cam_versions.length})
+          3. AI CAM ({cam_versions.length})
         </button>
         <button className={`nav-item ${activeTab === 'APPROVALS' ? 'active' : ''}`} onClick={() => setActiveTab('APPROVALS')}>
-          4. Approvals & Authority ({approvals.length})
+          4. Approvals ({approvals.length})
         </button>
         <button className={`nav-item ${activeTab === 'OFFER_CONDITIONS' ? 'active' : ''}`} onClick={() => setActiveTab('OFFER_CONDITIONS')}>
-          5. Offer & Conditions Precedent ({conditions.length})
+          5. Offer & Conditions ({conditions.length})
         </button>
         <button className={`nav-item ${activeTab === 'TREASURY' ? 'active' : ''}`} onClick={() => setActiveTab('TREASURY')}>
-          6. Treasury NAV & LOAN-DISC
+          6. Treasury NAV
+        </button>
+        <button className={`nav-item ${activeTab === 'EXCEPTIONS' ? 'active' : ''}`} onClick={() => setActiveTab('EXCEPTIONS')}>
+          7. Exceptions ({exceptions.length})
         </button>
       </div>
 
@@ -367,6 +428,14 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
       {/* TAB 2: FINANCIAL APPRAISAL */}
       {activeTab === 'FINANCIALS' && (
         <div>
+          {/* Automated Bank Statement Ingestion & Analysis */}
+          <BankStatementAnalyzerCard
+            caseId={caseData.id}
+            documents={documents}
+            currentPersona={currentPersona}
+            onRefresh={loadWorkspace}
+          />
+
           {/* Metrics Grid */}
           <div className="metrics-grid">
             <div className="metric-card">
@@ -424,110 +493,44 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
 
       {/* TAB 3: AI CAM ASSISTANT & VERSIONING */}
       {activeTab === 'CAM' && (
-        <div className="split-view" style={{ gridTemplateColumns: '280px 1fr' }}>
-          {/* Version sidebar */}
-          <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>CAM Versions</h4>
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={handleGenerateCam}
-                disabled={actionLoading}
-              >
-                <Cpu size={14} /> New Draft
-              </button>
-            </div>
-
-            {cam_versions.length === 0 ? (
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No CAM drafts generated yet. Click "New Draft".</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Version selector bar & AI Generation button */}
+          <div className="glass-panel no-print" style={{ padding: '0.85rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fff' }}>CAM Revisions:</span>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                 {cam_versions.map((cv: any, index: number) => (
-                  <div
+                  <button
                     key={cv.id}
                     onClick={() => setSelectedCamIndex(index)}
-                    style={{
-                      padding: '0.75rem',
-                      borderRadius: 'var(--radius-sm)',
-                      background: selectedCamIndex === index ? 'var(--brand-teal-dim)' : 'var(--bg-surface)',
-                      border: `1px solid ${selectedCamIndex === index ? 'var(--brand-teal)' : 'var(--border-subtle)'}`,
-                      cursor: 'pointer'
-                    }}
+                    className={`btn btn-sm ${selectedCamIndex === index ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ fontSize: '0.85rem', color: '#fff' }}>Version {cv.version}</strong>
-                      <span className={`status-pill ${cv.analyst_sign_off ? 'pill-green' : 'pill-amber'}`} style={{ fontSize: '0.65rem' }}>
-                        {cv.analyst_sign_off ? 'Validated' : 'Draft'}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                      {new Date(cv.created_at).toLocaleTimeString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* CAM Document Viewer */}
-          {latestCam ? (
-            <div className="cam-document">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
-                    Credit Appraisal Memorandum (CAM) — v{latestCam.version}
-                  </h3>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Generated with Azure OpenAI ({latestCam.token_telemetry?.model || 'gpt-4o-mini'}) &bull; Tokens: {latestCam.token_telemetry?.total_tokens || 'N/A'}
-                  </div>
-                </div>
-
-                {!latestCam.analyst_sign_off && (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={handleAnalystSignOff}
-                    disabled={actionLoading}
-                  >
-                    <CheckSquare size={16} /> Analyst Sign-Off (Submit to HRM)
+                    v{cv.version} {cv.analyst_sign_off ? '✓ (Validated)' : '(Draft)'}
                   </button>
-                )}
-              </div>
-
-              <div className="cam-section-title">1. Executive Summary</div>
-              <p>{latestCam.executive_summary}</p>
-
-              <div className="cam-section-title">2. Borrower Profile & KYC Summary</div>
-              <p>{latestCam.borrower_profile}</p>
-
-              <div className="cam-section-title">3. Facility Structure & Deterministic Amortization</div>
-              <p>{latestCam.facility_structure}</p>
-
-              <div className="cam-section-title">4. Financial Capacity & Debt Service Analysis</div>
-              <p>{latestCam.financial_analysis}</p>
-
-              <div className="cam-section-title">5. Key Risk Factors & Mitigants</div>
-              <p style={{ whiteSpace: 'pre-line' }}>{latestCam.risk_and_mitigants}</p>
-
-              <div className="cam-section-title">6. Credit Policy Exceptions</div>
-              <p style={{ whiteSpace: 'pre-line' }}>{latestCam.policy_exceptions}</p>
-
-              <div className="cam-section-title">7. Underwriting Recommendation</div>
-              <p style={{ fontWeight: 700, color: latestCam.recommendation?.includes('ADVERSE') ? 'var(--color-danger)' : 'var(--color-success)' }}>
-                {latestCam.recommendation}
-              </p>
-
-              <div className="cam-section-title">8. Cited Source Evidence (PRD FR-06)</div>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-                {latestCam.evidence_citations?.map((cit: any, i: number) => (
-                  <span key={i} className="citation-pill">
-                    <ExternalLink size={12} /> {cit.citation}
-                  </span>
                 ))}
               </div>
             </div>
+
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={handleGenerateCam}
+              disabled={actionLoading}
+            >
+              <Cpu size={14} /> Draft New Revision (Vertex AI Gemini)
+            </button>
+          </div>
+
+          {/* Render 12-Page Printable Official Opticom CAM Document */}
+          {latestCam ? (
+            <OpticomCamDocument
+              cam={latestCam}
+              onAnalystSignOff={handleAnalystSignOff}
+              actionLoading={actionLoading}
+            />
           ) : (
             <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              No CAM version selected. Click "New Draft" to invoke Azure AI CAM assistant.
+              No CAM versions found. Click "Draft New Revision" to synthesize the 12-page memorandum with Vertex AI Gemini.
             </div>
           )}
         </div>
@@ -834,6 +837,183 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                 Waiting for confirmed NAV disbursement before enabling LOAN-DISC synchronization.
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 7: EXCEPTIONS & REWORK HISTORY */}
+      {activeTab === 'EXCEPTIONS' && (
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--brand-teal-light)' }}>
+                Case Exception Log & Rework Audit Trail
+              </h3>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                Flowchart lifecycle tracking: Category &rarr; Designated Owner &rarr; Rework / Applicant Upload &rarr; Material Change Approval Check.
+              </p>
+            </div>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => setShowRaiseModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            >
+              <PlusCircle size={15} /> Record Exception
+            </button>
+          </div>
+
+          {exceptions.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              No exceptions have been recorded for this credit case.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {exceptions.map((ex: any) => (
+                <div 
+                  key={ex.id}
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '1.25rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                      <span className="status-pill pill-amber" style={{ fontSize: '0.72rem' }}>
+                        {ex.category.replace(/_/g, ' ')}
+                      </span>
+                      <span className={`status-pill ${ex.status === 'RESOLVED' ? 'pill-green' : 'pill-cyan'}`} style={{ fontSize: '0.72rem' }}>
+                        {ex.status}
+                      </span>
+                      {ex.is_material_change && (
+                        <span className="status-pill pill-red" style={{ fontSize: '0.72rem' }}>
+                          Material Credit Change
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: 'var(--accent-gold)' }}>
+                      <Clock size={13} /> SLA: {ex.sla_hours}h &bull; Created: {new Date(ex.created_at).toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', marginBottom: '0.35rem' }}>
+                    {ex.reason}
+                  </div>
+                  {ex.comments && (
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                      {ex.comments}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.65rem', marginTop: '0.5rem' }}>
+                    <div>Originator: <strong style={{ color: '#fff' }}>{ex.originator_role}</strong></div>
+                    <div>Assigned Owner: <strong style={{ color: 'var(--brand-teal-light)' }}>{ex.owner}</strong></div>
+                    <div>Origin Stage: <strong style={{ color: '#fff' }}>{ex.origin_stage}</strong></div>
+                    <div>Return Stage: <strong style={{ color: '#fff' }}>{ex.return_stage}</strong></div>
+                  </div>
+
+                  {ex.resolution_notes && (
+                    <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(0, 196, 159, 0.08)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--brand-teal-light)' }}>
+                      <strong>Resolution ({ex.resolved_by}):</strong> {ex.resolution_notes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* RECORD EXCEPTION MODAL */}
+      {showRaiseModal && (
+        <div className="modal-overlay">
+          <div className="modal-card" style={{ maxWidth: '580px' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginBottom: '0.5rem' }}>
+              Record Credit Exception — {caseData.case_number}
+            </h3>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+              Flowchart: <strong>Case ID + Reason + Originator Owner + Comments + SLA + Version</strong>
+            </p>
+
+            <form onSubmit={handleRaiseExceptionSubmit}>
+              <div className="form-group">
+                <label className="form-label">Flowchart Exception Category *</label>
+                <select
+                  className="form-select"
+                  value={raiseCategory}
+                  onChange={(e) => setRaiseCategory(e.target.value)}
+                >
+                  <option value="TECHNICAL_FAILURE">1. Technical Failure (IT / Integration)</option>
+                  <option value="INTERNAL_CORRECTION">2. Internal Correction (Credit Analyst)</option>
+                  <option value="REJECTION_RECOMMENDATION">3. Rejection Recommendation (Decision-Maker)</option>
+                  <option value="RISK_RECONSIDERATION">4. Risk Reconsideration (HRM)</option>
+                  <option value="WITHDRAWAL_EXPIRY">5. Withdrawal / Expiry (Credit Ops)</option>
+                  <option value="APPLICANT_CORRECTION">6. Applicant Correction (BDO / Applicant)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Originator Persona</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    disabled
+                    value={`${currentPersona} Officer`}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">SLA Hours *</label>
+                  <input
+                    type="number"
+                    className="form-input"
+                    value={raiseSla}
+                    onChange={(e) => setRaiseSla(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Primary Reason *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  required
+                  placeholder="e.g. Utility bill discrepancy, financial turnover mismatch, risk concern..."
+                  value={raiseReason}
+                  onChange={(e) => setRaiseReason(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Detailed Comments & Context</label>
+                <textarea
+                  className="form-textarea"
+                  rows={3}
+                  placeholder="Provide supporting notes or directives for the designated owner..."
+                  value={raiseComments}
+                  onChange={(e) => setRaiseComments(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowRaiseModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? 'Recording...' : 'Record & Route Exception'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

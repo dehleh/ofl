@@ -15,10 +15,11 @@ The **OFL Credit Automation & AI-Assisted Underwriting Platform** centralises cr
 ---
 
 ## 2. Technology Stack
+- **Cloud Infrastructure**: Google Cloud Platform (GCP) — [Google Cloud Run](https://cloud.google.com/run), [Google Cloud Storage](https://cloud.google.com/storage), [Secret Manager](https://cloud.google.com/secret-manager), and [Cloud Logging](https://cloud.google.com/logging).
 - **Backend API**: Python 3.13 with [FastAPI](https://fastapi.tiangolo.com/), [SQLAlchemy 2.0](https://www.sqlalchemy.org/), [Pydantic V2](https://docs.pydantic.dev/), and [Pytest](https://docs.pytest.org/).
-- **Database**: PostgreSQL (Flexible Server on Azure in production; SQLite local dev zero-setup).
+- **Database**: PostgreSQL (Cloud SQL on GCP in production; SQLite local dev zero-setup).
 - **Frontend Portal**: [React 18](https://react.dev/) + [Vite](https://vitejs.dev/) + TypeScript with vanilla enterprise CSS tokens tailored to Opticom Finance's brand guidelines.
-- **AI Engine**: Azure OpenAI Service (`gpt-4o-mini`) for narrative CAM drafting, evidence citations, and token budget telemetry.
+- **AI Underwriter**: Google Cloud Vertex AI ([Gemini 1.5 Pro / Flash](https://cloud.google.com/vertex-ai)) for narrative CAM drafting, evidence citations, and token budget telemetry.
 
 ---
 
@@ -83,4 +84,4 @@ All tests pass verifying:
    - Binding Offer Letter generation, acceptance, and Conditions Precedent checklist
    - Treasury Microsoft Dynamics NAV confirmation and idempotent LOAN-DISC synchronization
 5. **Exceptions & Rework (`ExceptionManager.tsx`)**: Open exceptions queue with SLA aging.
-6. **Platform Telemetry & Audit Integrity (`AuditTelemetry.tsx`)**: Tamper-evident audit log and Azure OpenAI token/cost dashboard.
+6. **Platform Telemetry & Audit Integrity (`AuditTelemetry.tsx`)**: Tamper-evident audit log and Google Cloud Vertex AI (Gemini) token/cost dashboard.

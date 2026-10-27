@@ -102,6 +102,7 @@ class Document(Base):
     retention_class = Column(String(30), default="STANDARD_CREDIT_7_YEARS")
     original_filename = Column(String(255), nullable=False)
     content_summary = Column(Text, nullable=True)
+    analysis_results = Column(JSON, default=dict)
     uploaded_at = Column(DateTime, default=utc_now)
     
     credit_case = relationship("CreditCase", back_populates="documents")
@@ -152,6 +153,7 @@ class CAMVersion(Base):
     risk_and_mitigants = Column(Text, nullable=True)
     policy_exceptions = Column(Text, nullable=True)
     recommendation = Column(Text, nullable=True)
+    cam_data = Column(JSON, default=dict)  # Structured 12-page Opticom CAM template payload
     evidence_citations = Column(JSON, default=list)
     validation_status = Column(String(30), default="DRAFT")  # DRAFT, ANALYST_VALIDATED, REJECTED
     analyst_sign_off = Column(Boolean, default=False)
@@ -161,20 +163,52 @@ class CAMVersion(Base):
     
     credit_case = relationship("CreditCase", back_populates="cam_versions")
 
+class ExceptionCategory(str, enum.Enum):
+    TECHNICAL_FAILURE = "TECHNICAL_FAILURE"
+    INTERNAL_CORRECTION = "INTERNAL_CORRECTION"
+    REJECTION_RECOMMENDATION = "REJECTION_RECOMMENDATION"
+    RISK_RECONSIDERATION = "RISK_RECONSIDERATION"
+    WITHDRAWAL_EXPIRY = "WITHDRAWAL_EXPIRY"
+    APPLICANT_CORRECTION = "APPLICANT_CORRECTION"
+
+class ExceptionOriginator(str, enum.Enum):
+    APPLICANT = "APPLICANT"
+    ANALYST = "ANALYST"
+    HRM = "HRM"
+    BCC = "BCC"
+    MD = "MD"
+    SYSTEM = "SYSTEM"
+
 class ExceptionItem(Base):
     __tablename__ = "exceptions"
     
     id = Column(String(36), primary_key=True, default=generate_uuid)
     case_id = Column(String(36), ForeignKey("credit_cases.id"), nullable=False)
-    category = Column(String(50), nullable=False)  # Applicant data, CAM correction, KYC mismatch, etc.
+    category = Column(String(50), nullable=False)  # Flowchart 6 categories
+    originator_role = Column(String(50), default="ANALYST")  # APPLICANT, ANALYST, HRM, BCC, MD, SYSTEM
+    originator_name = Column(String(100), nullable=True)
     origin_stage = Column(String(50), nullable=False)
-    owner = Column(String(100), nullable=False)
+    owner = Column(String(100), nullable=False)  # Designated owner per category
     return_stage = Column(String(50), nullable=False)
     reason = Column(Text, nullable=False)
+    comments = Column(Text, nullable=True)
+    version = Column(Integer, default=1)
     sla_hours = Column(Integer, default=24)
+    sla_due_at = Column(DateTime, nullable=True)
     status = Column(String(30), default="OPEN")  # OPEN, IN_PROGRESS, RESOLVED, WAIVED
-    created_at = Column(DateTime, default=utc_now)
+    
+    # Flowchart specific tracking payload
+    action_payload = Column(JSON, default=dict)
+    applicant_action_required = Column(Boolean, default=False)
+    applicant_response = Column(JSON, default=dict)
+    
+    # Resolution and Convergence tracking
+    is_material_change = Column(Boolean, default=False)
+    resolution_category = Column(String(50), nullable=True)
+    resolution_notes = Column(Text, nullable=True)
+    resolved_by = Column(String(100), nullable=True)
     resolved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
     
     credit_case = relationship("CreditCase", back_populates="exceptions")
 

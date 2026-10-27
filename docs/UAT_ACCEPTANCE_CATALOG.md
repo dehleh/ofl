@@ -27,3 +27,36 @@
 2. **Duplicate Replay**: Replaying the same payload twice never creates a second case (`test_besto_deduplication_replay_never_duplicates` — PASSED).
 3. **₦2,000,000 Boundary**: Exactly ₦2m accepted in BESTO; > ₦2m quarantined (`test_besto_boundary_rule` — PASSED).
 4. **Incomplete KYC**: Creates owned exception without losing case (`test_besto_incomplete_kyc_creates_exception_without_losing_case` — PASSED).
+
+### Section 17.5 Credit Exception Handling Architecture (Flowchart Verification)
+*Automated Verification Module:* `backend/tests/test_flowchart_exceptions.py` (9/9 Unit & Integration Tests Passed)
+
+1. **Exception Ingestion & Payload Tracking (`UAT-EXC-01`)**:
+   - Originators: Applicant, Analyst, HRM, BCC, MD, System.
+   - Preserves `Case ID + Reason + Originator Owner + Comments + SLA + Version`.
+   - Verified via `test_raise_all_six_categories` & `POST /api/v1/exceptions/raise`.
+2. **Branch 1: Technical Failure (`UAT-EXC-02`)**:
+   - Automated assignment to `IT / Integration Owner` (Default SLA: 4 hours).
+   - Retry counting, reconciliation notes, and restoration of original workflow state.
+   - Verified via `test_branch_1_technical_failure_retry_and_restore`.
+3. **Branch 2: Internal Correction (`UAT-EXC-03`)**:
+   - Assigned to `Credit Analyst` (Default SLA: 24 hours).
+   - Correct CAM / Calculations / Analysis -> Creates revised CAM version -> Converges to Material Credit Change check.
+4. **Branch 3: Rejection Recommendation (`UAT-EXC-04`)**:
+   - Routed to `Authorised Decision-Maker` (MD / BCC).
+   - **Decision: Reject**: Records reason, authority citation, and date -> Emits approved notification -> Transitions case to `REJECTED` and closes.
+   - **Decision: Further Assessment**: Routes to HRM -> HRM coordinates reassessment with Analyst -> Analyst revises.
+   - Verified via `test_branch_3_rejection_recommendation_reject_flow` and `test_branch_3_rejection_recommendation_further_assessment`.
+5. **Branch 4: Risk Reconsideration (`UAT-EXC-05`)**:
+   - Routed to `HRM` -> Coordinates restructuring / mitigation with Credit Analyst -> Analyst revises.
+   - Verified via `test_branch_4_risk_reconsideration_and_hrm_coordination`.
+6. **Branch 5: Withdrawal / Expiry (`UAT-EXC-06`)**:
+   - Validates withdrawal / expiry rules -> Transitions case to `WITHDRAWN` or authorizes renewal.
+   - Verified via `test_branch_5_withdrawal_expiry_close`.
+7. **Branch 6: Applicant Correction Loop (`UAT-EXC-07`)**:
+   - Assigned to `Credit Analyst / BDO` -> Sends specific request to applicant -> Applicant views and uploads replacement docs via public tracker (`/track/{case_number}`) -> Analyst validates changes.
+   - Verified via `test_branch_6_applicant_correction_lifecycle`.
+8. **Convergence Node: Material Credit Change (`UAT-EXC-08`)**:
+   - **Material Change (YES)**: `TransitionService.invalidate_approvals_if_material_change()` invalidates affected prior approvals, bumps case revision, and restarts applicable approval chain.
+   - **Non-Material Change (NO)**: Preserves prior approvals and returns to required reviewer with original comments.
+   - Verified via `test_convergence_material_change_invalidates_approvals` and `test_convergence_non_material_change_preserves_approvals`.

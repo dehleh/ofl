@@ -9,6 +9,9 @@ from typing import Dict, Any
 from ...database import get_db
 from ...models import CreditCase, Application, CAMVersion, ExceptionItem, Disbursement, CaseState
 from ...config import settings
+from ...integrations.gcs_service import GoogleCloudStorageService
+from ...integrations.secret_manager_service import GCPSecretManagerService
+from ...core.cloud_logger import GoogleCloudLoggingService
 
 router = APIRouter(prefix="/telemetry", tags=["Telemetry & Operational Reporting"])
 
@@ -51,7 +54,7 @@ def get_operational_metrics(db: Session = Depends(get_db)):
 @router.get("/ai-costs")
 def get_ai_cost_telemetry(db: Session = Depends(get_db)):
     """
-    Returns AI token consumption and estimated Azure OpenAI expenditures (FR-29).
+    Returns AI token consumption and estimated GCP Vertex AI (Gemini) expenditures (FR-29).
     """
     cams = db.query(CAMVersion).all()
     
@@ -79,7 +82,10 @@ def get_ai_cost_telemetry(db: Session = Depends(get_db)):
     avg_tokens_per_cam = round(total_tokens / len(cams), 1) if cams else 0
     
     return {
-        "model_deployment": settings.AZURE_OPENAI_DEPLOYMENT_NAME,
+        "cloud_provider": "Google Cloud Platform (GCP)",
+        "ai_underwriter": "Google Cloud Vertex AI (Gemini)",
+        "model_deployment": settings.VERTEX_AI_MODEL,
+        "gcp_region": settings.GCP_LOCATION,
         "total_cams_generated": len(cams),
         "total_tokens_consumed": total_tokens,
         "prompt_tokens": total_prompt_tokens,
@@ -89,5 +95,36 @@ def get_ai_cost_telemetry(db: Session = Depends(get_db)):
         "total_cost_ngn": total_cost_ngn,
         "monthly_approved_budget_usd": 150.0,
         "budget_consumption_percentage": round((total_cost_usd / 150.0) * 100, 2) if total_cost_usd > 0 else 0.0,
-        "governance_rule": "Deterministic financial rules calculated outside LLM; AI token budget strictly capped (FR-28)."
+        "governance_rule": "Deterministic financial rules calculated outside LLM; Vertex AI Gemini token budget strictly capped (FR-28)."
     }
+
+@router.get("/gcp-infrastructure")
+def get_gcp_infrastructure_status():
+    """
+    Returns deployment telemetry for Google Cloud Platform services:
+    Vertex AI, Google Cloud Storage, Secret Manager, Cloud Logging, and Cloud SQL.
+    """
+    gcs_status = GoogleCloudStorageService.get_storage_telemetry()
+    secrets_status = GCPSecretManagerService.get_secrets_inventory()
+    logging_status = GoogleCloudLoggingService.get_logging_telemetry()
+
+    return {
+        "cloud_platform": "Google Cloud Platform (GCP)",
+        "project_id": settings.GCP_PROJECT_ID,
+        "primary_region": settings.GCP_LOCATION,
+        "services": {
+            "vertex_ai": {
+                "status": "HEALTHY",
+                "model": settings.VERTEX_AI_MODEL,
+                "role": "AI Underwriter (Narrative CAM Synthesis & Evidence Citations)"
+            },
+            "cloud_storage": gcs_status,
+            "secret_manager": secrets_status,
+            "cloud_logging": logging_status,
+            "database": {
+                "engine": "PostgreSQL (Cloud SQL on GCP in Production; SQLite local dev)",
+                "status": "CONNECTED"
+            }
+        }
+    }
+

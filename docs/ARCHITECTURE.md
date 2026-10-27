@@ -22,15 +22,18 @@ ofl/
 │   │   ├── core/
 │   │   │   ├── financial_engine.py     # Deterministic PMT, DSR, NDI, and policy checks
 │   │   │   ├── state_machine.py        # Strict transition service with invariants (Section 6.1)
-│   │   │   └── authority_matrix.py     # Amount-based delegation limits (Analyst, HRM, BCC, MD)
+│   │   │   ├── authority_matrix.py     # Amount-based delegation limits (Analyst, HRM, BCC, MD)
+│   │   │   └── cloud_logger.py         # Google Cloud Logging & structured audit stream
 │   │   ├── integrations/
 │   │   │   ├── besto_adapter.py        # Section 17.3 BESTO ingestion, deduplication, quarantine
 │   │   │   ├── youverify_adapter.py    # Identity verification & mismatch exception routing
 │   │   │   ├── nav_adapter.py          # Treasury NAV disbursement packet & confirmation
 │   │   │   ├── loandisc_adapter.py     # Post-disbursement idempotent synchronization
-│   │   │   └── azure_ai_service.py     # AI CAM drafting, citations, token telemetry
+│   │   │   ├── vertex_ai_service.py    # Google Cloud Vertex AI (Gemini) CAM drafting & telemetry
+│   │   │   ├── gcs_service.py          # Google Cloud Storage document repository & SHA-256
+│   │   │   └── secret_manager_service.py # GCP Secret Manager credential retrieval
 │   │   └── api/v1/                     # 8 REST Routers
-│   ├── tests/                          # Pytest automated test suite
+│   ├── tests/                          # Pytest automated test suite (15 core & GCP tests)
 │   └── requirements.txt
 ├── frontend/                           # React 18 + Vite + TypeScript web portal
 │   ├── src/

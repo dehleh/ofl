@@ -1,0 +1,77 @@
+# ==============================================================================
+# Google Cloud Build Pipeline for Opticom Finance House (OFL) Credit Platform
+# Target: Google Cloud Run & Cloud SQL (PostgreSQL)
+# ==============================================================================
+
+steps:
+  # Step 1: Run automated backend acceptance tests
+  - name: 'python:3.13-slim'
+    id: 'run-unit-tests'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        pip install --no-cache-dir -r backend/requirements.txt
+        python -m pytest -v backend/tests
+
+  # Step 2: Build container image with Docker
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-image'
+    args:
+      - 'build'
+      - '-t'
+      - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:$COMMIT_SHA'
+      - '-t'
+      - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:latest'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+
+  # Step 3: Push container image to Google Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-image'
+    args:
+      - 'push'
+      - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:$COMMIT_SHA'
+
+  # Step 4: Deploy service to Google Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-cloud-run'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - '$_SERVICE_NAME'
+      - '--image'
+      - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:$COMMIT_SHA'
+      - '--region'
+      - '$_REGION'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--service-account'
+      - 'ofl-app-runner@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--set-env-vars'
+      - 'ENVIRONMENT=production,GCP_PROJECT_ID=$PROJECT_ID,GCP_LOCATION=$_REGION,VERTEX_AI_MODEL=gemini-1.5-pro,GCS_BUCKET_NAME=$_GCS_BUCKET,GCP_SECRET_MANAGER_ENABLED=true,GCP_CLOUD_LOGGING_ENABLED=true,GCS_LOCAL_EMULATOR=false'
+      - '--min-instances'
+      - '1'
+      - '--max-instances'
+      - '10'
+      - '--memory'
+      - '1Gi'
+      - '--cpu'
+      - '1'
+
+substitutions:
+  _AR_LOCATION: 'europe-west1'
+  _AR_REPO: 'ofl-containers'
+  _SERVICE_NAME: 'ofl-credit-platform'
+  _REGION: 'europe-west1'
+  _GCS_BUCKET: 'ofl-credit-documents'
+
+images:
+  - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:$COMMIT_SHA'
+  - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

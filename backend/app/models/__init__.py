@@ -14,7 +14,9 @@ from .entities import (
     IntegrationEvent,
     AuditEvent,
     IntakeChannel,
-    CaseState
+    CaseState,
+    ExceptionCategory,
+    ExceptionOriginator
 )
 
 __all__ = [
@@ -33,5 +35,7 @@ __all__ = [
     "IntegrationEvent",
     "AuditEvent",
     "IntakeChannel",
-    "CaseState"
+    "CaseState",
+    "ExceptionCategory",
+    "ExceptionOriginator"
 ]

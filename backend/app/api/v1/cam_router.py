@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 from ...database import get_db, utc_now
 from ...models import CreditCase, CAMVersion, FinancialAssessment, AuditEvent, CaseState
 from ...schemas.schemas import CAMUpdateRequest
-from ...integrations.azure_ai_service import AzureAICamService
+from ...integrations.vertex_ai_service import VertexAICamService
 from ...core.state_machine import TransitionService
 
 router = APIRouter(prefix="/cases/{case_id}/cam", tags=["CAM Management"])
@@ -20,7 +20,7 @@ def generate_ai_cam(
     db: Session = Depends(get_db)
 ):
     """
-    Invokes Azure AI CAM service to draft structured narrative and extract source citations.
+    Invokes Google Cloud Vertex AI (Gemini) CAM service to draft structured narrative and extract source citations.
     Calculations strictly drawn from deterministic financial assessment (FR-06, FR-28).
     """
     credit_case = db.query(CreditCase).filter(
@@ -36,12 +36,14 @@ def generate_ai_cam(
     if not assessment:
         raise HTTPException(status_code=400, detail="Cannot draft CAM: Financial assessment has not been generated.")
         
-    cam = AzureAICamService.generate_draft_cam(
+    cam = VertexAICamService.generate_draft_cam(
         db=db,
         credit_case=credit_case,
         financial_assessment=assessment,
         actor=actor
     )
+    db.commit()
+    db.refresh(cam)
     
     return {
         "message": f"CAM Version {cam.version} generated successfully.",

@@ -10,7 +10,8 @@ from ...database import get_db, utc_now
 from ...config import settings
 from ...models import (
     Customer, Application, CreditCase, Document, 
-    FinancialAssessment, IntegrationEvent, CaseState, IntakeChannel
+    FinancialAssessment, IntegrationEvent, CaseState, IntakeChannel,
+    ExceptionItem, AuditEvent
 )
 from ...schemas.schemas import DirectApplicationCreate, BestoInboundPayload
 from ...core.financial_engine import FinancialEngine
@@ -176,3 +177,159 @@ def list_quarantined_payloads(db: Session = Depends(get_db)):
         }
         for e in events
     ]
+
+@router.get("/track/{case_number}")
+def track_application_status(
+    case_number: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Public tracking endpoint for loan applicants.
+    Returns safe customer-facing status without exposing private risk deliberations or CAM notes.
+    """
+    credit_case = db.query(CreditCase).filter(
+        (CreditCase.case_number == case_number) | (CreditCase.id == case_number)
+    ).first()
+    if not credit_case:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Application reference not found. Please verify your reference number."
+        )
+
+    app_rec = credit_case.application
+    cust = app_rec.customer
+
+    state_labels = {
+        CaseState.DRAFT.value: "Application Draft",
+        CaseState.SUBMITTED.value: "Application Submitted",
+        CaseState.KYC_PENDING.value: "Identity & Document Verification",
+        CaseState.ANALYST_REVIEW.value: "Credit Appraisal & Underwriting",
+        CaseState.HRM_REVIEW.value: "Risk Management Assessment",
+        CaseState.BCC_REVIEW.value: "Credit Committee Review",
+        CaseState.MD_DECISION.value: "Executive Sanction",
+        CaseState.OFFER_PENDING.value: "Offer Letter Issued",
+        CaseState.CONDITIONS_PENDING.value: "Offer Accepted - Conditions Precedent Pending",
+        CaseState.READY_FOR_DISBURSEMENT.value: "Disbursement Scheduled",
+        CaseState.TREASURY_CONFIRMATION_PENDING.value: "Treasury Confirmation Pending",
+        CaseState.LOANDISC_SYNC_PENDING.value: "Core Banking Account Provisioning",
+        CaseState.DISBURSED_MONITORING.value: "Facility Disbursed",
+        CaseState.REJECTED.value: "Application Declined",
+        CaseState.WITHDRAWN.value: "Application Withdrawn"
+    }
+
+    # Check for pending applicant action items (Flowchart Branch 6: Applicant Correction)
+    pending_ex = db.query(ExceptionItem).filter(
+        ExceptionItem.case_id == credit_case.id,
+        ExceptionItem.status != "RESOLVED",
+        ExceptionItem.applicant_action_required == True
+    ).first()
+
+    applicant_action = None
+    if pending_ex:
+        req_info = (pending_ex.action_payload or {}).get("applicant_request", {})
+        applicant_action = {
+            "exception_id": pending_ex.id,
+            "category": pending_ex.category,
+            "reason": pending_ex.reason,
+            "instructions": req_info.get("message") or pending_ex.comments or pending_ex.reason,
+            "requested_documents": req_info.get("requested_documents", []),
+            "sla_due_at": pending_ex.sla_due_at.isoformat() if pending_ex.sla_due_at else None
+        }
+
+    message = (
+        "Action Required: Additional documentation or clarification requested by your Underwriter." if applicant_action
+        else "Congratulations! Your facility has been disbursed." if credit_case.state == CaseState.DISBURSED_MONITORING.value
+        else "Your loan offer has been issued! Please review terms with your Relationship Manager." if credit_case.state == CaseState.OFFER_PENDING.value
+        else "Your credit application has been received and is being appraised by our credit team."
+    )
+
+    return {
+        "case_number": credit_case.case_number,
+        "applicant_name": cust.name,
+        "amount": app_rec.amount,
+        "tenor": app_rec.tenor,
+        "purpose": app_rec.purpose,
+        "submitted_at": app_rec.created_at.isoformat(),
+        "status_code": credit_case.state,
+        "status_label": state_labels.get(credit_case.state, "Processing"),
+        "has_active_offer": credit_case.state in [CaseState.OFFER_PENDING.value, CaseState.CONDITIONS_PENDING.value],
+        "applicant_action": applicant_action,
+        "message": message
+    }
+
+@router.post("/track/{case_number}/respond-exception")
+def respond_to_applicant_exception(
+    case_number: str,
+    payload: Dict[str, Any],
+    db: Session = Depends(get_db)
+):
+    """
+    Public endpoint for loan applicants to fulfill Applicant Correction requests (Flowchart Branch 6).
+    """
+    credit_case = db.query(CreditCase).filter(
+        (CreditCase.case_number == case_number) | (CreditCase.id == case_number)
+    ).first()
+    if not credit_case:
+        raise HTTPException(status_code=404, detail="Application reference not found.")
+
+    exception_id = payload.get("exception_id")
+    query = db.query(ExceptionItem).filter(
+        ExceptionItem.case_id == credit_case.id,
+        ExceptionItem.status != "RESOLVED"
+    )
+    if exception_id:
+        query = query.filter(ExceptionItem.id == exception_id)
+    else:
+        query = query.filter(ExceptionItem.applicant_action_required == True)
+
+    ex = query.first()
+    if not ex:
+        raise HTTPException(status_code=400, detail="No active applicant clarification request found for this application.")
+
+    notes = payload.get("notes", "Clarification provided by applicant via portal")
+    docs = payload.get("documents", [])
+
+    # Attach any newly provided documents
+    if docs:
+        for doc in docs:
+            d = Document(
+                case_id=credit_case.id,
+                document_type=doc.get("type", "ADDITIONAL_EVIDENCE"),
+                object_key=doc.get("object_key", f"direct/{credit_case.case_number}/{doc.get('name', 'replacement_file')}"),
+                checksum=hashlib.sha256(doc.get("name", "replacement_file").encode()).hexdigest()[:32],
+                version=credit_case.revision,
+                scan_status="CLEAN",
+                original_filename=doc.get("name", "replacement_doc.pdf"),
+                content_summary=doc.get("summary", "Uploaded by applicant in response to exception correction")
+            )
+            db.add(d)
+
+    ex.applicant_action_required = False
+    ex.status = "IN_PROGRESS"
+    ex.applicant_response = {
+        "submitted_at": utc_now().isoformat(),
+        "notes": notes,
+        "documents": [d.get("name") for d in docs] if docs else []
+    }
+
+    # Audit event
+    audit = AuditEvent(
+        actor="Applicant",
+        role="APPLICANT",
+        event="APPLICANT_EXCEPTION_FULFILLED",
+        entity="CreditCase",
+        entity_id=credit_case.case_number,
+        correlation_id=ex.id,
+        reason=notes,
+        details={"documents_count": len(docs), "exception_id": ex.id}
+    )
+    db.add(audit)
+    db.commit()
+
+    return {
+        "message": "Information and documents submitted successfully. Your Underwriter will review the updates shortly.",
+        "case_number": credit_case.case_number,
+        "exception_id": ex.id,
+        "status": ex.status
+    }
+

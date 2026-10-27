@@ -127,34 +127,136 @@ export async function syncLoanDisc(caseId: string) {
   return json;
 }
 
-export async function fetchExceptions() {
-  const res = await fetch(`${API_BASE}/exceptions`);
+export async function fetchExceptions(params?: { status?: string; category?: string; caseId?: string }) {
+  const query = new URLSearchParams();
+  if (params?.status) query.set('status_filter', params.status);
+  if (params?.category) query.set('category_filter', params.category);
+  if (params?.caseId) query.set('case_id_filter', params.caseId);
+  const res = await fetch(`${API_BASE}/exceptions?${query.toString()}`);
   if (!res.ok) throw new Error('Failed to fetch exceptions');
   return res.json();
 }
 
-export async function resolveException(exceptionId: string, notes: string, resolvedBy: string) {
+export async function raiseException(data: {
+  case_id: string;
+  category: string;
+  originator_role: string;
+  originator_name?: string;
+  reason: string;
+  comments?: string;
+  sla_hours?: number;
+  action_payload?: any;
+}) {
+  const res = await fetch(`${API_BASE}/exceptions/raise`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function takeExceptionAction(exceptionId: string, actionData: {
+  action_type: string;
+  actor: string;
+  decision?: string;
+  notes?: string;
+  details?: any;
+}) {
+  const res = await fetch(`${API_BASE}/exceptions/${exceptionId}/action`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(actionData)
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function resolveException(exceptionId: string, payload: {
+  resolution_notes: string;
+  resolved_by: string;
+  return_to_stage?: string;
+  is_material_change?: boolean;
+  resolution_category?: string;
+}) {
   const res = await fetch(`${API_BASE}/exceptions/${exceptionId}/resolve`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ resolution_notes: notes, resolved_by: resolvedBy })
+    body: JSON.stringify(payload)
   });
-  if (!res.ok) throw new Error('Failed to resolve exception');
-  return res.json();
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function respondToApplicantException(caseNumber: string, data: {
+  exception_id?: string;
+  notes: string;
+  documents?: Array<{ name: string; type: string; summary?: string }>;
+}) {
+  const res = await fetch(`${API_BASE}/intake/track/${encodeURIComponent(caseNumber.trim())}/respond-exception`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
 }
 
 export async function fetchTelemetry() {
-  const [overviewRes, aiCostRes] = await Promise.all([
+  const [overviewRes, aiCostRes, infraRes] = await Promise.all([
     fetch(`${API_BASE}/telemetry/overview`),
-    fetch(`${API_BASE}/telemetry/ai-costs`)
+    fetch(`${API_BASE}/telemetry/ai-costs`),
+    fetch(`${API_BASE}/telemetry/gcp-infrastructure`)
   ]);
   const overview = await overviewRes.json();
   const aiCost = await aiCostRes.json();
-  return { overview, aiCost };
+  const infrastructure = infraRes.ok ? await infraRes.json() : null;
+  return { overview, aiCost, infrastructure };
 }
 
 export async function fetchAuditEvents() {
   const res = await fetch(`${API_BASE}/audit?limit=40`);
   if (!res.ok) throw new Error('Failed to fetch audit events');
   return res.json();
+}
+
+export async function uploadBankStatement(caseId: string, file: File, actor: string = 'Credit Analyst') {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/cases/${caseId}/bank-statements/upload?actor=${encodeURIComponent(actor)}`, {
+    method: 'POST',
+    body: formData
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function analyzeDemoBankStatement(caseId: string, bankPreset: string = 'UBA_HAULAGE', actor: string = 'Credit Analyst') {
+  const res = await fetch(`${API_BASE}/cases/${caseId}/bank-statements/analyze-demo?bank_preset=${encodeURIComponent(bankPreset)}&actor=${encodeURIComponent(actor)}`, {
+    method: 'POST'
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function applyStatementToFinancials(caseId: string, documentId: string, actor: string = 'Credit Analyst') {
+  const res = await fetch(`${API_BASE}/cases/${caseId}/bank-statements/${documentId}/apply-to-financials?actor=${encodeURIComponent(actor)}`, {
+    method: 'POST'
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function trackApplication(caseNumber: string) {
+  const res = await fetch(`${API_BASE}/intake/track/${encodeURIComponent(caseNumber.trim())}`);
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
 }

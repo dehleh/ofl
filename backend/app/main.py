@@ -29,7 +29,7 @@ def seed_initial_demo_data():
         CaseState, IntakeChannel
     )
     from .core.financial_engine import FinancialEngine
-    from .integrations.azure_ai_service import AzureAICamService
+    from .integrations.vertex_ai_service import VertexAICamService
     from .database import utc_now
     
     if db.query(CreditCase).count() > 0:
@@ -114,8 +114,8 @@ def seed_initial_demo_data():
     )
     db.add(doc1)
     
-    # Generate initial AI CAM for Case 1
-    AzureAICamService.generate_draft_cam(db, case1, fin1, actor="System Initializer")
+    # Generate initial AI CAM for Case 1 using Google Cloud Vertex AI (Gemini)
+    VertexAICamService.generate_draft_cam(db, case1, fin1, actor="System Initializer")
 
     # Seed 2: OFL Direct Loan (₦8,500,000) - Ready for Disbursement (Conditions Pending -> Satisfied)
     cust2 = Customer(
@@ -215,29 +215,45 @@ def seed_initial_demo_data():
     )
     db.add(offer2)
     
-    # Seed 3: Corporate Facility (₦25,000,000) - MD Decision
+    # Seed 3: Official Opticom Working Capital CAM (₦50m requested, ₦40m recommended for 6 months)
     cust3 = Customer(
-        customer_type="CORPORATE",
-        name="Horizon Logistics & Haulage PLC",
-        email="treasury@horizonlogistics.ng",
-        phone="+234 809 555 1234",
-        rc_number="RC-883921",
-        bvn="22334499001",
-        external_references={"channel": "OFL_DIRECT"}
+        customer_type="SME",
+        name="LEO-AKINBONI BABATUNDE GLOBAL ENTERPRISES",
+        email="leobabatunde9@gmail.com",
+        phone="08024799952",
+        rc_number="7049792",
+        bvn="2233307057",
+        nin="65858750946",
+        external_references={
+            "bn_number": "7049792",
+            "sector": "Haulage and Logistics",
+            "facility_type": "Working Capital",
+            "relationship_manager": "Mr. Oloyede Olaniyi",
+            "business_address": "NNPC Filling Station Opposite Eleganzer company, Ide-orogbo, Ibeju Lekki, Epe road, Lagos, Nigeria",
+            "registered_address": "No.2, Rev Yinka Akinsanya Street, Gbetu, Ibeju Lekki, Lagos.",
+            "promoter_name": "Mr. Leo Akinboni Babatunde",
+            "next_of_kin_name": "Mrs. Yewande Akinboni",
+            "guarantor_name": "Mr. Ayomikun Boluwaji Akinboni",
+            "guarantor_bvn": "22257967170",
+            "guarantor_phone": "07064451552",
+            "recommended_amount": 40_000_000.0,
+            "channel": "OFL_DIRECT"
+        },
+        verified_attributes={"cac_active": True, "bvn_verified": True}
     )
     db.add(cust3)
     db.flush()
     
     app3 = Application(
         customer_id=cust3.id,
-        amount=25_000_000.0,
+        amount=50_000_000.0,
         currency="NGN",
-        tenor=24,
-        purpose="Fleet acquisition - 5 prime mover diesel trucks",
+        tenor=6,
+        purpose="Purchase Order Execution for P.A. Lawrence Nigeria Limited",
         intake_channel=IntakeChannel.OFL_DIRECT.value,
         status="SUBMITTED",
-        applicant_type="CORPORATE",
-        raw_payload={"intake": "direct_portal"}
+        applicant_type="SME",
+        raw_payload={"intake": "direct_portal", "recommended_amount": 40_000_000.0}
     )
     db.add(app3)
     db.flush()
@@ -245,32 +261,72 @@ def seed_initial_demo_data():
     case3 = CreditCase(
         application_id=app3.id,
         case_number="OFL-2026-00003",
-        state=CaseState.MD_DECISION.value,
+        state=CaseState.HRM_REVIEW.value,
         revision=1,
-        assigned_owner="Managing Director"
+        assigned_owner="Head of Risk Management"
     )
     db.add(case3)
     db.flush()
+
+    # Documents for Case 3 matching CAM
+    doc3_1 = Document(
+        case_id=case3.id,
+        document_type="PURCHASE_ORDER",
+        object_key="cases/OFL-2026-00003/PO/PA_Lawrence_PO_5000_Trips.pdf",
+        checksum="8f73b821a9c148209eb4718520df9876",
+        version=1,
+        scan_status="CLEAN",
+        original_filename="PA_Lawrence_PO_5000_Trips.pdf",
+        content_summary="P.A. Lawrence Nigeria Limited transportation contract for 5,000 trips of sharp sand @ ₦230,000 per trip (Total ₦1.15bn)"
+    )
+    doc3_2 = Document(
+        case_id=case3.id,
+        document_type="BANK_STATEMENT",
+        object_key="cases/OFL-2026-00003/STATEMENTS/UBA_FirstBank_6M_Inflows.pdf",
+        checksum="41c9a1b9204781dfa5b7809623e10874",
+        version=1,
+        scan_status="CLEAN",
+        original_filename="UBA_FirstBank_6M_Inflows.pdf",
+        content_summary="6-month bank statements (UBA & FirstBank) showing total credits of ₦1,026,334,729.08"
+    )
+    doc3_3 = Document(
+        case_id=case3.id,
+        document_type="VALUATION_REPORT",
+        object_key="cases/OFL-2026-00003/COLLATERAL/Valuation_Survey_Landed_Property_Eyinra.pdf",
+        checksum="a1b2c3d4e5f67890123456789abcdef0",
+        version=1,
+        scan_status="CLEAN",
+        original_filename="Valuation_Survey_Landed_Property_Eyinra.pdf",
+        content_summary="Valuation report on landed building at No. 9 Lawrence Street, Eyinra Village (MV ₦80m, FSV ₦56m) + Toyota 4Runner (FSV ₦19.95m)"
+    )
+    db.add_all([doc3_1, doc3_2, doc3_3])
     
     fin3_eval = FinancialEngine.evaluate({
-        "requested_amount": 25_000_000.0,
-        "tenor_months": 24,
-        "applicant_type": "CORPORATE",
-        "verified_monthly_income": 9_500_000.0,
-        "existing_monthly_debt": 1_200_000.0,
-        "estimated_monthly_expenses": 4_200_000.0,
-        "collateral_value": 40_000_000.0
+        "requested_amount": 40_000_000.0,
+        "tenor_months": 6,
+        "annual_interest_rate": 0.60,
+        "applicant_type": "SME",
+        "verified_monthly_income": 142_222_475.22,
+        "existing_monthly_debt": 1_000_000.0,
+        "estimated_monthly_expenses": 120_361_182.64,
+        "collateral_value": 108_500_000.0,
+        "collateral_fsv": 75_950_000.0
     })
     fin3 = FinancialAssessment(
         case_id=case3.id,
         formula_version=fin3_eval["formula_version"],
-        input_snapshot={"verified_monthly_income": 9500000.0},
+        input_snapshot={
+            "verified_monthly_income": 142_222_475.22,
+            "average_monthly_sales": 142_222_475.22,
+            "recommended_amount": 40_000_000.0
+        },
         calculated_ratios=fin3_eval["calculated_ratios"],
         policy_flags=fin3_eval["policy_flags"]
     )
     db.add(fin3)
     
-    AzureAICamService.generate_draft_cam(db, case3, fin3, actor="Senior Risk Analyst")
+    # Generate the official Opticom 12-page CAM via Vertex AI service
+    VertexAICamService.generate_draft_cam(db, case3, fin3, actor="Sadiku Wasiu Adekunle")
     
     db.commit()
     db.close()
@@ -285,14 +341,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="Azure-hosted, human-controlled credit origination and AI-assisted underwriting platform for Opticom Finance House.",
+    description="GCP-hosted, human-controlled credit origination and Google Cloud Vertex AI (Gemini) underwriting platform for Opticom Finance House.",
     lifespan=lifespan
 )
 
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permits local frontend and Azure App Service origins
+    allow_origins=["*"],  # Permits local frontend and GCP Cloud Run origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
