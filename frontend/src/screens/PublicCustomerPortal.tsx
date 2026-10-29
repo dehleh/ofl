@@ -15,7 +15,15 @@ import {
   Briefcase,
   HelpCircle,
   PhoneCall,
-  CheckCheck
+  CheckCheck,
+  TrendingUp,
+  Cpu,
+  Layers,
+  Sparkles,
+  Zap,
+  ChevronRight,
+  ExternalLink,
+  Copy
 } from 'lucide-react';
 import { submitDirectApplication, trackApplication, respondToApplicantException } from '../services/api';
 
@@ -30,6 +38,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'APPLY' | 'CALCULATOR' | 'TRACK'>('APPLY');
   const [step, setStep] = useState<number>(1);
+  const [copiedCode, setCopiedCode] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -128,8 +137,10 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
       setSubmissionSuccess(res);
       setStep(4); // Confirmation step
     } catch (err: any) {
-      if (err.detail && err.detail.message) {
+      if (err.detail && typeof err.detail === 'object' && err.detail.message) {
         setErrorMsg(err.detail.message);
+      } else if (typeof err.detail === 'string') {
+        setErrorMsg(err.detail);
       } else {
         setErrorMsg(err.message || 'Application submission failed. Please verify your details.');
       }
@@ -150,7 +161,8 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
       const res = await trackApplication(trackRef);
       setTrackResult(res);
     } catch (err: any) {
-      setTrackError(err.detail || 'Application reference not found. Please check your reference code.');
+      const msg = typeof err.detail === 'string' ? err.detail : (err.message || 'Application reference not found. Please check your reference code.');
+      setTrackError(msg);
     } finally {
       setTrackLoading(false);
     }
@@ -184,7 +196,8 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
       const updated = await trackApplication(trackResult.case_number);
       setTrackResult(updated);
     } catch (err: any) {
-      setExceptionResponseMsg(err.detail || 'Failed to submit response. Please try again.');
+      const msg = typeof err.detail === 'string' ? err.detail : (err.message || 'Failed to submit response. Please try again.');
+      setExceptionResponseMsg(msg);
     } finally {
       setRespondingToException(false);
     }
@@ -203,7 +216,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
       amount: 50000000,
       tenor_months: 6,
       purpose: 'Purchase Order Execution for P.A. Lawrence Nigeria Limited',
-      facility_type: 'Working Capital',
+      facility_type: 'Purchase Order Execution',
       monthly_income: 142222475,
       existing_monthly_debt: 1000000,
       estimated_monthly_expenses: 8593600,
@@ -216,49 +229,104 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
     ]);
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-dark)' }}>
+    <div style={{ minHeight: '100vh', position: 'relative' }}>
+      {/* Ambient Lighting Orbs */}
+      <div style={{
+        position: 'fixed',
+        top: '-10%',
+        left: '20%',
+        width: '600px',
+        height: '600px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(0, 150, 204, 0.05) 0%, transparent 70%)',
+        filter: 'blur(60px)',
+        pointerEvents: 'none',
+        zIndex: 0
+      }} />
+      <div style={{
+        position: 'fixed',
+        bottom: '10%',
+        right: '10%',
+        width: '500px',
+        height: '500px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(0, 150, 204, 0.04) 0%, transparent 70%)',
+        filter: 'blur(70px)',
+        pointerEvents: 'none',
+        zIndex: 0
+      }} />
+
       {/* Top Customer Brand Navbar */}
       <nav style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '1.1rem 2.5rem',
-        background: 'rgba(12, 24, 44, 0.95)',
-        backdropFilter: 'blur(16px)',
+        padding: '1rem 2.5rem',
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
         borderBottom: '1px solid var(--border-subtle)',
         position: 'sticky',
         top: 0,
-        zIndex: 100
+        zIndex: 100,
+        boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <img 
-            src="/opticom_logo.jpg" 
-            alt="Opticom Finance Limited" 
-            style={{ height: '42px', objectFit: 'contain' }}
-          />
+          <div style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '3px',
+            background: 'linear-gradient(135deg, rgba(0, 150, 204, 0.15), rgba(0, 150, 204, 0.05))',
+            borderRadius: '10px',
+            border: '1px solid rgba(0, 150, 204, 0.25)',
+            boxShadow: '0 2px 8px rgba(0, 150, 204, 0.12)'
+          }}>
+            <img 
+              src="/opticom_logo.jpg" 
+              alt="Opticom Finance Limited" 
+              style={{ height: '40px', borderRadius: '8px', background: '#fff', padding: '2px 6px', display: 'block' }}
+            />
+          </div>
           <div>
-            <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
+            <div style={{
+              fontSize: '1.25rem',
+              fontWeight: 800,
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '-0.02em',
+              color: 'var(--brand-cerulean)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
               OPTICOM FINANCE LIMITED
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--brand-teal-light)', fontWeight: 600, letterSpacing: '0.05em' }}>
-              COMMERCIAL CREDIT & ENTERPRISE LOAN PORTAL (&gt; ₦2,000,000)
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: '0.08em' }}>
+              COMMERCIAL CREDIT & ENTERPRISE DEBT ENGINE &bull; &gt; ₦2,000,000
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <button 
             className={`btn btn-sm ${activeTab === 'APPLY' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setActiveTab('APPLY')}
           >
-            Apply for Loan
+            <Zap size={14} /> Apply for Loan
           </button>
           <button 
             className={`btn btn-sm ${activeTab === 'CALCULATOR' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setActiveTab('CALCULATOR')}
           >
-            <Calculator size={14} /> Calculator
+            <Calculator size={14} /> Live Calculator
           </button>
           <button 
             className={`btn btn-sm ${activeTab === 'TRACK' ? 'btn-primary' : 'btn-secondary'}`}
@@ -271,7 +339,12 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
           <button 
             className="btn btn-secondary btn-sm"
             onClick={onOpenStaffGate}
-            style={{ borderColor: 'var(--brand-teal)', color: 'var(--brand-teal-light)' }}
+            style={{ 
+              borderColor: 'rgba(0, 150, 204, 0.45)', 
+              color: 'var(--brand-cerulean)',
+              background: 'rgba(0, 150, 204, 0.08)',
+              fontWeight: 700
+            }}
             title="Internal Access for Underwriters & Risk Committee"
           >
             <Lock size={14} /> Staff Gate 🔒
@@ -279,63 +352,175 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
         </div>
       </nav>
 
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '2.5rem 1.5rem' }}>
-        {/* Hero Banner */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <span className="status-pill pill-cyan" style={{ fontSize: '0.8rem', padding: '0.35rem 0.9rem', marginBottom: '1rem', display: 'inline-flex' }}>
-            CBN Licensed Finance House &bull; RC: 347832
-          </span>
-          <h1 style={{ fontSize: '2.3rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', marginTop: '0.5rem', marginBottom: '0.75rem' }}>
-            Empowering Enterprises & Contractors With Structured Credit
+      {/* Main Container */}
+      <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '3rem 1.5rem', position: 'relative', zIndex: 1 }}>
+        {/* Futuristic Hero Section */}
+        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.4rem 1.1rem',
+            borderRadius: 'var(--radius-full)',
+            background: 'rgba(0, 150, 204, 0.08)',
+            border: '1px solid rgba(0, 150, 204, 0.28)',
+            boxShadow: '0 2px 8px rgba(0, 150, 204, 0.12)',
+            marginBottom: '1.25rem'
+          }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--brand-cyan)', boxShadow: '0 0 10px var(--brand-cyan)' }} />
+            <span style={{ fontSize: '0.78rem', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--brand-cyan)', letterSpacing: '0.06em' }}>
+              CBN LICENSED FINANCE HOUSE &bull; RC: 347832 &bull; ENTERPRISE CREDIT GATEWAY
+            </span>
+          </div>
+
+          <h1 style={{
+            fontSize: 'clamp(2.2rem, 5vw, 3.2rem)',
+            fontWeight: 900,
+            fontFamily: 'var(--font-display)',
+            lineHeight: 1.15,
+            letterSpacing: '-0.035em',
+            maxWidth: '920px',
+            margin: '0 auto 1.25rem auto',
+            color: 'var(--text-highlight)'
+          }}>
+            Autonomous Commercial Credit &amp; Structured Debt Engine
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', maxWidth: '720px', margin: '0 auto' }}>
-            Fast working capital, contract finance, and asset leasing for requests from <strong>₦2,000,000 up to ₦200,000,000</strong>. Automated identity verification, deterministic underwriting, and 48-hour term sheet turnaround.
+
+          <p style={{
+            color: 'var(--text-secondary)',
+            fontSize: '1.1rem',
+            maxWidth: '750px',
+            margin: '0 auto 2.5rem auto',
+            lineHeight: 1.6
+          }}>
+            Fast working capital, contract finance, and asset acquisition for facilities from{' '}
+            <strong style={{ color: 'var(--brand-cyan)' }}>₦2,000,000 up to ₦200,000,000</strong>.
+            Instant statement OCR, deterministic risk grading, and 48-hour term sheet execution.
           </p>
+
+          {/* High-Tech KPI Strip */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+            gap: '1rem',
+            maxWidth: '960px',
+            margin: '0 auto'
+          }}>
+            <div className="glass-panel" style={{ padding: '1.15rem 1.25rem', textAlign: 'left', borderLeft: '3px solid var(--brand-cyan)' }}>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.08em' }}>
+                Disbursed Volume
+              </div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--text-highlight)', marginTop: '0.2rem' }}>
+                ₦4.8 Billion+
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--brand-cyan)', marginTop: '0.25rem' }}>
+                Corporate &amp; SME Facilities
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '1.15rem 1.25rem', textAlign: 'left', borderLeft: '3px solid var(--brand-electric)' }}>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.08em' }}>
+                Decision Turnaround
+              </div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--text-highlight)', marginTop: '0.2rem' }}>
+                &le; 48 Hours
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--brand-electric)', marginTop: '0.25rem' }}>
+                Automated CAM &amp; Appraisal
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '1.15rem 1.25rem', textAlign: 'left', borderLeft: '3px solid var(--accent-purple)' }}>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.08em' }}>
+                Underwriting Precision
+              </div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--text-highlight)', marginTop: '0.2rem' }}>
+                99.4%
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--accent-purple-light)', marginTop: '0.25rem' }}>
+                Deterministic Rule Engine
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '1.15rem 1.25rem', textAlign: 'left', borderLeft: '3px solid var(--accent-gold)' }}>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.08em' }}>
+                Ticket Capability
+              </div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--text-highlight)', marginTop: '0.2rem' }}>
+                ₦2M – ₦200M
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--accent-gold-light)', marginTop: '0.25rem' }}>
+                SME &amp; Corporate Tiers
+              </div>
+            </div>
+          </div>
         </div>
 
+        {/* ================================================================= */}
         {/* TAB 1: APPLY FOR LOAN */}
+        {/* ================================================================= */}
         {activeTab === 'APPLY' && (
           <div>
             {/* Quick Demo Pre-fill Bar */}
-            <div className="glass-panel" style={{ padding: '0.75rem 1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                Demonstration Case: <strong>Leo-Akinboni Babatunde Global Enterprises (₦50M Haulage Facility)</strong>
+            <div className="glass-panel" style={{
+              padding: '0.85rem 1.4rem',
+              marginBottom: '1.75rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '0.85rem',
+              background: 'rgba(0, 150, 204, 0.04)',
+              border: '1px solid rgba(0, 150, 204, 0.25)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <Sparkles size={16} color="var(--brand-cyan)" />
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  Interactive Appraisal Demonstration: <strong style={{ color: 'var(--text-highlight)' }}>Leo-Akinboni Babatunde Global Enterprises (₦50M Haulage Facility)</strong>
+                </span>
               </div>
-              <button className="btn btn-secondary btn-sm" onClick={populateSampleSmeData}>
-                Prefill Sample Commercial Application
+              <button 
+                className="btn btn-secondary btn-sm btn-glow-cyan" 
+                onClick={populateSampleSmeData}
+                style={{ fontSize: '0.8rem' }}
+              >
+                Prefill Live Commercial Dossier
               </button>
             </div>
 
             {/* Canonical Boundary Notice if <= ₦2,000,000 */}
             {isBelowBoundary && (
               <div style={{
-                background: 'rgba(245, 158, 11, 0.12)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
-                borderRadius: 'var(--radius-md)',
-                padding: '1.25rem 1.5rem',
-                marginBottom: '1.5rem',
+                background: '#fffbeb',
+                border: '1px solid #fde68a',
+                borderRadius: 'var(--radius-lg)',
+                padding: '1.35rem 1.6rem',
+                marginBottom: '1.75rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                color: '#fbbf24'
+                color: '#92400e',
+                boxShadow: 'var(--shadow-sm)'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <AlertTriangle size={28} />
+                  <AlertTriangle size={32} />
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>Notice: Loans Under ₦2,000,000</div>
-                    <div style={{ fontSize: '0.85rem', color: '#fde68a', marginTop: '0.2rem' }}>
-                      Retail facilities between ₦300,000 and ₦2,000,000 are processed through our <strong>BESTO Retail Credit Platform</strong>. The OFL Direct platform services commercial requests above ₦2,000,000.
+                    <div style={{ fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-display)' }}>
+                      Channel Routing Notice: Facilities &le; ₦2,000,000
+                    </div>
+                    <div style={{ fontSize: '0.88rem', color: '#b45309', marginTop: '0.25rem' }}>
+                      Retail requests between ₦300,000 and ₦2,000,000 are ingested via the <strong>BESTO Retail Credit Platform</strong>. The OFL Direct gateway services commercial tickets above ₦2,000,000.
                     </div>
                   </div>
                 </div>
                 <button className="btn btn-warning btn-sm" onClick={onGoToBesto}>
-                  Go to BESTO Channel <ArrowRight size={14} />
+                  Route to BESTO Channel <ArrowRight size={14} />
                 </button>
               </div>
             )}
 
             {errorMsg && (
-              <div className="flag-banner flag-CRITICAL" style={{ marginBottom: '1.5rem' }}>
+              <div className="flag-banner flag-CRITICAL" style={{ marginBottom: '1.75rem' }}>
                 <AlertTriangle size={20} />
                 <div>{errorMsg}</div>
               </div>
@@ -343,32 +528,158 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
 
             {/* Stepper Navigation */}
             {step < 4 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: step === 1 ? 'var(--brand-teal-light)' : '#fff', fontWeight: 700 }}>
-                  <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: step === 1 ? 'var(--brand-teal)' : 'rgba(255,255,255,0.1)', color: step === 1 ? '#000' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem' }}>1</span>
-                  Facility Requirements
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: '2.25rem',
+                position: 'relative',
+                padding: '0 1rem'
+              }}>
+                {/* Connecting Line */}
+                <div style={{
+                  position: 'absolute',
+                  top: '16px',
+                  left: '10%',
+                  right: '10%',
+                  height: '2px',
+                  background: 'var(--border-subtle)',
+                  zIndex: 0
+                }}>
+                  <div style={{
+                    width: step === 1 ? '0%' : step === 2 ? '50%' : '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, var(--brand-cerulean), var(--brand-electric))',
+                    boxShadow: '0 0 10px rgba(0, 150, 204, 0.4)',
+                    transition: 'width 0.4s ease'
+                  }} />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: step === 2 ? 'var(--brand-teal-light)' : '#fff', fontWeight: 700 }}>
-                  <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: step === 2 ? 'var(--brand-teal)' : 'rgba(255,255,255,0.1)', color: step === 2 ? '#000' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem' }}>2</span>
-                  Business & Identity
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  position: 'relative',
+                  zIndex: 1,
+                  cursor: 'pointer'
+                }} onClick={() => setStep(1)}>
+                  <span style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '50%',
+                    background: step === 1 ? 'var(--brand-cerulean)' : step > 1 ? 'rgba(0, 150, 204, 0.15)' : 'var(--bg-dark)',
+                    color: step === 1 ? '#ffffff' : step > 1 ? 'var(--brand-cerulean)' : 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.9rem',
+                    fontWeight: 800,
+                    border: `2px solid ${step >= 1 ? 'var(--brand-cerulean)' : 'var(--border-subtle)'}`,
+                    boxShadow: step === 1 ? '0 0 15px rgba(0, 150, 204, 0.35)' : 'none'
+                  }}>
+                    {step > 1 ? '✓' : '1'}
+                  </span>
+                  <span style={{
+                    fontSize: '0.85rem',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: step === 1 ? 800 : 600,
+                    color: step === 1 ? 'var(--brand-cerulean)' : 'var(--text-secondary)'
+                  }}>
+                    Facility Architecture
+                  </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: step === 3 ? 'var(--brand-teal-light)' : '#fff', fontWeight: 700 }}>
-                  <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: step === 3 ? 'var(--brand-teal)' : 'rgba(255,255,255,0.1)', color: step === 3 ? '#000' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem' }}>3</span>
-                  Bank Statement & Turnover
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  position: 'relative',
+                  zIndex: 1,
+                  cursor: 'pointer'
+                }} onClick={() => step > 2 ? setStep(2) : null}>
+                  <span style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '50%',
+                    background: step === 2 ? 'var(--brand-cerulean)' : step > 2 ? 'rgba(0, 150, 204, 0.15)' : 'var(--bg-dark)',
+                    color: step === 2 ? '#ffffff' : step > 2 ? 'var(--brand-cerulean)' : 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.9rem',
+                    fontWeight: 800,
+                    border: `2px solid ${step >= 2 ? 'var(--brand-cerulean)' : 'var(--border-subtle)'}`,
+                    boxShadow: step === 2 ? '0 0 15px rgba(0, 150, 204, 0.35)' : 'none'
+                  }}>
+                    {step > 2 ? '✓' : '2'}
+                  </span>
+                  <span style={{
+                    fontSize: '0.85rem',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: step === 2 ? 800 : 600,
+                    color: step === 2 ? 'var(--brand-cerulean)' : 'var(--text-secondary)'
+                  }}>
+                    Corporate &amp; Identity
+                  </span>
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  position: 'relative',
+                  zIndex: 1
+                }}>
+                  <span style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '50%',
+                    background: step === 3 ? 'var(--brand-cerulean)' : 'var(--bg-dark)',
+                    color: step === 3 ? '#ffffff' : 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.9rem',
+                    fontWeight: 800,
+                    border: `2px solid ${step === 3 ? 'var(--brand-cerulean)' : 'var(--border-subtle)'}`,
+                    boxShadow: step === 3 ? '0 0 15px rgba(0, 150, 204, 0.35)' : 'none'
+                  }}>
+                    3
+                  </span>
+                  <span style={{
+                    fontSize: '0.85rem',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: step === 3 ? 800 : 600,
+                    color: step === 3 ? 'var(--brand-cerulean)' : 'var(--text-secondary)'
+                  }}>
+                    Cashflow &amp; Documents
+                  </span>
                 </div>
               </div>
             )}
 
             {/* STEP 1: FACILITY REQUIREMENTS */}
             {step === 1 && (
-              <div className="glass-panel" style={{ padding: '2rem' }}>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', marginBottom: '1.25rem' }}>
-                  1. Facility Details & Financing Requirement
-                </h3>
+              <div className="glass-panel cyber-top-edge" style={{ padding: '2.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-highlight)' }}>
+                      1. Facility Parameters &amp; Capital Requirement
+                    </h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                      Specify the facility quantum, tenor structure, and commercial purpose.
+                    </p>
+                  </div>
+                  <span className="status-pill pill-cyan">Step 1 of 3</span>
+                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                   <div className="form-group">
-                    <label className="form-label">Requested Loan Amount (₦)</label>
+                    <label className="form-label">
+                      <DollarSign size={14} color="var(--brand-cyan)" /> Requested Facility Amount (₦)
+                    </label>
                     <input
                       type="number"
                       className="form-input"
@@ -376,62 +687,71 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
                       min="2000001"
                       placeholder="e.g. 50,000,000"
+                      style={{ fontSize: '1.1rem', fontFamily: 'var(--font-mono)', fontWeight: 700 }}
                     />
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                      Minimum: ₦2,000,001 &bull; Formatted: ₦{Number(formData.amount).toLocaleString()}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                      <span>Min: ₦2,000,001</span>
+                      <span style={{ color: 'var(--brand-cyan)', fontWeight: 600 }}>₦{Number(formData.amount).toLocaleString()}</span>
                     </div>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Proposed Tenor (Months)</label>
+                    <label className="form-label">
+                      <Clock size={14} color="var(--brand-cyan)" /> Proposed Tenor (Months)
+                    </label>
                     <select
                       className="form-select"
                       value={formData.tenor_months}
                       onChange={(e) => setFormData({ ...formData, tenor_months: Number(e.target.value) })}
+                      style={{ fontSize: '0.95rem' }}
                     >
-                      <option value={3}>3 Months</option>
-                      <option value={6}>6 Months (Standard PO / Contract)</option>
-                      <option value={12}>12 Months (1 Year)</option>
-                      <option value={18}>18 Months</option>
-                      <option value={24}>24 Months (2 Years)</option>
-                      <option value={36}>36 Months (Asset Lease)</option>
+                      <option value={3}>3 Months (Short Term Bridge)</option>
+                      <option value={6}>6 Months (Standard Purchase Order / Contract Execution)</option>
+                      <option value={12}>12 Months (Annual Working Capital Facility)</option>
+                      <option value={18}>18 Months (Extended Medium Term)</option>
+                      <option value={24}>24 Months (Capital Equipment / Fleet)</option>
+                      <option value={36}>36 Months (Specialized Project Finance)</option>
                     </select>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Facility Classification</label>
+                    <label className="form-label">
+                      <Layers size={14} color="var(--brand-cyan)" /> Facility Classification
+                    </label>
                     <select
                       className="form-select"
                       value={formData.facility_type}
                       onChange={(e) => setFormData({ ...formData, facility_type: e.target.value })}
                     >
-                      <option value="Working Capital">Working Capital Support</option>
+                      <option value="Working Capital">Working Capital Line</option>
                       <option value="Purchase Order Execution">Purchase Order / Contract Financing</option>
-                      <option value="Asset Finance">Fleet & Heavy Machinery Acquisition</option>
-                      <option value="Invoice Discounting">Invoice Discounting</option>
+                      <option value="Asset Finance">Fleet &amp; Heavy Machinery Lease</option>
+                      <option value="Invoice Discounting">Receivables &amp; Invoice Discounting</option>
                     </select>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Borrower Type</label>
+                    <label className="form-label">
+                      <Building2 size={14} color="var(--brand-cyan)" /> Borrower Entity Structure
+                    </label>
                     <select
                       className="form-select"
                       value={formData.applicant_type}
                       onChange={(e) => setFormData({ ...formData, applicant_type: e.target.value })}
                     >
-                      <option value="SME">Sole Proprietorship / Enterprise (BN)</option>
+                      <option value="SME">Sole Proprietorship / Registered Enterprise (BN)</option>
                       <option value="CORPORATE">Limited Liability Company (RC)</option>
-                      <option value="INDIVIDUAL">Professional / High-Net-Worth Individual</option>
+                      <option value="INDIVIDUAL">Accredited Professional / HNWI</option>
                     </select>
                   </div>
                 </div>
 
-                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <div className="form-group" style={{ marginBottom: '1.75rem' }}>
                   <label className="form-label">Specific Purpose of Facility</label>
                   <textarea
-                    className="form-input"
+                    className="form-textarea"
                     rows={3}
-                    placeholder="e.g. Mobilization and execution of haulage transport contract awarded by P.A. Lawrence Nigeria Limited covering 5,000 trips"
+                    placeholder="e.g. Mobilization and haulage logistics for contract awarded by P.A. Lawrence Nigeria Limited covering 5,000 trips"
                     value={formData.purpose}
                     onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
                   />
@@ -439,33 +759,49 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
 
                 {/* Live Repayment Callout Card */}
                 <div style={{
-                  background: 'var(--bg-surface)',
-                  padding: '1.25rem 1.5rem',
-                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-dark)',
+                  padding: '1.5rem',
+                  borderRadius: 'var(--radius-lg)',
                   border: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '1.75rem',
-                  flexWrap: 'wrap',
-                  gap: '1rem'
+                  boxShadow: 'var(--shadow-sm)',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '1.5rem',
+                  marginBottom: '2rem'
                 }}>
                   <div>
-                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Estimated Monthly Installment</div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--brand-teal-light)', fontFamily: 'var(--font-mono)' }}>
-                      ₦{calculations.monthlyInstallment.toLocaleString()} / mo
+                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.06em' }}>
+                      Estimated Monthly Installment
+                    </div>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--brand-cerulean)', fontFamily: 'var(--font-mono)', marginTop: '0.25rem' }}>
+                      ₦{calculations.monthlyInstallment.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                      Principal + Interest (28% APR)
                     </div>
                   </div>
+
                   <div>
-                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Estimated Total Repayment</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', fontFamily: 'var(--font-mono)' }}>
+                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.06em' }}>
+                      Total Repayment Over Tenor
+                    </div>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-highlight)', fontFamily: 'var(--font-mono)', marginTop: '0.25rem' }}>
                       ₦{calculations.totalRepayment.toLocaleString()}
                     </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                      Total interest: ₦{calculations.totalInterest.toLocaleString()}
+                    </div>
                   </div>
+
                   <div>
-                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Upfront Fees (Approx 4.5%)</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-gold)', fontFamily: 'var(--font-mono)' }}>
+                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.06em' }}>
+                      Upfront Fees (Approx 4.5%)
+                    </div>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--accent-gold-light)', fontFamily: 'var(--font-mono)', marginTop: '0.25rem' }}>
                       ₦{calculations.upfrontFees.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                      Management, Facility &amp; Legal
                     </div>
                   </div>
                 </div>
@@ -473,11 +809,11 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <button 
                     type="button" 
-                    className="btn btn-primary"
+                    className="btn btn-primary btn-lg"
                     onClick={() => setStep(2)}
                     disabled={isBelowBoundary || !formData.amount}
                   >
-                    Next: Business & Identity <ArrowRight size={16} />
+                    Proceed to Business &amp; Identity <ArrowRight size={18} />
                   </button>
                 </div>
               </div>
@@ -485,14 +821,22 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
 
             {/* STEP 2: BUSINESS & IDENTITY CREDENTIALS */}
             {step === 2 && (
-              <div className="glass-panel" style={{ padding: '2rem' }}>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', marginBottom: '1.25rem' }}>
-                  2. Business Profile & Promoter Identity (Youverify Verification)
-                </h3>
+              <div className="glass-panel cyber-top-edge" style={{ padding: '2.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-highlight)' }}>
+                      2. Business Entity &amp; Promoter Identity
+                    </h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                      Corporate registry verification and automated NIBSS BVN identity screening.
+                    </p>
+                  </div>
+                  <span className="status-pill pill-cyan">Step 2 of 3</span>
+                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                   <div className="form-group">
-                    <label className="form-label">Full Legal Name / Registered Business Name</label>
+                    <label className="form-label">Full Legal Name / Registered Business Name *</label>
                     <input
                       type="text"
                       className="form-input"
@@ -515,7 +859,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Bank Verification Number (BVN - 11 Digits)</label>
+                    <label className="form-label">Bank Verification Number (BVN - 11 Digits) *</label>
                     <input
                       type="text"
                       className="form-input"
@@ -524,9 +868,10 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       value={formData.bvn}
                       onChange={(e) => setFormData({ ...formData, bvn: e.target.value })}
                       required
+                      style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}
                     />
-                    <div style={{ fontSize: '0.72rem', color: 'var(--brand-teal-light)', marginTop: '0.2rem' }}>
-                      ✓ Verified against NIBSS / Youverify API upon submission
+                    <div style={{ fontSize: '0.74rem', color: 'var(--brand-cyan)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <ShieldCheck size={13} /> Automated cryptographic verification via Youverify / NIBSS
                     </div>
                   </div>
 
@@ -539,11 +884,12 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       maxLength={11}
                       value={formData.nin}
                       onChange={(e) => setFormData({ ...formData, nin: e.target.value })}
+                      style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Official Email Address</label>
+                    <label className="form-label">Official Corporate Email Address *</label>
                     <input
                       type="email"
                       className="form-input"
@@ -555,7 +901,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Direct Telephone Number</label>
+                    <label className="form-label">Direct Telephone Number *</label>
                     <input
                       type="tel"
                       className="form-input"
@@ -567,12 +913,12 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   </div>
                 </div>
 
-                <div className="form-group" style={{ marginBottom: '1.75rem' }}>
-                  <label className="form-label">Registered Business Operating Address</label>
+                <div className="form-group" style={{ marginBottom: '2rem' }}>
+                  <label className="form-label">Registered Operating Business Address</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. NNPC Filling Station Opposite Eleganzer company, Ide-orogbo, Ibeju Lekki, Lagos"
+                    placeholder="e.g. NNPC Filling Station, Ide-orogbo, Ibeju Lekki, Lagos"
                     value={formData.business_address}
                     onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
                   />
@@ -580,15 +926,15 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
 
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setStep(1)}>
-                    ← Back
+                    ← Back to Facility Architecture
                   </button>
                   <button 
                     type="button" 
-                    className="btn btn-primary"
+                    className="btn btn-primary btn-lg"
                     onClick={() => setStep(3)}
                     disabled={!formData.applicant_name || !formData.email || !formData.bvn}
                   >
-                    Next: Bank Statement & Inflows <ArrowRight size={16} />
+                    Proceed to Cashflow &amp; Documents <ArrowRight size={18} />
                   </button>
                 </div>
               </div>
@@ -596,76 +942,102 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
 
             {/* STEP 3: FINANCIAL PROFILE & BANK STATEMENT UPLOAD */}
             {step === 3 && (
-              <div className="glass-panel" style={{ padding: '2rem' }}>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', marginBottom: '1.25rem' }}>
-                  3. Cashflow Profile & Bank Statement Document Upload
-                </h3>
+              <div className="glass-panel cyber-top-edge" style={{ padding: '2.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-highlight)' }}>
+                      3. Cashflow Profile &amp; Document Manifest
+                    </h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                      Provide turnover estimates and attach supporting credit appraisal documents.
+                    </p>
+                  </div>
+                  <span className="status-pill pill-cyan">Step 3 of 3</span>
+                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.75rem' }}>
                   <div className="form-group">
-                    <label className="form-label">Average Monthly Business Inflow / Sales (₦)</label>
+                    <label className="form-label">Average Monthly Inflow / Turnover (₦)</label>
                     <input
                       type="number"
                       className="form-input"
                       value={formData.monthly_income}
                       onChange={(e) => setFormData({ ...formData, monthly_income: Number(e.target.value) })}
                       placeholder="e.g. 142,222,475"
+                      style={{ fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Existing Monthly Bank Loans / Overdrafts (₦)</label>
+                    <label className="form-label">Existing Monthly Debt Service / Loans (₦)</label>
                     <input
                       type="number"
                       className="form-input"
                       value={formData.existing_monthly_debt}
                       onChange={(e) => setFormData({ ...formData, existing_monthly_debt: Number(e.target.value) })}
                       placeholder="e.g. 1,000,000"
+                      style={{ fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Estimated Monthly Operating Costs (₦)</label>
+                    <label className="form-label">Estimated Monthly Operating Expenses (₦)</label>
                     <input
                       type="number"
                       className="form-input"
                       value={formData.estimated_monthly_expenses}
                       onChange={(e) => setFormData({ ...formData, estimated_monthly_expenses: Number(e.target.value) })}
                       placeholder="e.g. 8,500,000"
+                      style={{ fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Estimated Value of Pledged Assets / Collateral (₦)</label>
+                    <label className="form-label">Estimated Value of Collateral / Pledged Assets (₦)</label>
                     <input
                       type="number"
                       className="form-input"
                       value={formData.collateral_value}
                       onChange={(e) => setFormData({ ...formData, collateral_value: Number(e.target.value) })}
                       placeholder="e.g. 108,500,000"
+                      style={{ fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
                 </div>
 
-                {/* Document Dropzone */}
+                {/* High-Tech Document Dropzone */}
                 <div style={{
-                  border: '2px dashed var(--border-subtle)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1.75rem',
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  marginBottom: '1.5rem'
+                  border: '2px dashed rgba(0, 150, 204, 0.4)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '2.25rem',
+                  background: 'rgba(0, 150, 204, 0.02)',
+                  marginBottom: '2rem',
+                  textAlign: 'center'
                 }}>
-                  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-                    <UploadCloud size={32} color="var(--brand-teal)" style={{ marginBottom: '0.5rem' }} />
-                    <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>Attach Supporting Credit Documents</h4>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Upload 6-month Bank Statement (PDF/CSV), Contract Award / Purchase Order, and CAC Registration documents.
-                    </p>
+                  <div style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '50%',
+                    background: 'rgba(0, 150, 204, 0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 1rem auto',
+                    boxShadow: '0 2px 10px rgba(0, 150, 204, 0.15)'
+                  }}>
+                    <UploadCloud size={30} color="var(--brand-cerulean)" />
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
-                      + Bank Statement (PDF)
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-highlight)', fontFamily: 'var(--font-display)' }}>
+                    Attach Supporting Credit Evidence
+                  </h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '580px', margin: '0.35rem auto 1.5rem auto' }}>
+                    Upload 6-month Bank Statement (PDF/CSV with Document AI OCR support), Contract Award / Purchase Order, and CAC Registration documents.
+                  </p>
+
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+                    <label className="btn btn-secondary btn-sm btn-glow-cyan" style={{ cursor: 'pointer' }}>
+                      + Bank Statement (PDF/CSV)
                       <input 
                         type="file" 
                         accept=".pdf,.csv,.xlsx" 
@@ -674,8 +1046,8 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       />
                     </label>
 
-                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
-                      + Contract / PO Document
+                    <label className="btn btn-secondary btn-sm btn-glow-cyan" style={{ cursor: 'pointer' }}>
+                      + Contract / PO Award
                       <input 
                         type="file" 
                         accept=".pdf,.jpg,.png" 
@@ -684,8 +1056,8 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       />
                     </label>
 
-                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
-                      + CAC Registration Document
+                    <label className="btn btn-secondary btn-sm btn-glow-cyan" style={{ cursor: 'pointer' }}>
+                      + CAC Registration Proof
                       <input 
                         type="file" 
                         accept=".pdf,.jpg,.png" 
@@ -696,40 +1068,49 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   </div>
 
                   {uploadedFiles.length > 0 && (
-                    <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ marginTop: '1.75rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                       {uploadedFiles.map((f, i) => (
                         <div key={i} style={{
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
-                          padding: '0.65rem 0.85rem',
+                          padding: '0.75rem 1.15rem',
                           background: 'var(--bg-surface)',
-                          borderRadius: 'var(--radius-sm)',
-                          fontSize: '0.8rem'
+                          border: '1px solid var(--border-medium)',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: '0.85rem'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <FileText size={16} color="var(--brand-teal)" />
-                            <span style={{ fontWeight: 600, color: '#fff' }}>{f.name}</span>
-                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>({f.type} &bull; {f.size})</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                            <FileText size={18} color="var(--brand-cerulean)" />
+                            <span style={{ fontWeight: 700, color: 'var(--text-highlight)' }}>{f.name}</span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({f.type} &bull; {f.size})</span>
                           </div>
-                          <span className="status-pill pill-green" style={{ fontSize: '0.7rem' }}>Attached ✓</span>
+                          <span className="status-pill pill-cyan" style={{ fontSize: '0.72rem' }}>Ready for OCR ✓</span>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setStep(2)}>
-                    ← Back
+                    ← Back to Entity Profile
                   </button>
                   <button 
                     type="button" 
-                    className="btn btn-primary"
+                    className="btn btn-primary btn-lg"
                     onClick={handleSubmit}
                     disabled={loading}
                   >
-                    {loading ? 'Submitting to Underwriting...' : 'Submit Commercial Application'} <ArrowRight size={16} />
+                    {loading ? (
+                      <>
+                        <Cpu size={18} className="pulse" /> Ingesting to Underwriting Engine...
+                      </>
+                    ) : (
+                      <>
+                        Transmit Application for Appraisal <ArrowRight size={18} />
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -737,63 +1118,82 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
 
             {/* STEP 4: SUBMISSION SUCCESS & TRACKING RECEIPT */}
             {step === 4 && submissionSuccess && (
-              <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center' }}>
+              <div className="glass-panel cyber-top-edge" style={{ padding: '3.5rem 2.5rem', textAlign: 'center' }}>
                 <div style={{
-                  width: '64px',
-                  height: '64px',
+                  width: '74px',
+                  height: '74px',
                   borderRadius: '50%',
                   background: 'rgba(16, 185, 129, 0.15)',
+                  border: '2px solid rgba(16, 185, 129, 0.4)',
                   color: 'var(--color-success)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  margin: '0 auto 1.25rem auto'
+                  margin: '0 auto 1.5rem auto',
+                  boxShadow: '0 0 30px rgba(16, 185, 129, 0.3)'
                 }}>
-                  <CheckCheck size={36} />
+                  <CheckCheck size={42} />
                 </div>
 
-                <span className="status-pill pill-green" style={{ fontSize: '0.85rem', padding: '0.4rem 1rem', marginBottom: '1rem', display: 'inline-flex' }}>
-                  Application Successfully Logged
+                <span className="status-pill pill-green" style={{ fontSize: '0.85rem', padding: '0.4rem 1.2rem', marginBottom: '1.25rem', display: 'inline-flex' }}>
+                  APPLICATION SUCCESSFULLY QUEUED &bull; ENGINE ACCEPTED
                 </span>
 
-                <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff', marginBottom: '0.5rem' }}>
-                  Your Credit Application Has Been Queued
+                <h2 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-highlight)', marginBottom: '0.75rem', fontFamily: 'var(--font-display)' }}>
+                  Credit Dossier Ingested Into Underwriting Pipeline
                 </h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', maxWidth: '600px', margin: '0 auto 1.5rem auto' }}>
-                  Thank you for applying to Opticom Finance Limited. Your application has been ingested into our underwriting pipeline and an assigned Credit Analyst is currently appraising your dossier.
+                <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', maxWidth: '640px', margin: '0 auto 2rem auto', lineHeight: 1.6 }}>
+                  Thank you for submitting to Opticom Finance Limited. Your application has been logged into the automated risk appraisal queue and an assigned Underwriter is appraising your dossier.
                 </p>
 
+                {/* Reference Code Card */}
                 <div style={{
                   background: 'var(--bg-surface)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1.25rem 2rem',
-                  display: 'inline-block',
-                  marginBottom: '2rem'
+                  border: '1px solid rgba(0, 150, 204, 0.45)',
+                  borderRadius: 'var(--radius-xl)',
+                  padding: '1.75rem 2.5rem',
+                  display: 'inline-flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  marginBottom: '2.5rem',
+                  boxShadow: 'var(--shadow-md)'
                 }}>
-                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>
-                    Official Application Reference Code
+                  <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.08em' }}>
+                    Official OFL Application Reference Code
                   </div>
-                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--brand-teal-light)', fontFamily: 'var(--font-mono)', marginTop: '0.25rem' }}>
+                  <div style={{
+                    fontSize: '2.4rem',
+                    fontWeight: 900,
+                    color: 'var(--brand-cerulean)',
+                    fontFamily: 'var(--font-mono)',
+                    letterSpacing: '0.04em',
+                    margin: '0.5rem 0'
+                  }}>
                     {submissionSuccess.case_number}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>
-                    Save this reference code to track your underwriting progress online.
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <button 
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => copyToClipboard(submissionSuccess.case_number)}
+                      style={{ fontSize: '0.78rem' }}
+                    >
+                      <Copy size={13} /> {copiedCode ? 'Copied to Clipboard!' : 'Copy Code'}
+                    </button>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '1.25rem' }}>
                   <button 
-                    className="btn btn-secondary"
+                    className="btn btn-secondary btn-lg"
                     onClick={() => {
                       setTrackRef(submissionSuccess.case_number);
                       setActiveTab('TRACK');
                     }}
                   >
-                    <Search size={15} /> Track Application Online
+                    <Search size={18} /> Track Application Live
                   </button>
                   <button 
-                    className="btn btn-primary"
+                    className="btn btn-primary btn-lg"
                     onClick={() => {
                       setStep(1);
                       setSubmissionSuccess(null);
@@ -807,23 +1207,39 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
           </div>
         )}
 
+        {/* ================================================================= */}
         {/* TAB 2: INTERACTIVE LOAN CALCULATOR */}
+        {/* ================================================================= */}
         {activeTab === 'CALCULATOR' && (
-          <div className="glass-panel" style={{ padding: '2rem' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', marginBottom: '0.5rem' }}>
-              Commercial Loan & Amortization Calculator
-            </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.75rem' }}>
-              Calculate estimated monthly repayments, upfront facility fees, and total debt service for facilities above ₦2,000,000.
-            </p>
+          <div className="glass-panel cyber-top-edge" style={{ padding: '2.75rem' }}>
+            <div style={{ textAlign: 'center', maxWidth: '680px', margin: '0 auto 2.5rem auto' }}>
+              <span className="status-pill pill-cyan" style={{ marginBottom: '0.75rem' }}>
+                DETERMINISTIC AMORTIZATION ENGINE
+              </span>
+              <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-highlight)', fontFamily: 'var(--font-display)' }}>
+                Commercial Facility Amortization &amp; Fee Simulator
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '0.35rem' }}>
+                Simulate monthly debt service installments, upfront facility appraisal fees, and total repayment costs across ticket sizes from ₦2,000,000 to ₦100,000,000.
+              </p>
+            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '2.5rem', marginBottom: '2.5rem' }}>
+              {/* Controls */}
               <div>
-                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                    <label className="form-label" style={{ margin: 0 }}>Facility Amount</label>
-                    <strong style={{ color: 'var(--brand-teal-light)', fontFamily: 'var(--font-mono)' }}>₦{formData.amount.toLocaleString()}</strong>
+                <div className="form-group" style={{ marginBottom: '2rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <label className="form-label" style={{ margin: 0, fontSize: '0.85rem' }}>Facility Amount</label>
+                    <span style={{
+                      fontSize: '1.45rem',
+                      fontWeight: 800,
+                      color: 'var(--brand-cerulean)',
+                      fontFamily: 'var(--font-mono)'
+                    }}>
+                      ₦{formData.amount.toLocaleString()}
+                    </span>
                   </div>
+                  
                   <input
                     type="range"
                     min={2000000}
@@ -831,30 +1247,47 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     step={1000000}
                     value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
-                    style={{ width: '100%', accentColor: 'var(--brand-teal)' }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                    <span>₦2,000,000 (Min)</span>
-                    <span>₦50,000,000</span>
-                    <span>₦100,000,000 (Max)</span>
+
+                  {/* Preset Buttons */}
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                    {[5000000, 15000000, 50000000, 100000000].map(val => (
+                      <button
+                        key={val}
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{
+                          fontSize: '0.75rem',
+                          padding: '0.3rem 0.65rem',
+                          borderColor: formData.amount === val ? 'var(--brand-cerulean)' : 'var(--border-subtle)',
+                          color: formData.amount === val ? 'var(--brand-cerulean)' : 'var(--text-secondary)',
+                          background: formData.amount === val ? 'rgba(0, 150, 204, 0.08)' : 'var(--bg-surface)'
+                        }}
+                        onClick={() => setFormData({ ...formData, amount: val })}
+                      >
+                        ₦{(val / 1000000).toFixed(0)}M
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                    <label className="form-label" style={{ margin: 0 }}>Tenor</label>
-                    <strong style={{ color: '#fff' }}>{formData.tenor_months} Months</strong>
+                <div className="form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <label className="form-label" style={{ margin: 0, fontSize: '0.85rem' }}>Facility Tenor</label>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-highlight)', fontFamily: 'var(--font-mono)' }}>
+                      {formData.tenor_months} Months
+                    </span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.65rem' }}>
                     {[3, 6, 12, 18, 24].map((t) => (
                       <button
                         key={t}
                         type="button"
                         onClick={() => setFormData({ ...formData, tenor_months: t })}
-                        className={`btn btn-sm ${formData.tenor_months === t ? 'btn-primary' : 'btn-secondary'}`}
-                        style={{ fontSize: '0.78rem' }}
+                        className={`btn ${formData.tenor_months === t ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ padding: '0.6rem 0.5rem', fontSize: '0.85rem' }}
                       >
-                        {t}M
+                        {t} Mos
                       </button>
                     ))}
                   </div>
@@ -864,77 +1297,95 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
               {/* Calculator Output Display */}
               <div style={{
                 background: 'var(--bg-surface)',
-                borderRadius: 'var(--radius-md)',
-                padding: '1.5rem',
-                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-xl)',
+                padding: '2rem',
+                border: '1px solid var(--border-medium)',
+                boxShadow: 'var(--shadow-md)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center'
               }}>
-                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Estimated Monthly PMT</div>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--brand-teal-light)', fontFamily: 'var(--font-mono)', margin: '0.25rem 0 1rem 0' }}>
+                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.08em' }}>
+                  Estimated Monthly Debt Service
+                </div>
+                <div style={{
+                  fontSize: '2.4rem',
+                  fontWeight: 900,
+                  color: 'var(--brand-cerulean)',
+                  fontFamily: 'var(--font-mono)',
+                  margin: '0.35rem 0 1.25rem 0',
+                  letterSpacing: '-0.02em'
+                }}>
                   ₦{calculations.monthlyInstallment.toLocaleString()}
+                  <span style={{ fontSize: '1rem', color: 'var(--text-secondary)', fontWeight: 500 }}> / month</span>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.4rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', fontSize: '0.9rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
                     <span style={{ color: 'var(--text-secondary)' }}>Principal Borrowed:</span>
-                    <strong style={{ color: '#fff' }}>₦{formData.amount.toLocaleString()}</strong>
+                    <strong style={{ color: 'var(--text-highlight)', fontFamily: 'var(--font-mono)' }}>₦{formData.amount.toLocaleString()}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.4rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Total Interest Payable:</span>
-                    <strong style={{ color: '#fff' }}>₦{calculations.totalInterest.toLocaleString()}</strong>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Total Interest (28% APR):</span>
+                    <strong style={{ color: 'var(--text-highlight)', fontFamily: 'var(--font-mono)' }}>₦{calculations.totalInterest.toLocaleString()}</strong>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.4rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Upfront Processing & Legal (4.5%):</span>
-                    <strong style={{ color: 'var(--accent-gold)' }}>₦{calculations.upfrontFees.toLocaleString()}</strong>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Upfront Processing &amp; Legal (4.5%):</span>
+                    <strong style={{ color: 'var(--accent-gold-light)', fontFamily: 'var(--font-mono)' }}>₦{calculations.upfrontFees.toLocaleString()}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Total Facility Repayment:</span>
-                    <strong style={{ color: 'var(--brand-teal-light)' }}>₦{calculations.totalRepayment.toLocaleString()}</strong>
+                    <span style={{ color: 'var(--text-secondary)' }}>Total Debt Repayment:</span>
+                    <strong style={{ color: 'var(--brand-cerulean)', fontFamily: 'var(--font-mono)' }}>₦{calculations.totalRepayment.toLocaleString()}</strong>
                   </div>
                 </div>
 
                 <button 
-                  className="btn btn-primary" 
-                  style={{ marginTop: '1.5rem', width: '100%' }}
+                  className="btn btn-primary btn-lg" 
+                  style={{ marginTop: '2rem', width: '100%' }}
                   onClick={() => setActiveTab('APPLY')}
                 >
-                  Proceed to Apply for ₦{formData.amount.toLocaleString()} <ArrowRight size={16} />
+                  Apply For ₦{formData.amount.toLocaleString()} Facility <ArrowRight size={18} />
                 </button>
               </div>
             </div>
           </div>
         )}
 
+        {/* ================================================================= */}
         {/* TAB 3: TRACK EXISTING APPLICATION STATUS */}
+        {/* ================================================================= */}
         {activeTab === 'TRACK' && (
-          <div className="glass-panel" style={{ padding: '2rem', maxWidth: '750px', margin: '0 auto' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', marginBottom: '0.5rem' }}>
-              Track Application Status
-            </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-              Enter your official OFL application reference code to view live appraisal milestones and offer issuance status.
-            </p>
+          <div className="glass-panel cyber-top-edge" style={{ padding: '2.75rem', maxWidth: '820px', margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <span className="status-pill pill-cyan" style={{ marginBottom: '0.75rem' }}>
+                UNDERWRITING RADAR &bull; LIVE TRACKING
+              </span>
+              <h3 style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-highlight)', fontFamily: 'var(--font-display)' }}>
+                Track Appraisal Progress
+              </h3>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.35rem' }}>
+                Enter your official OFL application reference code to view live appraisal milestones and committee decisions.
+              </p>
+            </div>
 
-            <form onSubmit={handleTrackSubmit} style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.75rem' }}>
+            <form onSubmit={handleTrackSubmit} style={{ display: 'flex', gap: '0.85rem', marginBottom: '2rem' }}>
               <input
                 type="text"
                 className="form-input"
                 placeholder="e.g. OFL-2026-00003"
                 value={trackRef}
                 onChange={(e) => setTrackRef(e.target.value)}
-                style={{ fontFamily: 'var(--font-mono)' }}
+                style={{ fontFamily: 'var(--font-mono)', fontSize: '1.05rem', fontWeight: 700 }}
                 required
               />
-              <button type="submit" className="btn btn-primary" disabled={trackLoading} style={{ whiteSpace: 'nowrap' }}>
-                <Search size={15} /> {trackLoading ? 'Searching...' : 'Track'}
+              <button type="submit" className="btn btn-primary" disabled={trackLoading} style={{ whiteSpace: 'nowrap', padding: '0 1.8rem' }}>
+                <Search size={16} /> {trackLoading ? 'Querying...' : 'Track Dossier'}
               </button>
             </form>
 
             {trackError && (
-              <div className="flag-banner flag-CRITICAL" style={{ marginBottom: '1.25rem' }}>
-                <AlertTriangle size={18} />
+              <div className="flag-banner flag-CRITICAL" style={{ marginBottom: '1.5rem' }}>
+                <AlertTriangle size={20} />
                 <span>{trackError}</span>
               </div>
             )}
@@ -942,76 +1393,78 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
             {trackResult && (
               <div style={{
                 background: 'var(--bg-surface)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border-subtle)',
-                padding: '1.5rem'
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid var(--border-medium)',
+                padding: '2rem',
+                boxShadow: 'var(--shadow-md)'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <div>
-                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--brand-teal-light)', fontFamily: 'var(--font-mono)' }}>
+                    <div style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--brand-cerulean)', fontFamily: 'var(--font-mono)' }}>
                       {trackResult.case_number}
                     </div>
-                    <div style={{ fontSize: '0.82rem', color: '#fff', marginTop: '0.2rem' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-highlight)', marginTop: '0.2rem' }}>
                       {trackResult.applicant_name}
                     </div>
                   </div>
-                  <span className="status-pill pill-cyan" style={{ fontSize: '0.8rem', padding: '0.35rem 0.85rem' }}>
+                  <span className="status-pill pill-cyan" style={{ fontSize: '0.85rem', padding: '0.45rem 1.1rem' }}>
                     {trackResult.status_label}
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.82rem', marginBottom: '1.25rem' }}>
-                  <div><span style={{ color: 'var(--text-muted)' }}>Facility Amount:</span> <strong style={{ color: '#fff' }}>₦{trackResult.amount?.toLocaleString()}</strong></div>
-                  <div><span style={{ color: 'var(--text-muted)' }}>Tenor:</span> <strong style={{ color: '#fff' }}>{trackResult.tenor} Months</strong></div>
-                  <div><span style={{ color: 'var(--text-muted)' }}>Purpose:</span> {trackResult.purpose}</div>
-                  <div><span style={{ color: 'var(--text-muted)' }}>Submitted:</span> {new Date(trackResult.submitted_at).toLocaleDateString()}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.88rem', marginBottom: '1.5rem' }}>
+                  <div><span style={{ color: 'var(--text-muted)' }}>Facility Amount:</span> <strong style={{ color: 'var(--text-highlight)', fontFamily: 'var(--font-mono)' }}>₦{trackResult.amount?.toLocaleString()}</strong></div>
+                  <div><span style={{ color: 'var(--text-muted)' }}>Tenor:</span> <strong style={{ color: 'var(--text-highlight)' }}>{trackResult.tenor} Months</strong></div>
+                  <div><span style={{ color: 'var(--text-muted)' }}>Purpose:</span> <span style={{ color: 'var(--text-highlight)' }}>{trackResult.purpose}</span></div>
+                  <div><span style={{ color: 'var(--text-muted)' }}>Submitted:</span> <span style={{ color: 'var(--text-highlight)' }}>{new Date(trackResult.submitted_at).toLocaleDateString()}</span></div>
                 </div>
 
                 <div style={{
-                  padding: '0.85rem 1rem',
-                  background: 'rgba(0, 196, 159, 0.08)',
-                  border: '1px solid rgba(0, 196, 159, 0.2)',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.82rem',
-                  color: 'var(--brand-teal-light)'
+                  padding: '1rem 1.25rem',
+                  background: 'rgba(0, 150, 204, 0.08)',
+                  border: '1px solid rgba(0, 150, 204, 0.25)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '0.88rem',
+                  color: 'var(--brand-cerulean)',
+                  lineHeight: 1.5
                 }}>
                   {trackResult.message}
                 </div>
 
-                {/* Flowchart Branch 6: Applicant Correction Action Box */}
+                {/* Applicant Clarification / Exception Action Box */}
                 {trackResult.applicant_action && (
                   <div style={{
-                    marginTop: '1.25rem',
-                    padding: '1.25rem',
-                    background: 'rgba(245, 158, 11, 0.08)',
-                    border: '1px solid rgba(245, 158, 11, 0.3)',
-                    borderRadius: 'var(--radius-md)'
+                    marginTop: '1.75rem',
+                    padding: '1.5rem',
+                    background: '#fffbeb',
+                    border: '1px solid #fde68a',
+                    borderRadius: 'var(--radius-lg)'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--accent-gold)', fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                      <AlertTriangle size={18} /> Action Required by Applicant
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#92400e', fontWeight: 800, fontSize: '0.98rem', marginBottom: '0.65rem' }}>
+                      <AlertTriangle size={20} /> Action Required: Underwriting Clarification
                     </div>
-                    <div style={{ fontSize: '0.82rem', color: '#fff', marginBottom: '0.75rem' }}>
+                    <div style={{ fontSize: '0.88rem', color: 'var(--text-highlight)', marginBottom: '1rem', lineHeight: 1.5 }}>
                       <strong>Underwriter Request:</strong> {trackResult.applicant_action.instructions}
                     </div>
 
                     {trackResult.applicant_action.requested_documents?.length > 0 && (
-                      <div style={{ marginBottom: '1rem', fontSize: '0.8rem' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>Documents to attach: </span>
-                        <strong style={{ color: 'var(--brand-teal-light)' }}>
+                      <div style={{ marginBottom: '1.25rem', fontSize: '0.85rem' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Required Attachment: </span>
+                        <strong style={{ color: 'var(--brand-cerulean)' }}>
                           {trackResult.applicant_action.requested_documents.join(', ')}
                         </strong>
                       </div>
                     )}
 
                     {exceptionResponseMsg && (
-                      <div className="flag-banner flag-SUCCESS" style={{ marginBottom: '1rem', fontSize: '0.82rem' }}>
-                        <CheckCheck size={16} /> <span>{exceptionResponseMsg}</span>
+                      <div className="flag-banner flag-SUCCESS" style={{ marginBottom: '1.25rem', fontSize: '0.88rem' }}>
+                        <CheckCheck size={18} /> <span>{exceptionResponseMsg}</span>
                       </div>
                     )}
 
                     <form onSubmit={handleRespondToException}>
-                      <div className="form-group" style={{ marginBottom: '0.75rem' }}>
-                        <label className="form-label" style={{ fontSize: '0.78rem' }}>Your Clarification / Explanation *</label>
+                      <div className="form-group" style={{ marginBottom: '1rem' }}>
+                        <label className="form-label" style={{ fontSize: '0.82rem' }}>Clarification Explanation / Narrative *</label>
                         <textarea
                           className="form-textarea"
                           rows={3}
@@ -1019,13 +1472,12 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                           placeholder="e.g. Attached certified true copy with official director stamp as requested..."
                           value={applicantResponseNotes}
                           onChange={(e) => setApplicantResponseNotes(e.target.value)}
-                          style={{ fontSize: '0.82rem' }}
                         />
                       </div>
 
-                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem' }}>
-                        <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', fontSize: '0.78rem' }}>
-                          <UploadCloud size={14} /> Attach Replacement Document
+                      <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                        <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
+                          <UploadCloud size={15} /> Attach Replacement Evidence
                           <input
                             type="file"
                             style={{ display: 'none' }}
@@ -1038,7 +1490,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                           />
                         </label>
                         {applicantResponseFiles.map((f, i) => (
-                          <span key={i} className="status-pill pill-blue" style={{ fontSize: '0.72rem' }}>
+                          <span key={i} className="status-pill pill-blue" style={{ fontSize: '0.75rem' }}>
                             {f.name}
                           </span>
                         ))}
@@ -1046,10 +1498,10 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
 
                       <button
                         type="submit"
-                        className="btn btn-primary btn-sm"
+                        className="btn btn-primary"
                         disabled={respondingToException}
                       >
-                        {respondingToException ? 'Submitting...' : 'Submit Clarification & Resume Underwriting'}
+                        {respondingToException ? 'Submitting Clarification...' : 'Submit Clarification & Resume Underwriting'}
                       </button>
                     </form>
                   </div>
@@ -1060,17 +1512,25 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
         )}
       </div>
 
-      {/* Customer Footer */}
+      {/* Modern Customer Footer */}
       <footer style={{
         textAlign: 'center',
-        padding: '2rem 1.5rem',
+        padding: '2.5rem 1.5rem',
         borderTop: '1px solid var(--border-subtle)',
         color: 'var(--text-muted)',
-        fontSize: '0.78rem'
+        fontSize: '0.82rem',
+        position: 'relative',
+        zIndex: 1,
+        background: '#ffffff'
       }}>
-        <div>Opticom Finance Limited &bull; RC: 347832 &bull; Licensed by the Central Bank of Nigeria (CBN)</div>
-        <div style={{ marginTop: '0.5rem' }}>
+        <div style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
+          Opticom Finance Limited &bull; RC: 347832 &bull; Licensed by the Central Bank of Nigeria (CBN)
+        </div>
+        <div style={{ marginTop: '0.5rem', color: 'var(--text-muted)' }}>
           Registered Office: No.2, Rev Yinka Akinsanya Street, Gbetu Ibeju Lekki, Lagos, Nigeria.
+        </div>
+        <div style={{ marginTop: '0.5rem', fontSize: '0.74rem', color: 'var(--brand-cerulean)', fontWeight: 600 }}>
+          Deterministic Underwriting Engine &bull; Document AI OCR &bull; GCP Cloud Run Enterprise Cluster
         </div>
       </footer>
     </div>

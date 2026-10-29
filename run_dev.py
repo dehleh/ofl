@@ -29,10 +29,10 @@ def main():
         cwd=frontend_dir
     )
 
-    print("\n✓ Platform running:")
-    print("  • Web Portal: http://localhost:5173")
-    print("  • API & Swagger Docs: http://127.0.0.1:8000/docs")
-    print("  • Health check: http://127.0.0.1:8000/health")
+    print("\n[OK] Platform running:")
+    print("  * Web Portal: http://localhost:5173")
+    print("  * API & Swagger Docs: http://127.0.0.1:8000/docs")
+    print("  * Health check: http://127.0.0.1:8000/health")
     print("\nPress Ctrl+C to terminate both servers.")
 
     try:

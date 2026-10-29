@@ -7,7 +7,7 @@ import {
 import {
   fetchCaseWorkspace, generateAICam, updateCam, submitApprovalDecision,
   generateOffer, takeOfferAction, updateCondition, confirmNavDisbursement,
-  syncLoanDisc, raiseException
+  syncLoanDisc, raiseException, triggerYouverifyKyc
 } from '../services/api';
 import { OpticomCamDocument } from '../components/OpticomCamDocument';
 import { BankStatementAnalyzerCard } from '../components/BankStatementAnalyzerCard';
@@ -45,6 +45,29 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
   const [raiseReason, setRaiseReason] = useState('');
   const [raiseComments, setRaiseComments] = useState('');
   const [raiseSla, setRaiseSla] = useState(24);
+
+  // Youverify Verification State
+  const [kycLoading, setKycLoading] = useState(false);
+
+  const handleRunYouverifyCheck = async () => {
+    if (!workspace) return;
+    setKycLoading(true);
+    try {
+      const res = await triggerYouverifyKyc(workspace.case.id, `${currentPersona} Officer`);
+      setMessageBanner({
+        type: res.status === 'PASSED' ? 'success' : 'error',
+        text: `Youverify verification completed: ${res.status}. Provider Ref: ${res.provider_ref}`
+      });
+      await loadWorkspace();
+    } catch (err: any) {
+      setMessageBanner({
+        type: 'error',
+        text: err?.detail || err?.message || 'Youverify identity verification failed.'
+      });
+    } finally {
+      setKycLoading(false);
+    }
+  };
 
   const handleRaiseExceptionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,7 +290,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                 </span>
               </div>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-                Borrower: <strong style={{ color: '#fff' }}>{customer.name}</strong> &bull; Amount: <strong style={{ color: '#fff' }}>₦{application.amount.toLocaleString()}</strong> ({application.tenor}M) &bull; Owner: {caseData.assigned_owner}
+                Borrower: <strong style={{ color: 'var(--text-highlight)' }}>{customer.name}</strong> &bull; Amount: <strong style={{ color: 'var(--text-highlight)' }}>₦{application.amount.toLocaleString()}</strong> ({application.tenor}M) &bull; Owner: {caseData.assigned_owner}
               </div>
             </div>
           </div>
@@ -345,7 +368,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
             </h3>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.85rem' }}>
-              <div><span style={{ color: 'var(--text-muted)' }}>Customer Name:</span> <strong style={{ color: '#fff' }}>{customer.name}</strong></div>
+              <div><span style={{ color: 'var(--text-muted)' }}>Customer Name:</span> <strong style={{ color: 'var(--text-highlight)' }}>{customer.name}</strong></div>
               <div><span style={{ color: 'var(--text-muted)' }}>Classification:</span> {customer.customer_type}</div>
               <div><span style={{ color: 'var(--text-muted)' }}>BVN:</span> <span style={{ fontFamily: 'var(--font-mono)' }}>{customer.bvn || 'Not Supplied'}</span></div>
               <div><span style={{ color: 'var(--text-muted)' }}>NIN:</span> <span style={{ fontFamily: 'var(--font-mono)' }}>{customer.nin || 'N/A'}</span></div>
@@ -354,31 +377,105 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
             </div>
 
             <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff' }}>Youverify / Identity Verification Records</h4>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-highlight)', margin: 0 }}>
+                    Youverify / Identity & CAC Verification
+                  </h4>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Automated NIBSS BVN, CAC Company Search, & AML Watchlist
+                  </div>
+                </div>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handleRunYouverifyCheck}
+                  disabled={kycLoading}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', padding: '0.35rem 0.8rem' }}
+                >
+                  <ShieldCheck size={14} className={kycLoading ? 'pulse' : ''} />
+                  <span>{kycLoading ? 'Verifying with Youverify...' : 'Run Youverify Check'}</span>
+                </button>
               </div>
 
               {kyc_checks.length === 0 ? (
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No KYC checks recorded yet.</div>
+                <div style={{
+                  padding: '1.25rem',
+                  background: 'var(--bg-dark)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px dashed var(--border-subtle)',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+                    No KYC verification recorded yet for this facility.
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                    Click <strong>Run Youverify Check</strong> to initiate automated verification against NIBSS & CAC registries.
+                  </div>
+                </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                   {kyc_checks.map((k: any) => (
                     <div key={k.id} style={{
-                      padding: '0.75rem',
+                      padding: '0.85rem',
                       background: 'var(--bg-surface)',
                       borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--border-subtle)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
+                      border: '1px solid var(--border-subtle)'
                     }}>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#fff' }}>Provider: {k.provider}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Ref: {k.provider_ref}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-highlight)' }}>
+                            Provider: {k.provider}
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--brand-cerulean)', fontFamily: 'var(--font-mono)' }}>
+                            Ref: {k.provider_ref}
+                          </div>
+                        </div>
+                        <span className={`status-pill ${k.status === 'PASSED' ? 'pill-green' : 'pill-red'}`}>
+                          {k.status}
+                        </span>
                       </div>
-                      <span className={`status-pill ${k.status === 'PASSED' ? 'pill-green' : 'pill-red'}`}>
-                        {k.status}
-                      </span>
+
+                      {k.result_summary && (
+                        <div style={{
+                          marginTop: '0.5rem',
+                          paddingTop: '0.5rem',
+                          borderTop: '1px solid var(--border-subtle)',
+                          fontSize: '0.75rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.25rem'
+                        }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                            {k.result_summary.cac_verified !== undefined && (
+                              <span className={`badge ${k.result_summary.cac_verified ? 'badge-teal' : 'badge-danger'}`} style={{ fontSize: '0.7rem' }}>
+                                CAC: {k.result_summary.cac_verified ? 'VERIFIED' : 'UNCONFIRMED'}
+                              </span>
+                            )}
+                            {k.result_summary.bvn_verified !== undefined && (
+                              <span className={`badge ${k.result_summary.bvn_verified ? 'badge-teal' : 'badge-danger'}`} style={{ fontSize: '0.7rem' }}>
+                                BVN: {k.result_summary.bvn_verified ? 'VERIFIED' : 'UNCONFIRMED'}
+                              </span>
+                            )}
+                            {k.result_summary.aml_pep_clean !== undefined && (
+                              <span className={`badge ${k.result_summary.aml_pep_clean ? 'badge-neutral' : 'badge-danger'}`} style={{ fontSize: '0.7rem' }}>
+                                AML: {k.result_summary.aml_pep_clean ? 'CLEAN' : 'FLAGGED'}
+                              </span>
+                            )}
+                          </div>
+
+                          {k.result_summary.cac_data?.company_name && (
+                            <div style={{ color: 'var(--text-secondary)' }}>
+                              <strong>CAC Registered Name:</strong> {k.result_summary.cac_data.company_name} ({k.result_summary.cac_data.status})
+                            </div>
+                          )}
+
+                          {k.result_summary.reason && (
+                            <div style={{ color: '#ef4444', fontWeight: 500 }}>
+                              <strong>Notice:</strong> {k.result_summary.reason}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -408,7 +505,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <FileText size={20} color="var(--brand-teal)" />
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#fff' }}>{d.original_filename}</div>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-highlight)' }}>{d.original_filename}</div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                           SHA-256: {d.checksum} &bull; {d.document_type}
                         </div>
@@ -466,7 +563,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
 
           {/* Policy Flags */}
           <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem', color: '#fff' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-highlight)' }}>
               Deterministic Policy Exceptions & Rule Violations (PRD FR-05)
             </h3>
 
@@ -497,7 +594,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
           {/* Version selector bar & AI Generation button */}
           <div className="glass-panel no-print" style={{ padding: '0.85rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#fff' }}>CAM Revisions:</span>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-highlight)' }}>CAM Revisions:</span>
               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                 {cam_versions.map((cv: any, index: number) => (
                   <button
@@ -596,7 +693,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
 
           {/* Historical Decisions & Chain */}
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: '#fff' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-highlight)' }}>
               Sequential Approval Audit Trail
             </h3>
 
@@ -612,7 +709,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                     border: `1px solid ${a.is_active ? 'var(--border-subtle)' : 'rgba(239, 68, 68, 0.4)'}`
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ fontSize: '0.85rem', color: '#fff' }}>{a.actor} ({a.authority_level})</strong>
+                      <strong style={{ fontSize: '0.85rem', color: 'var(--text-highlight)' }}>{a.actor} ({a.authority_level})</strong>
                       <span className={`status-pill ${a.decision === 'APPROVE' ? 'pill-green' : a.decision === 'REJECT' ? 'pill-red' : 'pill-amber'}`}>
                         {a.decision}
                       </span>
@@ -651,7 +748,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Approved Facility Amount:</span>
-                    <strong style={{ fontSize: '1.1rem', color: '#fff' }}>₦{activeOffer.approved_amount.toLocaleString()}</strong>
+                    <strong style={{ fontSize: '1.1rem', color: 'var(--text-highlight)' }}>₦{activeOffer.approved_amount.toLocaleString()}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Installment:</span>
@@ -731,7 +828,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                         style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--brand-teal)' }}
                       />
                       <div>
-                        <div style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600 }}>{c.description}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-highlight)', fontWeight: 600 }}>{c.description}</div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                           Mandatory: {c.mandatory ? 'Yes' : 'No'} &bull; Verified By: {c.verified_by || 'Pending'}
                         </div>
@@ -814,7 +911,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                   marginBottom: '1rem',
                   border: '1px solid var(--border-subtle)'
                 }}>
-                  <div style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600 }}>NAV Ref: {disbursements[0].nav_reference}</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-highlight)', fontWeight: 600 }}>NAV Ref: {disbursements[0].nav_reference}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Status: {disbursements[0].status}</div>
                 </div>
 
@@ -897,7 +994,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                     </div>
                   </div>
 
-                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', marginBottom: '0.35rem' }}>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-highlight)', marginBottom: '0.35rem' }}>
                     {ex.reason}
                   </div>
                   {ex.comments && (
@@ -907,14 +1004,14 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                   )}
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)', paddingTop: '0.65rem', marginTop: '0.5rem' }}>
-                    <div>Originator: <strong style={{ color: '#fff' }}>{ex.originator_role}</strong></div>
+                    <div>Originator: <strong style={{ color: 'var(--text-highlight)' }}>{ex.originator_role}</strong></div>
                     <div>Assigned Owner: <strong style={{ color: 'var(--brand-teal-light)' }}>{ex.owner}</strong></div>
-                    <div>Origin Stage: <strong style={{ color: '#fff' }}>{ex.origin_stage}</strong></div>
-                    <div>Return Stage: <strong style={{ color: '#fff' }}>{ex.return_stage}</strong></div>
+                    <div>Origin Stage: <strong style={{ color: 'var(--text-highlight)' }}>{ex.origin_stage}</strong></div>
+                    <div>Return Stage: <strong style={{ color: 'var(--text-highlight)' }}>{ex.return_stage}</strong></div>
                   </div>
 
                   {ex.resolution_notes && (
-                    <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(0, 196, 159, 0.08)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--brand-teal-light)' }}>
+                    <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(0, 150, 204, 0.08)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--brand-cerulean)' }}>
                       <strong>Resolution ({ex.resolved_by}):</strong> {ex.resolution_notes}
                     </div>
                   )}
@@ -929,7 +1026,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
       {showRaiseModal && (
         <div className="modal-overlay">
           <div className="modal-card" style={{ maxWidth: '580px' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginBottom: '0.5rem' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-highlight)', marginBottom: '0.5rem' }}>
               Record Credit Exception — {caseData.case_number}
             </h3>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>

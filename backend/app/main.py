@@ -374,6 +374,7 @@ app.include_router(jobs_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 
 @app.get("/health")
+@app.get("/api/v1/health")
 def health_check():
     return {
         "status": "healthy",

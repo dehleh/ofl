@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status, Header, Re
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 import hashlib
+import json
 
 from ...database import get_db, utc_now
 from ...config import settings
@@ -167,6 +168,48 @@ async def ingest_besto_application(
             detail=result
         )
     return result
+
+@router.post("/webhooks/youverify")
+async def youverify_webhook_handler(
+    request: Request,
+    x_youverify_signature: Optional[str] = Header(None, alias="x-youverify-signature"),
+    db: Session = Depends(get_db)
+):
+    """
+    Inbound webhook receiver for Youverify asynchronous background verifications & status updates.
+    Verifies HMAC-SHA256 signature using settings.YOUVERIFY_WEBHOOK_SECRET.
+    """
+    body_bytes = await request.body()
+    webhook_secret = getattr(settings, "YOUVERIFY_WEBHOOK_SECRET", "tKQglemsJkFw4Ci6HoVMQstDsm13ZwfuYXNG")
+    
+    if x_youverify_signature:
+        if not verify_hmac_signature(body_bytes, x_youverify_signature, secret=webhook_secret):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid Youverify webhook HMAC signature."
+            )
+            
+    payload = {}
+    try:
+        payload = json.loads(body_bytes.decode("utf-8")) if body_bytes else {}
+    except Exception:
+        payload = {}
+
+    event_type = payload.get("event") or payload.get("type", "UNKNOWN")
+    data = payload.get("data", {})
+    provider_ref = data.get("id") or data.get("verificationId") or f"YV-WEBHOOK-{utc_now().strftime('%Y%m%d%H%M%S')}"
+
+    # Log integration event
+    event_log = IntegrationEvent(
+        external_system="YOUVERIFY",
+        idempotency_key=f"YV-{provider_ref}-{event_type}",
+        payload=payload,
+        status="PROCESSED"
+    )
+    db.add(event_log)
+    db.commit()
+
+    return {"status": "received", "event": event_type, "provider_ref": provider_ref}
 
 @router.get("/besto/quarantine")
 def list_quarantined_payloads(db: Session = Depends(get_db)):

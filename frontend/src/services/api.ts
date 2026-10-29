@@ -69,15 +69,31 @@ export async function fetchCaseWorkspace(caseId: string) {
   return res.json();
 }
 
+async function safeJson(res: Response) {
+  const contentType = res.headers.get('content-type') || '';
+  let data: any;
+  if (contentType.includes('application/json')) {
+    try {
+      data = await res.json();
+    } catch {
+      const text = await res.text();
+      data = { message: text || `HTTP ${res.status} error` };
+    }
+  } else {
+    const text = await res.text();
+    data = { message: text || `HTTP ${res.status} ${res.statusText}` };
+  }
+  if (!res.ok) throw data;
+  return data;
+}
+
 export async function submitDirectApplication(data: any) {
   const res = await fetch(`${API_BASE}/intake/direct`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
-  const json = await res.json();
-  if (!res.ok) throw json;
-  return json;
+  return safeJson(res);
 }
 
 export async function submitBestoPayload(payload: any) {
@@ -86,9 +102,7 @@ export async function submitBestoPayload(payload: any) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-  const json = await res.json();
-  if (!res.ok) throw json;
-  return json;
+  return safeJson(res);
 }
 
 export async function fetchQuarantinedBesto() {
@@ -112,6 +126,23 @@ export async function updateCam(caseId: string, versionId: string, data: any) {
     body: JSON.stringify(data)
   });
   if (!res.ok) throw new Error('Failed to update CAM');
+  return res.json();
+}
+
+export async function triggerYouverifyKyc(caseId: string, actor: string = 'Credit Operations') {
+  const res = await fetch(`${API_BASE}/cases/${caseId}/kyc/verify?actor=${encodeURIComponent(actor)}`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' })
+  });
+  if (!res.ok) {
+    let errJson: any;
+    try {
+      errJson = await res.json();
+    } catch (e) {
+      errJson = { detail: `Server error (${res.status}): ${res.statusText}` };
+    }
+    throw errJson;
+  }
   return res.json();
 }
 

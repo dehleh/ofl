@@ -200,18 +200,18 @@ export const AdminConfigPortal: React.FC = () => {
       )}
 
       {/* Hero Header */}
-      <div className="card" style={{ marginBottom: '1.5rem', background: 'linear-gradient(135deg, rgba(7, 26, 36, 0.95), rgba(4, 40, 48, 0.95))' }}>
+      <div className="card" style={{ marginBottom: '1.5rem', background: 'linear-gradient(135deg, rgba(0, 150, 204, 0.08) 0%, rgba(0, 150, 204, 0.02) 100%)', border: '1px solid rgba(0, 150, 204, 0.22)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.4rem' }}>
               <span className="badge badge-teal" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                 <Sliders size={12} /> ENTERPRISE ADMINISTRATION
               </span>
-              <span className="badge" style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--text-secondary)' }}>
+              <span className="badge" style={{ background: 'rgba(0, 150, 204, 0.1)', color: 'var(--brand-cerulean)', border: '1px solid rgba(0, 150, 204, 0.2)' }}>
                 RC: 347832
               </span>
             </div>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-highlight)', margin: 0 }}>
               Opticom Platform Administration & Internal Configuration
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.35rem', maxWidth: '780px' }}>
@@ -281,7 +281,7 @@ export const AdminConfigPortal: React.FC = () => {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: '#ffffff' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
                 Opticom Staff Directory & Role-Based Access Control (RBAC)
               </h2>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0 0' }}>
@@ -427,7 +427,7 @@ export const AdminConfigPortal: React.FC = () => {
                 {users.map((u) => (
                   <tr key={u.id}>
                     <td>
-                      <div style={{ fontWeight: 600, color: '#ffffff' }}>{u.name}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-highlight)' }}>{u.name}</div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>ID: {u.id}</div>
                     </td>
                     <td>
@@ -492,7 +492,7 @@ export const AdminConfigPortal: React.FC = () => {
                 <Server size={22} />
               </div>
               <div>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: '#ffffff' }}>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
                   Custom Corporate Email Client (SMTP / API)
                 </h2>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
@@ -622,14 +622,14 @@ export const AdminConfigPortal: React.FC = () => {
           </div>
 
           {/* Real-time Diagnostic Test Email Card */}
-          <div className="card" style={{ background: 'rgba(7, 26, 36, 0.75)' }}>
+          <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
               <div style={{
                 width: '40px',
                 height: '40px',
                 borderRadius: '8px',
-                background: 'rgba(59, 130, 246, 0.12)',
-                color: '#3b82f6',
+                background: 'rgba(0, 150, 204, 0.12)',
+                color: 'var(--brand-cerulean)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -637,7 +637,7 @@ export const AdminConfigPortal: React.FC = () => {
                 <Zap size={22} />
               </div>
               <div>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: '#ffffff' }}>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
                   Live Diagnostic Email Verification
                 </h2>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
@@ -694,7 +694,7 @@ export const AdminConfigPortal: React.FC = () => {
                 </p>
 
                 {testResult.diagnostics && (
-                  <div style={{ background: '#030d12', padding: '0.75rem', borderRadius: '6px', fontSize: '0.76rem', fontFamily: 'monospace' }}>
+                  <div style={{ background: 'var(--bg-dark)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', padding: '0.75rem', borderRadius: '6px', fontSize: '0.76rem', fontFamily: 'monospace' }}>
                     <div><strong>Server:</strong> {testResult.diagnostics.host}:{testResult.diagnostics.port}</div>
                     <div><strong>Transport:</strong> {testResult.diagnostics.security}</div>
                     <div><strong>Provider:</strong> {testResult.provider}</div>
@@ -706,7 +706,7 @@ export const AdminConfigPortal: React.FC = () => {
 
             {/* SMS Gateway Mini Card */}
             <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-subtle)' }}>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-highlight)', marginBottom: '0.75rem' }}>
                 Transactional SMS Gateway (Termii Nigeria / Twilio)
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
@@ -765,7 +765,7 @@ export const AdminConfigPortal: React.FC = () => {
               <Globe size={22} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: '#ffffff' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
                 Enterprise Single Sign-On (SSID / Tenant Federation)
               </h2>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
@@ -854,7 +854,7 @@ export const AdminConfigPortal: React.FC = () => {
                 checked={ssoForm.auto_provision_users ?? true}
                 onChange={(e) => setSsoForm({ ...ssoForm, auto_provision_users: e.target.checked })}
               />
-              <label htmlFor="autoProvision" style={{ fontSize: '0.82rem', color: '#ffffff', cursor: 'pointer' }}>
+              <label htmlFor="autoProvision" style={{ fontSize: '0.82rem', color: 'var(--text-primary)', cursor: 'pointer' }}>
                 Auto-provision corporate accounts on first SSO login
               </label>
             </div>
@@ -889,7 +889,7 @@ export const AdminConfigPortal: React.FC = () => {
               <Lock size={22} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: '#ffffff' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
                 Multi-Factor Authentication (MFA) & Session Policy
               </h2>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
@@ -965,7 +965,7 @@ export const AdminConfigPortal: React.FC = () => {
               <Sliders size={22} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: '#ffffff' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
                 Credit Origination Thresholds & Approval Limits
               </h2>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>

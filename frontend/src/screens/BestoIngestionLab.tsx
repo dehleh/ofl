@@ -130,7 +130,7 @@ export const BestoIngestionLab: React.FC<BestoIngestionLabProps> = ({ onCaseCrea
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>BESTO Ingestion Simulator & Quarantine Lab</h2>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-highlight)' }}>BESTO Ingestion Simulator & Quarantine Lab</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
             Simulates inbound webhooks/batches from BESTO (₦300k–₦2m). Tests idempotency, deduplication, and quarantine controls (PRD Section 17).
           </p>
@@ -215,7 +215,7 @@ export const BestoIngestionLab: React.FC<BestoIngestionLabProps> = ({ onCaseCrea
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {/* Response Box */}
           <div className="glass-panel" style={{ padding: '1.5rem', minHeight: '220px' }}>
-            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.75rem', color: '#fff' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-highlight)' }}>
               API Transmission Status & Audit Response
             </h3>
 
@@ -226,8 +226,8 @@ export const BestoIngestionLab: React.FC<BestoIngestionLabProps> = ({ onCaseCrea
                   borderRadius: 'var(--radius-md)',
                   marginBottom: '1rem',
                   background: responseLog.success ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
-                  border: `1px solid ${responseLog.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                  color: responseLog.success ? '#34d399' : '#f87171',
+                  border: `1px solid ${responseLog.success ? 'rgba(5, 150, 105, 0.3)' : 'rgba(220, 38, 38, 0.3)'}`,
+                  color: responseLog.success ? 'var(--color-success-light)' : 'var(--color-danger-light)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
@@ -239,12 +239,13 @@ export const BestoIngestionLab: React.FC<BestoIngestionLabProps> = ({ onCaseCrea
                 </div>
 
                 <pre style={{
-                  background: '#091322',
+                  background: 'var(--bg-dark)',
+                  border: '1px solid var(--border-subtle)',
                   padding: '0.85rem',
                   borderRadius: 'var(--radius-sm)',
                   fontFamily: 'var(--font-mono)',
                   fontSize: '0.78rem',
-                  color: 'var(--text-secondary)',
+                  color: 'var(--text-primary)',
                   overflowX: 'auto',
                   maxHeight: '180px'
                 }}>
@@ -262,7 +263,7 @@ export const BestoIngestionLab: React.FC<BestoIngestionLabProps> = ({ onCaseCrea
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
               <ShieldAlert size={18} color="var(--color-danger)" />
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-highlight)' }}>
                 Quarantined Payloads Queue ({quarantinedList.length})
               </h3>
             </div>

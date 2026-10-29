@@ -327,12 +327,14 @@ def trigger_kyc_verification(
     if not credit_case:
         raise HTTPException(status_code=404, detail="Case not found.")
         
+    customer = credit_case.application.customer if credit_case.application else None
     passed, result = YouverifyAdapter.verify_identity(
         db=db,
         credit_case=credit_case,
-        bvn=credit_case.application.customer.bvn,
-        nin=credit_case.application.customer.nin,
-        rc_number=credit_case.application.customer.rc_number,
+        bvn=customer.bvn if customer else None,
+        nin=customer.nin if customer else None,
+        rc_number=customer.rc_number if customer else None,
+        borrower_name=customer.name if customer else None,
         actor=actor
     )
     return result

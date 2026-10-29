@@ -79,7 +79,7 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
       <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>Direct OFL Loan Origination Portal</h2>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-highlight)' }}>Direct OFL Loan Origination Portal</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
           Originates high-value credit facilities above ₦2,000,000 for verified Individuals, SMEs, and Corporate clients (PRD FR-01).
         </p>
@@ -329,7 +329,7 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Estimated Installment:</span>
-                  <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#fff' }}>
+                  <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-highlight)' }}>
                     ₦{calculations.pmt.toLocaleString()} / mo
                   </div>
                 </div>
@@ -355,7 +355,7 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Collateral Coverage:</span>
-                  <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#fff' }}>
+                  <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-highlight)' }}>
                     {calculations.collateralRatio}%
                   </div>
                 </div>

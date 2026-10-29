@@ -110,7 +110,7 @@ export const BankStatementAnalyzerCard: React.FC<BankStatementAnalyzerProps> = (
             <FileSpreadsheet size={20} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#fff' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-highlight)' }}>
               Bank Statement Intelligent Ingestion & Cashflow Inference
             </h3>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
@@ -144,7 +144,7 @@ export const BankStatementAnalyzerCard: React.FC<BankStatementAnalyzerProps> = (
 
       {/* Success / Error Banners */}
       {actionSuccess && (
-        <div className="flag-banner flag-MEDIUM" style={{ background: 'rgba(16, 185, 129, 0.15)', borderColor: '#10b981', color: '#6ee7b7', marginBottom: '1rem' }}>
+        <div className="flag-banner flag-SUCCESS" style={{ marginBottom: '1rem' }}>
           <CheckCircle2 size={18} />
           <span>{actionSuccess}</span>
         </div>
@@ -159,14 +159,14 @@ export const BankStatementAnalyzerCard: React.FC<BankStatementAnalyzerProps> = (
       {/* Upload Drag & Drop Area if no statements or wanting new upload */}
       {statementDocs.length === 0 ? (
         <div style={{
-          border: '2px dashed var(--border-subtle)',
+          border: '2px dashed var(--border-medium)',
           borderRadius: 'var(--radius-md)',
           padding: '2.5rem',
           textAlign: 'center',
-          background: 'rgba(255, 255, 255, 0.02)'
+          background: 'var(--bg-dark)'
         }}>
           <FileSpreadsheet size={36} color="var(--brand-teal)" style={{ marginBottom: '0.75rem' }} />
-          <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#fff', marginBottom: '0.35rem' }}>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-highlight)', marginBottom: '0.35rem' }}>
             No Bank Statement Ingested Yet
           </h4>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', maxWidth: '480px', margin: '0 auto 1.25rem auto' }}>
@@ -230,7 +230,7 @@ export const BankStatementAnalyzerCard: React.FC<BankStatementAnalyzerProps> = (
 
                 <div style={{ background: 'var(--bg-surface)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
                   <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>Avg Monthly Turnover</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', fontFamily: 'var(--font-mono)' }}>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-highlight)', fontFamily: 'var(--font-mono)' }}>
                     ₦{(analysis.average_monthly_inflow || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}
                   </div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--color-success)', display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.2rem' }}>
@@ -262,7 +262,7 @@ export const BankStatementAnalyzerCard: React.FC<BankStatementAnalyzerProps> = (
               {/* Monthly Breakdown Table */}
               <div style={{ marginBottom: '1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-highlight)' }}>
                     Monthly Credit & Debit Inflow Trend
                   </h4>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -307,7 +307,7 @@ export const BankStatementAnalyzerCard: React.FC<BankStatementAnalyzerProps> = (
               {/* Risk Signals & Credit Inferences */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div>
-                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', marginBottom: '0.5rem' }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-highlight)', marginBottom: '0.5rem' }}>
                     Behavioral Inflow Signals & Risk Checks
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
@@ -317,8 +317,8 @@ export const BankStatementAnalyzerCard: React.FC<BankStatementAnalyzerProps> = (
                         style={{
                           padding: '0.65rem 0.85rem',
                           borderRadius: 'var(--radius-sm)',
-                          background: s.severity === 'SUCCESS' ? 'rgba(16, 185, 129, 0.08)' : s.severity === 'WARNING' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(59, 130, 246, 0.08)',
-                          border: `1px solid ${s.severity === 'SUCCESS' ? 'rgba(16, 185, 129, 0.25)' : s.severity === 'WARNING' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(59, 130, 246, 0.25)'}`,
+                          background: s.severity === 'SUCCESS' ? 'rgba(5, 150, 105, 0.08)' : s.severity === 'WARNING' ? 'rgba(217, 119, 6, 0.08)' : 'rgba(0, 150, 204, 0.08)',
+                          border: `1px solid ${s.severity === 'SUCCESS' ? 'rgba(5, 150, 105, 0.25)' : s.severity === 'WARNING' ? 'rgba(217, 119, 6, 0.25)' : 'rgba(0, 150, 204, 0.25)'}`,
                           fontSize: '0.78rem'
                         }}
                       >
@@ -334,7 +334,7 @@ export const BankStatementAnalyzerCard: React.FC<BankStatementAnalyzerProps> = (
                 </div>
 
                 <div>
-                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', marginBottom: '0.5rem' }}>
+                  <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-highlight)', marginBottom: '0.5rem' }}>
                     Underwriting Capacity Inferences
                   </h4>
                   <div style={{
@@ -347,16 +347,16 @@ export const BankStatementAnalyzerCard: React.FC<BankStatementAnalyzerProps> = (
                     color: 'var(--text-secondary)'
                   }}>
                     <p style={{ marginBottom: '0.5rem' }}>
-                      <strong style={{ color: '#fff' }}>Repayment Capacity:</strong> {analysis.underwriting_inferences?.capacity_summary}
+                      <strong style={{ color: 'var(--text-highlight)' }}>Repayment Capacity:</strong> {analysis.underwriting_inferences?.capacity_summary}
                     </p>
                     <p style={{ marginBottom: '0.5rem' }}>
-                      <strong style={{ color: '#fff' }}>Debt Cushion:</strong> {analysis.underwriting_inferences?.repayment_cushion}
+                      <strong style={{ color: 'var(--text-highlight)' }}>Debt Cushion:</strong> {analysis.underwriting_inferences?.repayment_cushion}
                     </p>
                     <p style={{ marginBottom: '0.5rem' }}>
-                      <strong style={{ color: '#fff' }}>Concentration Assessment:</strong> {analysis.underwriting_inferences?.concentration_inference}
+                      <strong style={{ color: 'var(--text-highlight)' }}>Concentration Assessment:</strong> {analysis.underwriting_inferences?.concentration_inference}
                     </p>
                     <p style={{ margin: 0 }}>
-                      <strong style={{ color: '#fff' }}>Operating Margin:</strong> {analysis.underwriting_inferences?.operational_profitability_inference}
+                      <strong style={{ color: 'var(--text-highlight)' }}>Operating Margin:</strong> {analysis.underwriting_inferences?.operational_profitability_inference}
                     </p>
                   </div>
                 </div>

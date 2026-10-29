@@ -311,7 +311,7 @@ export const ExceptionManager: React.FC<ExceptionManagerProps> = ({ onOpenCase }
       {/* Top Header & Metrics */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff' }}>Credit Exception Handling Architecture</h2>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-highlight)' }}>Credit Exception Handling Architecture</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
             Multi-branch exception routing, automated SLA aging, applicant clarification loops, and material change approval invalidation (PRD Section 6.1 & Flowchart).
           </p>
@@ -338,7 +338,7 @@ export const ExceptionManager: React.FC<ExceptionManagerProps> = ({ onOpenCase }
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         <div className="glass-panel" style={{ padding: '1rem 1.25rem' }}>
           <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Total Open Queue</div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', fontFamily: 'var(--font-mono)' }}>{stats.total}</div>
+          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-highlight)', fontFamily: 'var(--font-mono)' }}>{stats.total}</div>
         </div>
         <div className="glass-panel" style={{ padding: '1rem 1.25rem' }}>
           <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>SLA Breaches</div>
@@ -419,7 +419,7 @@ export const ExceptionManager: React.FC<ExceptionManagerProps> = ({ onOpenCase }
                     <span style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--brand-teal-light)' }}>
                       {ex.case_number}
                     </span>
-                    <div style={{ fontSize: '0.75rem', color: '#fff', marginTop: '0.15rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-highlight)', marginTop: '0.15rem' }}>
                       {ex.borrower_name}
                     </div>
                   </td>
@@ -432,7 +432,7 @@ export const ExceptionManager: React.FC<ExceptionManagerProps> = ({ onOpenCase }
                     </div>
                   </td>
                   <td>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#fff' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-highlight)' }}>
                       {ex.owner}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
@@ -453,7 +453,7 @@ export const ExceptionManager: React.FC<ExceptionManagerProps> = ({ onOpenCase }
                     </div>
                   </td>
                   <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', maxWidth: '300px' }}>
-                    <div style={{ fontWeight: 600, color: '#fff' }}>{ex.reason}</div>
+                    <div style={{ fontWeight: 600, color: 'var(--text-highlight)' }}>{ex.reason}</div>
                     {ex.comments && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>{ex.comments}</div>}
                     {ex.applicant_action_required && (
                       <span className="status-pill pill-purple" style={{ fontSize: '0.65rem', marginTop: '0.3rem', display: 'inline-block' }}>
@@ -507,7 +507,7 @@ export const ExceptionManager: React.FC<ExceptionManagerProps> = ({ onOpenCase }
                 <span className="status-pill pill-cyan" style={{ fontSize: '0.7rem' }}>
                   {selectedException.category.replace(/_/g, ' ')}
                 </span>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginTop: '0.25rem' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-highlight)', marginTop: '0.25rem' }}>
                   Exception Action: {selectedException.case_number}
                 </h3>
               </div>
@@ -602,7 +602,7 @@ export const ExceptionManager: React.FC<ExceptionManagerProps> = ({ onOpenCase }
                       onChange={(e) => setIsMaterialChange(e.target.checked)}
                       style={{ width: '18px', height: '18px', accentColor: 'var(--brand-teal)' }}
                     />
-                    <label htmlFor="materialCheck" style={{ fontWeight: 700, color: '#fff', fontSize: '0.88rem', cursor: 'pointer' }}>
+                    <label htmlFor="materialCheck" style={{ fontWeight: 700, color: 'var(--text-highlight)', fontSize: '0.88rem', cursor: 'pointer' }}>
                       Material Credit Change?
                     </label>
                   </div>
@@ -849,7 +849,7 @@ export const ExceptionManager: React.FC<ExceptionManagerProps> = ({ onOpenCase }
                             checked={isMaterialChange}
                             onChange={(e) => setIsMaterialChange(e.target.checked)}
                           />
-                          <label htmlFor="matCheck2" style={{ fontWeight: 700, color: '#fff', fontSize: '0.85rem', cursor: 'pointer' }}>
+                          <label htmlFor="matCheck2" style={{ fontWeight: 700, color: 'var(--text-highlight)', fontSize: '0.85rem', cursor: 'pointer' }}>
                             Material Credit Change?
                           </label>
                         </div>
@@ -910,7 +910,7 @@ export const ExceptionManager: React.FC<ExceptionManagerProps> = ({ onOpenCase }
       {showRaiseModal && (
         <div className="modal-overlay">
           <div className="modal-card" style={{ maxWidth: '580px' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginBottom: '0.5rem' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-highlight)', marginBottom: '0.5rem' }}>
               Record Credit Exception
             </h3>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>

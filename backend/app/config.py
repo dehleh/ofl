@@ -65,7 +65,10 @@ class Settings(BaseSettings):
     GCP_CLOUD_LOGGING_ENABLED: bool = os.getenv("GCP_CLOUD_LOGGING_ENABLED", "false").lower() == "true"
     
     # Third party mock/adapter mode
-    MOCK_YOUVERIFY_SANDBOX: bool = True
+    MOCK_YOUVERIFY_SANDBOX: bool = os.getenv("MOCK_YOUVERIFY_SANDBOX", "false").lower() == "true"
+    YOUVERIFY_API_KEY: str = os.getenv("YOUVERIFY_API_KEY", "q6VMnCWC.HFrVDW4ycU1bcnXTe9FJQ9s0MCF60kbxrnme")
+    YOUVERIFY_WEBHOOK_SECRET: str = os.getenv("YOUVERIFY_WEBHOOK_SECRET", "tKQglemsJkFw4Ci6HoVMQstDsm13ZwfuYXNG")
+    YOUVERIFY_BASE_URL: str = os.getenv("YOUVERIFY_BASE_URL", "https://api.youverify.co")
     MOCK_NAV_INTEGRATION: bool = True
     MOCK_LOANDISC_INTEGRATION: bool = True
 
@@ -73,7 +76,7 @@ class Settings(BaseSettings):
     WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "OPTICOM_DEFAULT_WEBHOOK_SECRET_2026")
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "OFL-ENTERPRISE-CREDIT-SECRET-KEY-2026-X99")
 
-    model_config = SettingsConfigDict(case_sensitive=True)
+    model_config = SettingsConfigDict(case_sensitive=True, env_file=".env", extra="ignore")
 
 settings = Settings()
 

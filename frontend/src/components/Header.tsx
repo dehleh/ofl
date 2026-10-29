@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, UserCheck, Activity } from 'lucide-react';
+import { UserCheck, Activity, ArrowLeft, Radio } from 'lucide-react';
 
 interface HeaderProps {
   currentPersona: string;
@@ -12,21 +12,40 @@ export const Header: React.FC<HeaderProps> = ({ currentPersona, onPersonaChange,
   return (
     <header className="app-header">
       <div className="brand-badge">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <img
-            src="/opticom_logo.jpg"
-            alt="Opticom Finance"
-            style={{
-              height: '38px',
-              borderRadius: '6px',
-              border: '1px solid var(--border-subtle)',
-              background: '#ffffff',
-              padding: '2px 4px'
-            }}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '3px',
+            background: 'linear-gradient(135deg, rgba(0, 150, 204, 0.15), rgba(0, 150, 204, 0.05))',
+            borderRadius: '10px',
+            border: '1px solid rgba(0, 150, 204, 0.25)',
+            boxShadow: '0 2px 8px rgba(0, 150, 204, 0.12)'
+          }}>
+            <img
+              src="/opticom_logo.jpg"
+              alt="Opticom Finance"
+              style={{
+                height: '38px',
+                borderRadius: '8px',
+                background: '#ffffff',
+                padding: '2px 6px',
+                display: 'block'
+              }}
+            />
+          </div>
           <div>
-            <div className="brand-logo-text">Opticom Finance</div>
-            <div className="brand-tagline">INTERNAL RISK MANAGEMENT & UNDERWRITING GATE &bull; RC: 347832</div>
+            <div className="brand-logo-text">
+              <span>Opticom Finance</span>
+              <span className="status-pill pill-cyan" style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem' }}>
+                ENTERPRISE COCKPIT
+              </span>
+            </div>
+            <div className="brand-tagline">
+              AUTONOMOUS RISK MANAGEMENT &bull; UNDERWRITING ENGINE &bull; RC: 347832
+            </div>
           </div>
         </div>
       </div>
@@ -36,19 +55,37 @@ export const Header: React.FC<HeaderProps> = ({ currentPersona, onPersonaChange,
           <button 
             className="btn btn-secondary btn-sm"
             onClick={onExitToPublicClient}
-            style={{ fontSize: '0.78rem' }}
+            style={{ 
+              fontSize: '0.8rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              borderColor: 'var(--border-medium)'
+            }}
           >
-            ← Public Customer App
+            <ArrowLeft size={14} /> Switch to Customer Portal
           </button>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: backendOnline ? 'var(--color-success)' : 'var(--color-danger)' }}>
-          <Activity size={14} className={backendOnline ? 'pulse' : ''} />
-          <span>{backendOnline ? 'GCP API Connected' : 'API Connecting...'}</span>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          padding: '0.35rem 0.75rem',
+          borderRadius: 'var(--radius-full)',
+          background: backendOnline ? 'rgba(5, 150, 105, 0.08)' : 'rgba(220, 38, 38, 0.08)',
+          border: `1px solid ${backendOnline ? 'rgba(5, 150, 105, 0.25)' : 'rgba(220, 38, 38, 0.25)'}`,
+          fontSize: '0.75rem',
+          fontFamily: 'var(--font-mono)',
+          fontWeight: 600,
+          color: backendOnline ? '#047857' : '#b91c1c'
+        }}>
+          <Radio size={13} style={{ animation: backendOnline ? 'pulseGlow 2s infinite' : 'none' }} />
+          <span>{backendOnline ? 'LIVE API ONLINE' : 'DISCONNECTED'}</span>
         </div>
 
         <div className="persona-switcher">
-          <UserCheck size={16} color="var(--brand-teal-light)" />
+          <UserCheck size={16} color="var(--brand-cyan)" />
           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Persona:</span>
           <select 
             className="persona-select"

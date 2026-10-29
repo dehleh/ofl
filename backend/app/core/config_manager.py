@@ -95,7 +95,7 @@ DEFAULT_CONFIGS: Dict[str, Dict[str, Any]] = {
         "is_secret": True,
         "value": {
             "besto_webhook_secret": getattr(settings, "WEBHOOK_SECRET", "OPTICOM_DEFAULT_WEBHOOK_SECRET_2026"),
-            "youverify_webhook_secret": "OPTICOM_YV_WEBHOOK_SECRET_2026",
+            "youverify_webhook_secret": getattr(settings, "YOUVERIFY_WEBHOOK_SECRET", "tKQglemsJkFw4Ci6HoVMQstDsm13ZwfuYXNG"),
             "require_hmac_in_dev": False
         }
     }
