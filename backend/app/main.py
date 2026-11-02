@@ -2,7 +2,8 @@
 OFL Credit Automation & AI-Assisted Underwriting Platform
 FastAPI Application Entrypoint
 """
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
@@ -383,12 +384,42 @@ def health_check():
         "environment": settings.ENVIRONMENT
     }
 
-@app.get("/")
-def root():
-    return {
-        "platform": settings.APP_NAME,
-        "client": "Opticom Finance House",
-        "vendor": "CyberCapSec Limited",
-        "documentation": "/docs",
-        "api_v1": "/api/v1"
-    }
+# ==============================================================================
+# Production Static SPA Mounting (Google Cloud Run Multi-stage Container)
+# ==============================================================================
+frontend_dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend_dist"))
+if not os.path.exists(frontend_dist_dir):
+    frontend_dist_dir = os.path.abspath("frontend_dist")
+
+if os.path.exists(frontend_dist_dir):
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+
+    assets_dir = os.path.join(frontend_dist_dir, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="static_assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa_app(full_path: str):
+        # Allow API and Swagger routes to pass through
+        if full_path.startswith(("api/", "docs", "redoc", "openapi.json", "health")):
+            raise HTTPException(status_code=404, detail="API route not found")
+        
+        target_file = os.path.join(frontend_dist_dir, full_path)
+        if os.path.isfile(target_file):
+            return FileResponse(target_file)
+        
+        index_file = os.path.join(frontend_dist_dir, "index.html")
+        if os.path.isfile(index_file):
+            return FileResponse(index_file)
+        return {"platform": settings.APP_NAME, "status": "frontend_dist missing index.html"}
+else:
+    @app.get("/")
+    def root():
+        return {
+            "platform": settings.APP_NAME,
+            "client": "Opticom Finance House",
+            "vendor": "CyberCapSec Limited",
+            "documentation": "/docs",
+            "api_v1": "/api/v1"
+        }

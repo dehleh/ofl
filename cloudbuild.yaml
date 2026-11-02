@@ -20,7 +20,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:$COMMIT_SHA'
+      - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:$BUILD_ID'
       - '-t'
       - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:latest'
       - '-f'
@@ -32,7 +32,7 @@ steps:
     id: 'push-image'
     args:
       - 'push'
-      - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:$COMMIT_SHA'
+      - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:$BUILD_ID'
 
   # Step 4: Deploy service to Google Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -43,7 +43,7 @@ steps:
       - 'deploy'
       - '$_SERVICE_NAME'
       - '--image'
-      - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:$COMMIT_SHA'
+      - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:$BUILD_ID'
       - '--region'
       - '$_REGION'
       - '--platform'
@@ -52,7 +52,7 @@ steps:
       - '--service-account'
       - 'ofl-app-runner@$PROJECT_ID.iam.gserviceaccount.com'
       - '--set-env-vars'
-      - 'ENVIRONMENT=production,GCP_PROJECT_ID=$PROJECT_ID,GCP_LOCATION=$_REGION,VERTEX_AI_MODEL=gemini-1.5-pro,GCS_BUCKET_NAME=$_GCS_BUCKET,GCP_SECRET_MANAGER_ENABLED=true,GCP_CLOUD_LOGGING_ENABLED=true,GCS_LOCAL_EMULATOR=false'
+      - 'ENVIRONMENT=production,GCP_PROJECT_ID=$PROJECT_ID,GCP_LOCATION=$_REGION,VERTEX_AI_MODEL=gemini-1.5-pro,GCS_BUCKET_NAME=$_GCS_BUCKET,GCP_SECRET_MANAGER_ENABLED=true,GCP_CLOUD_LOGGING_ENABLED=true,GCS_LOCAL_EMULATOR=false,YOUVERIFY_API_KEY=q6VMnCWC.HFrVDW4ycU1bcnXTe9FJQ9s0MCF60kbxrnme,YOUVERIFY_WEBHOOK_SECRET=tKQglemsJkFw4Ci6HoVMQstDsm13ZwfuYXNG,MOCK_YOUVERIFY_SANDBOX=false'
       - '--min-instances'
       - '1'
       - '--max-instances'
@@ -67,10 +67,10 @@ substitutions:
   _AR_REPO: 'ofl-containers'
   _SERVICE_NAME: 'ofl-credit-platform'
   _REGION: 'europe-west1'
-  _GCS_BUCKET: 'ofl-credit-documents'
+  _GCS_BUCKET: 'opticom-ofl-platform-docs'
 
 images:
-  - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:$COMMIT_SHA'
+  - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:$BUILD_ID'
   - '$_AR_LOCATION-docker.pkg.dev/$PROJECT_ID/$_AR_REPO/ofl-platform:latest'
 
 options:

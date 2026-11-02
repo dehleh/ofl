@@ -6,16 +6,19 @@
 
 set -euo pipefail
 
-# 1. Configuration Defaults (Override via environment variables)
-export GCP_PROJECT_ID="${GCP_PROJECT_ID:-opticom-finance-platform}"
+# 1. Configuration Defaults (Configured for Opticom OFL Platform)
+export GCP_PROJECT_ID="${GCP_PROJECT_ID:-opticom-ofl-platform}"
+export GCP_PROJECT_NUMBER="${GCP_PROJECT_NUMBER:-394911050867}"
 export GCP_REGION="${GCP_REGION:-europe-west1}"
 export AR_REPO="${AR_REPO:-ofl-containers}"
-export GCS_BUCKET="${GCS_BUCKET:-ofl-credit-documents}"
+export GCS_BUCKET="${GCS_BUCKET:-opticom-ofl-platform-docs}"
 export SERVICE_ACCOUNT_NAME="${SERVICE_ACCOUNT_NAME:-ofl-app-runner}"
 
 echo "======================================================================"
 echo "Initializing GCP Provisioning for Opticom Finance House"
+echo "Project Name:      Opticom OFL Platform"
 echo "Project ID:        $GCP_PROJECT_ID"
+echo "Project Number:    $GCP_PROJECT_NUMBER"
 echo "Region:            $GCP_REGION"
 echo "Artifact Registry: $AR_REPO"
 echo "Storage Bucket:    $GCS_BUCKET"
@@ -96,24 +99,60 @@ for ROLE in "${ROLES[@]}"; do
     echo "Assigned $ROLE to $SA_EMAIL"
 done
 
-# 7. Provision Secret Manager Secrets (Initial Placeholders)
+# Grant Cloud Build permission to deploy to Cloud Run, access source bucket, and push containers
+echo "Configuring Cloud Build deployment permissions..."
+CB_ACCOUNTS=(
+    "$GCP_PROJECT_NUMBER@cloudbuild.gserviceaccount.com"
+    "$GCP_PROJECT_NUMBER-compute@developer.gserviceaccount.com"
+)
+CB_ROLES=(
+    "roles/run.admin"
+    "roles/storage.admin"
+    "roles/artifactregistry.writer"
+    "roles/cloudbuild.builds.builder"
+)
+for CB_ACCT in "${CB_ACCOUNTS[@]}"; do
+    for CB_ROLE in "${CB_ROLES[@]}"; do
+        gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+            --member="serviceAccount:$CB_ACCT" \
+            --role="$CB_ROLE" \
+            --condition=None >/dev/null 2>&1 || true
+    done
+    
+    gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" \
+        --member="serviceAccount:$CB_ACCT" \
+        --role="roles/iam.serviceAccountUser" \
+        --condition=None >/dev/null 2>&1 || true
+done
+echo "Cloud Build IAM bindings configured."
+
+# 7. Provision Secret Manager Secrets & Seed Values
 echo "[Step 5/6] Initializing Google Cloud Secret Manager Secrets..."
-SECRETS=(
-    "DATABASE_URL"
-    "GEMINI_API_KEY"
-    "YOUVERIFY_API_KEY"
-    "NAV_INTEGRATION_KEY"
-    "LOANDISC_API_TOKEN"
+declare -A SECRET_VALUES=(
+    ["YOUVERIFY_API_KEY"]="q6VMnCWC.HFrVDW4ycU1bcnXTe9FJQ9s0MCF60kbxrnme"
+    ["YOUVERIFY_WEBHOOK_SECRET"]="tKQglemsJkFw4Ci6HoVMQstDsm13ZwfuYXNG"
+    ["JWT_SECRET_KEY"]="OFL-ENTERPRISE-CREDIT-SECRET-KEY-2026-X99"
+    ["WEBHOOK_SECRET"]="tKQglemsJkFw4Ci6HoVMQstDsm13ZwfuYXNG"
+    ["DATABASE_URL"]="sqlite:///./ofl.db"
+    ["GEMINI_API_KEY"]=""
+    ["NAV_INTEGRATION_KEY"]=""
+    ["LOANDISC_API_TOKEN"]=""
 )
 
-for SECRET in "${SECRETS[@]}"; do
+for SECRET in "${!SECRET_VALUES[@]}"; do
     if ! gcloud secrets describe "$SECRET" >/dev/null 2>&1; then
         gcloud secrets create "$SECRET" \
             --replication-policy="automatic" \
             --labels="app=ofl-credit-platform"
-        echo "Created secret placeholder: $SECRET (Add versions with gcloud secrets versions add $SECRET --data-file=...)"
+        echo "Created secret: $SECRET"
     else
         echo "Secret already exists: $SECRET"
+    fi
+    
+    VAL="${SECRET_VALUES[$SECRET]}"
+    if [ -n "$VAL" ]; then
+        echo -n "$VAL" | gcloud secrets versions add "$SECRET" --data-file=- >/dev/null 2>&1 || true
+        echo "Populated active secret version for: $SECRET"
     fi
 done
 

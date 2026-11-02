@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # MD approval required for > 15,000,000
     
     # Google Cloud Platform (GCP) Configuration
-    GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "opticom-finance-platform")
+    GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "opticom-ofl-platform")
     GCP_LOCATION: str = os.getenv("GCP_LOCATION", "europe-west1")
     GCP_REGION: str = os.getenv("GCP_REGION", "europe-west1")
     
@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     AZURE_OPENAI_DEPLOYMENT_NAME: str = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gemini-1.5-pro")
     
     # Google Cloud Storage (GCS) Document Repository
-    GCS_BUCKET_NAME: str = os.getenv("GCS_BUCKET_NAME", "ofl-credit-documents")
+    GCS_BUCKET_NAME: str = os.getenv("GCS_BUCKET_NAME", "opticom-ofl-platform-docs")
     GCS_LOCAL_EMULATOR: bool = os.getenv("GCS_LOCAL_EMULATOR", "true").lower() == "true"
     
     # Google Cloud Secret Manager
