@@ -9,6 +9,7 @@ ofl.db
 # Node / Frontend
 node_modules/
 frontend/dist/
+frontend_dist/
 frontend/node_modules/
 .DS_Store
 

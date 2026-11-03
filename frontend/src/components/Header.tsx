@@ -1,14 +1,23 @@
 import React from 'react';
-import { UserCheck, Activity, ArrowLeft, Radio } from 'lucide-react';
+import { UserCheck, Radio, LogOut, ExternalLink, ShieldCheck } from 'lucide-react';
 
 interface HeaderProps {
   currentPersona: string;
   onPersonaChange: (persona: string) => void;
   backendOnline: boolean;
+  currentUser?: any;
+  onSignOut?: () => void;
   onExitToPublicClient?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentPersona, onPersonaChange, backendOnline, onExitToPublicClient }) => {
+export const Header: React.FC<HeaderProps> = ({ 
+  currentPersona, 
+  onPersonaChange, 
+  backendOnline, 
+  currentUser,
+  onSignOut,
+  onExitToPublicClient 
+}) => {
   return (
     <header className="app-header">
       <div className="brand-badge">
@@ -40,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({ currentPersona, onPersonaChange,
             <div className="brand-logo-text">
               <span>Opticom Finance</span>
               <span className="status-pill pill-cyan" style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem' }}>
-                ENTERPRISE COCKPIT
+                INTERNAL COCKPIT
               </span>
             </div>
             <div className="brand-tagline">
@@ -60,10 +69,12 @@ export const Header: React.FC<HeaderProps> = ({ currentPersona, onPersonaChange,
               display: 'flex',
               alignItems: 'center',
               gap: '0.4rem',
-              borderColor: 'var(--border-medium)'
+              borderColor: 'var(--border-medium)',
+              fontWeight: 500
             }}
+            title="Open customer loan portal in a new tab"
           >
-            <ArrowLeft size={14} /> Switch to Customer Portal
+            <ExternalLink size={13} /> View Public Portal
           </button>
         )}
 
@@ -85,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({ currentPersona, onPersonaChange,
         </div>
 
         <div className="persona-switcher">
-          <UserCheck size={16} color="var(--brand-cyan)" />
+          <UserCheck size={16} color="var(--brand-cerulean)" />
           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Persona:</span>
           <select 
             className="persona-select"
@@ -103,6 +114,41 @@ export const Header: React.FC<HeaderProps> = ({ currentPersona, onPersonaChange,
             <option value="AUDITOR">Compliance Auditor (Read-Only Audit)</option>
           </select>
         </div>
+
+        {currentUser && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.65rem',
+            paddingLeft: '0.75rem',
+            borderLeft: '1px solid #cbd5e1'
+          }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>
+                {currentUser.name || 'Staff User'}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                {currentUser.email || `${currentPersona.toLowerCase()}@opticom.ng`}
+              </div>
+            </div>
+            {onSignOut && (
+              <button
+                onClick={onSignOut}
+                className="btn btn-secondary btn-sm"
+                style={{
+                  padding: '0.45rem 0.65rem',
+                  fontSize: '0.78rem',
+                  color: '#dc2626',
+                  borderColor: '#fca5a5',
+                  background: '#fff'
+                }}
+                title="Sign Out of Internal Cockpit"
+              >
+                <LogOut size={14} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );

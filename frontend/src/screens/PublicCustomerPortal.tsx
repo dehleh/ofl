@@ -28,8 +28,8 @@ import {
 import { submitDirectApplication, trackApplication, respondToApplicantException } from '../services/api';
 
 interface PublicCustomerPortalProps {
-  onOpenStaffGate: () => void;
-  onGoToBesto: () => void;
+  onOpenStaffGate?: () => void;
+  onGoToBesto?: () => void;
 }
 
 export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
@@ -335,20 +335,20 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
             <Search size={14} /> Track Status
           </button>
 
-          {/* Dedicated Staff Gate Trigger */}
-          <button 
+          <a 
+            href="tel:+23412703000"
             className="btn btn-secondary btn-sm"
-            onClick={onOpenStaffGate}
             style={{ 
-              borderColor: 'rgba(0, 150, 204, 0.45)', 
-              color: 'var(--brand-cerulean)',
-              background: 'rgba(0, 150, 204, 0.08)',
-              fontWeight: 700
+              fontSize: '0.8rem',
+              fontWeight: 500,
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem'
             }}
-            title="Internal Access for Underwriters & Risk Committee"
           >
-            <Lock size={14} /> Staff Gate 🔒
-          </button>
+            <PhoneCall size={14} color="var(--brand-cerulean)" /> Help Desk: (01) 270 3000
+          </a>
         </div>
       </nav>
 
@@ -513,8 +513,12 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     </div>
                   </div>
                 </div>
-                <button className="btn btn-warning btn-sm" onClick={onGoToBesto}>
-                  Route to BESTO Channel <ArrowRight size={14} />
+                <button 
+                  type="button" 
+                  className="btn btn-warning btn-sm" 
+                  onClick={() => setFormData(prev => ({ ...prev, amount: 2500000 }))}
+                >
+                  Adjust to ₦2,500,000 Commercial Tier <ArrowRight size={14} />
                 </button>
               </div>
             )}
