@@ -355,102 +355,80 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
       {/* Main Container */}
       <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '3rem 1.5rem', position: 'relative', zIndex: 1 }}>
         {/* Futuristic Hero Section */}
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: '0.5rem',
-            padding: '0.4rem 1.1rem',
+            padding: '0.35rem 1rem',
             borderRadius: 'var(--radius-full)',
-            background: 'rgba(0, 150, 204, 0.08)',
-            border: '1px solid rgba(0, 150, 204, 0.28)',
-            boxShadow: '0 2px 8px rgba(0, 150, 204, 0.12)',
+            background: 'rgba(0, 150, 204, 0.06)',
+            border: '1px solid rgba(0, 150, 204, 0.25)',
+            boxShadow: '0 1px 4px rgba(0, 150, 204, 0.08)',
             marginBottom: '1.25rem'
           }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--brand-cyan)', boxShadow: '0 0 10px var(--brand-cyan)' }} />
-            <span style={{ fontSize: '0.78rem', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--brand-cyan)', letterSpacing: '0.06em' }}>
-              CBN LICENSED FINANCE HOUSE &bull; RC: 347832 &bull; ENTERPRISE CREDIT GATEWAY
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0096cc', boxShadow: '0 0 8px #0096cc' }} />
+            <span style={{ fontSize: '0.76rem', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#0096cc', letterSpacing: '0.06em' }}>
+              CBN LICENSED FINANCE HOUSE &bull; RC: 347832 &bull; COMMERCIAL CREDIT GATEWAY
             </span>
           </div>
 
           <h1 style={{
-            fontSize: 'clamp(2.2rem, 5vw, 3.2rem)',
-            fontWeight: 900,
+            fontSize: 'clamp(2rem, 4.5vw, 3rem)',
+            fontWeight: 800,
             fontFamily: 'var(--font-display)',
-            lineHeight: 1.15,
-            letterSpacing: '-0.035em',
-            maxWidth: '920px',
-            margin: '0 auto 1.25rem auto',
-            color: 'var(--text-highlight)'
+            lineHeight: 1.16,
+            letterSpacing: '-0.03em',
+            maxWidth: '880px',
+            margin: '0 auto 1.15rem auto',
+            color: '#0f172a'
           }}>
-            Autonomous Commercial Credit &amp; Structured Debt Engine
+            Commercial Credit &amp; Structured Debt Financing
           </h1>
 
           <p style={{
-            color: 'var(--text-secondary)',
-            fontSize: '1.1rem',
-            maxWidth: '750px',
-            margin: '0 auto 2.5rem auto',
+            color: '#475569',
+            fontSize: '1.08rem',
+            maxWidth: '740px',
+            margin: '0 auto 2.25rem auto',
             lineHeight: 1.6
           }}>
             Fast working capital, contract finance, and asset acquisition for facilities from{' '}
-            <strong style={{ color: 'var(--brand-cyan)' }}>₦2,000,000 up to ₦200,000,000</strong>.
-            Instant statement OCR, deterministic risk grading, and 48-hour term sheet execution.
+            <strong style={{ color: '#0096cc', fontWeight: 700 }}>₦2,000,000 to ₦200,000,000</strong>.
+            Instant statement analysis, transparent pricing, and 48-hour term sheet execution.
           </p>
 
-          {/* High-Tech KPI Strip */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-            gap: '1rem',
-            maxWidth: '960px',
-            margin: '0 auto'
-          }}>
-            <div className="glass-panel" style={{ padding: '1.15rem 1.25rem', textAlign: 'left', borderLeft: '3px solid var(--brand-cyan)' }}>
-              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.08em' }}>
-                Disbursed Volume
-              </div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--text-highlight)', marginTop: '0.2rem' }}>
-                ₦4.8 Billion+
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--brand-cyan)', marginTop: '0.25rem' }}>
+          {/* Institutional KPI Strip */}
+          <div className="metrics-grid" style={{ maxWidth: '960px', margin: '0 auto 1.5rem auto' }}>
+            <div className="metric-card" style={{ textAlign: 'left', borderLeft: '3px solid #0096cc' }}>
+              <div className="metric-label">Disbursed Volume</div>
+              <div className="metric-value">₦4.8 Billion+</div>
+              <div className="metric-footer" style={{ color: '#0096cc', fontWeight: 600 }}>
                 Corporate &amp; SME Facilities
               </div>
             </div>
 
-            <div className="glass-panel" style={{ padding: '1.15rem 1.25rem', textAlign: 'left', borderLeft: '3px solid var(--brand-electric)' }}>
-              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.08em' }}>
-                Decision Turnaround
-              </div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--text-highlight)', marginTop: '0.2rem' }}>
-                &le; 48 Hours
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--brand-electric)', marginTop: '0.25rem' }}>
-                Automated CAM &amp; Appraisal
+            <div className="metric-card" style={{ textAlign: 'left', borderLeft: '3px solid #2563eb' }}>
+              <div className="metric-label">Decision Turnaround</div>
+              <div className="metric-value">&le; 48 Hours</div>
+              <div className="metric-footer" style={{ color: '#2563eb', fontWeight: 600 }}>
+                Credit Committee Term Sheet
               </div>
             </div>
 
-            <div className="glass-panel" style={{ padding: '1.15rem 1.25rem', textAlign: 'left', borderLeft: '3px solid var(--accent-purple)' }}>
-              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.08em' }}>
-                Underwriting Precision
-              </div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--text-highlight)', marginTop: '0.2rem' }}>
-                99.4%
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--accent-purple-light)', marginTop: '0.25rem' }}>
-                Deterministic Rule Engine
+            <div className="metric-card" style={{ textAlign: 'left', borderLeft: '3px solid #059669' }}>
+              <div className="metric-label">Underwriting Precision</div>
+              <div className="metric-value">99.4%</div>
+              <div className="metric-footer" style={{ color: '#059669', fontWeight: 600 }}>
+                Financial Assessment Engine
               </div>
             </div>
 
-            <div className="glass-panel" style={{ padding: '1.15rem 1.25rem', textAlign: 'left', borderLeft: '3px solid var(--accent-gold)' }}>
-              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.08em' }}>
-                Ticket Capability
-              </div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--text-highlight)', marginTop: '0.2rem' }}>
-                ₦2M – ₦200M
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--accent-gold-light)', marginTop: '0.25rem' }}>
-                SME &amp; Corporate Tiers
+            <div className="metric-card" style={{ textAlign: 'left', borderLeft: '3px solid #d97706' }}>
+              <div className="metric-label">Facility Capability</div>
+              <div className="metric-value">₦2M – ₦200M</div>
+              <div className="metric-footer" style={{ color: '#d97706', fontWeight: 600 }}>
+                Commercial &amp; Structured Debt
               </div>
             </div>
           </div>
@@ -461,32 +439,6 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
         {/* ================================================================= */}
         {activeTab === 'APPLY' && (
           <div>
-            {/* Quick Demo Pre-fill Bar */}
-            <div className="glass-panel" style={{
-              padding: '0.85rem 1.4rem',
-              marginBottom: '1.75rem',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '0.85rem',
-              background: 'rgba(0, 150, 204, 0.04)',
-              border: '1px solid rgba(0, 150, 204, 0.25)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <Sparkles size={16} color="var(--brand-cyan)" />
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  Interactive Appraisal Demonstration: <strong style={{ color: 'var(--text-highlight)' }}>Leo-Akinboni Babatunde Global Enterprises (₦50M Haulage Facility)</strong>
-                </span>
-              </div>
-              <button 
-                className="btn btn-secondary btn-sm btn-glow-cyan" 
-                onClick={populateSampleSmeData}
-                style={{ fontSize: '0.8rem' }}
-              >
-                Prefill Live Commercial Dossier
-              </button>
-            </div>
 
             {/* Canonical Boundary Notice if <= ₦2,000,000 */}
             {isBelowBoundary && (
@@ -546,15 +498,15 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   left: '10%',
                   right: '10%',
                   height: '2px',
-                  background: 'var(--border-subtle)',
+                  background: '#e2e8f0',
                   zIndex: 0
                 }}>
                   <div style={{
                     width: step === 1 ? '0%' : step === 2 ? '50%' : '100%',
                     height: '100%',
-                    background: 'linear-gradient(90deg, var(--brand-cerulean), var(--brand-electric))',
-                    boxShadow: '0 0 10px rgba(0, 150, 204, 0.4)',
-                    transition: 'width 0.4s ease'
+                    background: '#0096cc',
+                    boxShadow: '0 0 8px rgba(0, 150, 204, 0.3)',
+                    transition: 'width 0.3s ease'
                   }} />
                 </div>
 
@@ -571,23 +523,23 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     width: '34px',
                     height: '34px',
                     borderRadius: '50%',
-                    background: step === 1 ? 'var(--brand-cerulean)' : step > 1 ? 'rgba(0, 150, 204, 0.15)' : 'var(--bg-dark)',
-                    color: step === 1 ? '#ffffff' : step > 1 ? 'var(--brand-cerulean)' : 'var(--text-muted)',
+                    background: step === 1 ? '#0096cc' : step > 1 ? 'rgba(0, 150, 204, 0.12)' : '#f8fafc',
+                    color: step === 1 ? '#ffffff' : step > 1 ? '#0096cc' : '#94a3b8',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '0.9rem',
-                    fontWeight: 800,
-                    border: `2px solid ${step >= 1 ? 'var(--brand-cerulean)' : 'var(--border-subtle)'}`,
-                    boxShadow: step === 1 ? '0 0 15px rgba(0, 150, 204, 0.35)' : 'none'
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    border: `2px solid ${step >= 1 ? '#0096cc' : '#cbd5e1'}`,
+                    boxShadow: step === 1 ? '0 0 10px rgba(0, 150, 204, 0.25)' : 'none'
                   }}>
                     {step > 1 ? '✓' : '1'}
                   </span>
                   <span style={{
-                    fontSize: '0.85rem',
+                    fontSize: '0.82rem',
                     fontFamily: 'var(--font-display)',
-                    fontWeight: step === 1 ? 800 : 600,
-                    color: step === 1 ? 'var(--brand-cerulean)' : 'var(--text-secondary)'
+                    fontWeight: step === 1 ? 700 : 500,
+                    color: step === 1 ? '#0096cc' : '#64748b'
                   }}>
                     Facility Architecture
                   </span>
@@ -606,23 +558,23 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     width: '34px',
                     height: '34px',
                     borderRadius: '50%',
-                    background: step === 2 ? 'var(--brand-cerulean)' : step > 2 ? 'rgba(0, 150, 204, 0.15)' : 'var(--bg-dark)',
-                    color: step === 2 ? '#ffffff' : step > 2 ? 'var(--brand-cerulean)' : 'var(--text-muted)',
+                    background: step === 2 ? '#0096cc' : step > 2 ? 'rgba(0, 150, 204, 0.12)' : '#f8fafc',
+                    color: step === 2 ? '#ffffff' : step > 2 ? '#0096cc' : '#94a3b8',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '0.9rem',
-                    fontWeight: 800,
-                    border: `2px solid ${step >= 2 ? 'var(--brand-cerulean)' : 'var(--border-subtle)'}`,
-                    boxShadow: step === 2 ? '0 0 15px rgba(0, 150, 204, 0.35)' : 'none'
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    border: `2px solid ${step >= 2 ? '#0096cc' : '#cbd5e1'}`,
+                    boxShadow: step === 2 ? '0 0 10px rgba(0, 150, 204, 0.25)' : 'none'
                   }}>
                     {step > 2 ? '✓' : '2'}
                   </span>
                   <span style={{
-                    fontSize: '0.85rem',
+                    fontSize: '0.82rem',
                     fontFamily: 'var(--font-display)',
-                    fontWeight: step === 2 ? 800 : 600,
-                    color: step === 2 ? 'var(--brand-cerulean)' : 'var(--text-secondary)'
+                    fontWeight: step === 2 ? 700 : 500,
+                    color: step === 2 ? '#0096cc' : '#64748b'
                   }}>
                     Corporate &amp; Identity
                   </span>
@@ -640,23 +592,23 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     width: '34px',
                     height: '34px',
                     borderRadius: '50%',
-                    background: step === 3 ? 'var(--brand-cerulean)' : 'var(--bg-dark)',
-                    color: step === 3 ? '#ffffff' : 'var(--text-muted)',
+                    background: step === 3 ? '#0096cc' : '#f8fafc',
+                    color: step === 3 ? '#ffffff' : '#94a3b8',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '0.9rem',
-                    fontWeight: 800,
-                    border: `2px solid ${step === 3 ? 'var(--brand-cerulean)' : 'var(--border-subtle)'}`,
-                    boxShadow: step === 3 ? '0 0 15px rgba(0, 150, 204, 0.35)' : 'none'
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    border: `2px solid ${step === 3 ? '#0096cc' : '#cbd5e1'}`,
+                    boxShadow: step === 3 ? '0 0 10px rgba(0, 150, 204, 0.25)' : 'none'
                   }}>
                     3
                   </span>
                   <span style={{
-                    fontSize: '0.85rem',
+                    fontSize: '0.82rem',
                     fontFamily: 'var(--font-display)',
-                    fontWeight: step === 3 ? 800 : 600,
-                    color: step === 3 ? 'var(--brand-cerulean)' : 'var(--text-secondary)'
+                    fontWeight: step === 3 ? 700 : 500,
+                    color: step === 3 ? '#0096cc' : '#64748b'
                   }}>
                     Cashflow &amp; Documents
                   </span>
@@ -763,48 +715,48 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
 
                 {/* Live Repayment Callout Card */}
                 <div style={{
-                  background: 'var(--bg-dark)',
-                  padding: '1.5rem',
+                  background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #f0f9ff 100%)',
+                  padding: '1.5rem 1.75rem',
                   borderRadius: 'var(--radius-lg)',
-                  border: '1px solid var(--border-subtle)',
-                  boxShadow: 'var(--shadow-sm)',
+                  border: '1px solid #bae6fd',
+                  boxShadow: '0 2px 8px rgba(0, 150, 204, 0.06)',
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                   gap: '1.5rem',
                   marginBottom: '2rem'
                 }}>
                   <div>
-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.06em' }}>
+                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.06em' }}>
                       Estimated Monthly Installment
                     </div>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--brand-cerulean)', fontFamily: 'var(--font-mono)', marginTop: '0.25rem' }}>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0096cc', fontFamily: 'var(--font-mono)', marginTop: '0.25rem' }}>
                       ₦{calculations.monthlyInstallment.toLocaleString()}
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
                       Principal + Interest (28% APR)
                     </div>
                   </div>
 
                   <div>
-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.06em' }}>
+                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.06em' }}>
                       Total Repayment Over Tenor
                     </div>
-                    <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-highlight)', fontFamily: 'var(--font-mono)', marginTop: '0.25rem' }}>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', fontFamily: 'var(--font-mono)', marginTop: '0.25rem' }}>
                       ₦{calculations.totalRepayment.toLocaleString()}
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
                       Total interest: ₦{calculations.totalInterest.toLocaleString()}
                     </div>
                   </div>
 
                   <div>
-                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, letterSpacing: '0.06em' }}>
+                    <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.06em' }}>
                       Upfront Fees (Approx 4.5%)
                     </div>
-                    <div style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--accent-gold-light)', fontFamily: 'var(--font-mono)', marginTop: '0.25rem' }}>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#d97706', fontFamily: 'var(--font-mono)', marginTop: '0.25rem' }}>
                       ₦{calculations.upfrontFees.toLocaleString()}
                     </div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
                       Management, Facility &amp; Legal
                     </div>
                   </div>
