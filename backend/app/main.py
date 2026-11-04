@@ -21,6 +21,7 @@ from .api.v1.audit_router import router as audit_router
 from .api.v1.auth_router import router as auth_router
 from .api.v1.jobs_router import router as jobs_router
 from .api.v1.admin_router import router as admin_router
+from .api.v1.copilot_router import router as copilot_router
 from .core.config_manager import ConfigManager
 
 def seed_initial_demo_data():
@@ -373,6 +374,7 @@ app.include_router(audit_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(jobs_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
+app.include_router(copilot_router, prefix="/api/v1")
 
 @app.get("/health")
 @app.get("/api/v1/health")

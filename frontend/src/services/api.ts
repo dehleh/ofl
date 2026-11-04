@@ -1,7 +1,7 @@
 /**
  * OFL Credit Automation API Service Client
  */
-const API_BASE = '/api/v1';
+export const API_BASE = '/api/v1';
 
 export function getAuthHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
   const token = localStorage.getItem('ofl_jwt_token');

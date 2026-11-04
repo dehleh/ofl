@@ -9,6 +9,7 @@ import { AuditTelemetry } from './screens/AuditTelemetry';
 import { PublicCustomerPortal } from './screens/PublicCustomerPortal';
 import { AdminConfigPortal } from './screens/AdminConfigPortal';
 import { StaffLoginScreen } from './screens/StaffLoginScreen';
+import { CreditCopilotDrawer } from './components/CreditCopilotDrawer';
 import { fetchExceptions } from './services/api';
 import { Inbox, FilePlus, Database, AlertCircle, BarChart3, Settings } from 'lucide-react';
 
@@ -247,6 +248,12 @@ export const App: React.FC = () => {
         {currentScreen === 'ADMIN' && (
           <AdminConfigPortal />
         )}
+
+        {/* Global Staff Conversational AI Copilot */}
+        <CreditCopilotDrawer
+          currentPersona={currentPersona}
+          selectedCaseId={selectedCaseId}
+        />
       </main>
     </div>
   );
