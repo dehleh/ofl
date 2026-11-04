@@ -104,7 +104,7 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
       department: 'Treasury Operations',
       badge: 'TREASURY',
       badgeClass: 'pill-cyan',
-      authority: 'NAV Banking & Funding Execution',
+      authority: 'LOAN-DISC Booking & Funding Execution',
       email: 'ibrahim.musa@opticom.ng'
     },
     {

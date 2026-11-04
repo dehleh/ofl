@@ -352,7 +352,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
           5. Offer & Conditions ({conditions.length})
         </button>
         <button className={`nav-item ${activeTab === 'TREASURY' ? 'active' : ''}`} onClick={() => setActiveTab('TREASURY')}>
-          6. Treasury NAV
+          6. Treasury LOAN-DISC
         </button>
         <button className={`nav-item ${activeTab === 'EXCEPTIONS' ? 'active' : ''}`} onClick={() => setActiveTab('EXCEPTIONS')}>
           7. Exceptions ({exceptions.length})
@@ -847,92 +847,127 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
 
       {/* TAB 6: TREASURY & LOAN-DISC */}
       {activeTab === 'TREASURY' && (
-        <div className="split-view">
-          {/* NAV Confirmation Form */}
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--brand-teal-light)' }}>
-              Treasury NAV Disbursement Handoff (FR-15)
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-              Human Treasury officer confirms facility booking and records confirmed Microsoft Dynamics NAV reference.
-            </p>
-
-            <form onSubmit={handleConfirmTreasuryNav}>
-              <div className="form-group">
-                <label className="form-label">Microsoft Dynamics NAV Reference *</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  required
-                  placeholder="e.g. NAV-2026-DISB-9941"
-                  value={navReference}
-                  onChange={(e) => setNavReference(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Confirmation Evidence / Reference Advice *</label>
-                <textarea
-                  className="form-textarea"
-                  rows={2}
-                  required
-                  placeholder="Confirmed transfer advice via CBN RTGS / NIP core banking entry..."
-                  value={navEvidence}
-                  onChange={(e) => setNavEvidence(e.target.value)}
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={actionLoading || caseData.state !== 'Ready for Disbursement'}
-                style={{ width: '100%' }}
-              >
-                <DollarSign size={16} /> Confirm NAV Disbursement
-              </button>
-            </form>
-          </div>
-
-          {/* LOAN-DISC Push */}
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--brand-teal-light)' }}>
-              LOAN-DISC Post-Disbursement Sync (FR-16)
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-              Synchronizes confirmed loan facility to LOAN-DISC for ongoing repayment servicing and portfolio monitoring.
-            </p>
-
-            {disbursements.length > 0 && disbursements[0].status === 'CONFIRMED' ? (
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <div className="glass-panel" style={{ padding: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
               <div>
-                <div style={{
-                  padding: '1rem',
-                  background: 'var(--bg-surface)',
-                  borderRadius: 'var(--radius-md)',
-                  marginBottom: '1rem',
-                  border: '1px solid var(--border-subtle)'
-                }}>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-highlight)', fontWeight: 600 }}>NAV Ref: {disbursements[0].nav_reference}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Status: {disbursements[0].status}</div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--brand-cerulean)', fontFamily: 'var(--font-display)' }}>
+                  LOAN-DISC Core Banking &amp; Facility Booking
+                </h3>
+                <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                  Opticom's primary Loan Management System (LMS). Books approved commercial facilities, generates amortization schedules, and tracks loan servicing.
+                </p>
+              </div>
+              <span className="status-pill pill-cyan" style={{ fontSize: '0.72rem' }}>
+                SOLE CORE LMS
+              </span>
+            </div>
+
+            {/* Approved Facility Summary Strip */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '1rem',
+              padding: '1.25rem',
+              background: '#f8fafc',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid #e2e8f0',
+              marginBottom: '1.75rem'
+            }}>
+              <div>
+                <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Facility Quantum</div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
+                  ₦{application.amount.toLocaleString()}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Tenor &amp; Rate</div>
+                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0096cc', marginTop: '0.2rem' }}>
+                  {application.tenor} Mos @ 28% APR
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Borrower Entity</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#334155', marginTop: '0.2rem' }}>
+                  {customer.name}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Lifecycle State</div>
+                <div style={{ marginTop: '0.2rem' }}>
+                  <span className={`status-pill pill-${caseData.state.toLowerCase().includes('disburs') ? 'emerald' : 'cyan'}`} style={{ fontSize: '0.72rem' }}>
+                    {caseData.state}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {disbursements.length > 0 && (disbursements[0].status === 'RECONCILED' || caseData.state === 'Disbursed / Monitoring') ? (
+              <div style={{
+                padding: '1.75rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(5, 150, 105, 0.05)',
+                border: '1px solid rgba(5, 150, 105, 0.25)',
+                textAlign: 'center'
+              }}>
+                <CheckCircle size={36} color="#059669" style={{ margin: '0 auto 0.75rem auto' }} />
+                <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#065f46', marginBottom: '0.35rem' }}>
+                  Facility Successfully Booked &amp; Active in LOAN-DISC
+                </h4>
+                <p style={{ fontSize: '0.85rem', color: '#047857', maxWidth: '500px', margin: '0 auto 1.25rem auto' }}>
+                  Amortization schedule created, disbursement advice dispatched to borrower, and active portfolio monitoring initiated.
+                </p>
+                <div style={{ display: 'inline-flex', gap: '1.5rem', background: '#ffffff', padding: '0.75rem 1.5rem', borderRadius: '8px', border: '1px solid #d1fae5' }}>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>LOAN-DISC Facility ID</span>
+                    <strong style={{ fontSize: '1rem', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
+                      {disbursements[0].nav_reference || 'LD-ACTIVE-SERVICING'}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>Servicing Status</span>
+                    <strong style={{ fontSize: '0.9rem', color: '#059669' }}>ACTIVE_SERVICING</strong>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleConfirmTreasuryNav}>
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label className="form-label">Payment Voucher / Bank Transaction Reference *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    placeholder="e.g. LD-DISB-202611-9941 or NIP Ref"
+                    value={navReference}
+                    onChange={(e) => setNavReference(e.target.value)}
+                  />
+                  <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.25rem', display: 'block' }}>
+                    Reference from payment voucher or bank transfer advice for LOAN-DISC settlement tracking.
+                  </span>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1.75rem' }}>
+                  <label className="form-label">Disbursement Settlement Notes *</label>
+                  <textarea
+                    className="form-textarea"
+                    rows={2}
+                    required
+                    placeholder="Approved commercial facility disbursement via NIP / RTGS into borrower's verified commercial bank account."
+                    value={navEvidence}
+                    onChange={(e) => setNavEvidence(e.target.value)}
+                  />
                 </div>
 
                 <button
-                  className="btn btn-primary"
-                  onClick={handleSyncLoanDiscClick}
-                  disabled={actionLoading}
-                  style={{ width: '100%' }}
+                  type="submit"
+                  className="btn btn-primary btn-lg"
+                  disabled={actionLoading || (caseData.state !== 'Ready for Disbursement' && caseData.state !== 'Offer Accepted')}
+                  style={{ width: '100%', justifyContent: 'center', gap: '0.5rem' }}
                 >
-                  <Send size={16} /> Push to LOAN-DISC (Idempotent Delivery)
+                  <Send size={16} /> Book &amp; Synchronize Facility into LOAN-DISC
                 </button>
-              </div>
-            ) : disbursements.length > 0 && disbursements[0].status === 'RECONCILED' ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-success)', fontSize: '0.9rem' }}>
-                <CheckCircle size={20} />
-                <span>Facility successfully synchronized with LOAN-DISC. Servicing active.</span>
-              </div>
-            ) : (
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Waiting for confirmed NAV disbursement before enabling LOAN-DISC synchronization.
-              </div>
+              </form>
             )}
           </div>
         </div>

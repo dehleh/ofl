@@ -109,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({
             <option value="BCC">BCC / Authoriser (Limit &le; ₦15m)</option>
             <option value="MD">Managing Director (MD &gt; ₦15m / Final)</option>
             <option value="OPERATIONS">Credit Operations (Offer & Conditions)</option>
-            <option value="TREASURY">Treasury Officer (NAV Handoff)</option>
+            <option value="TREASURY">Treasury &amp; Loan Operations (LOAN-DISC)</option>
             <option value="BDO">Business Dev Officer (BDO Assisted)</option>
             <option value="AUDITOR">Compliance Auditor (Read-Only Audit)</option>
           </select>

@@ -69,8 +69,12 @@ class Settings(BaseSettings):
     YOUVERIFY_API_KEY: str = os.getenv("YOUVERIFY_API_KEY", "q6VMnCWC.HFrVDW4ycU1bcnXTe9FJQ9s0MCF60kbxrnme")
     YOUVERIFY_WEBHOOK_SECRET: str = os.getenv("YOUVERIFY_WEBHOOK_SECRET", "tKQglemsJkFw4Ci6HoVMQstDsm13ZwfuYXNG")
     YOUVERIFY_BASE_URL: str = os.getenv("YOUVERIFY_BASE_URL", "https://api.youverify.co")
-    MOCK_NAV_INTEGRATION: bool = True
-    MOCK_LOANDISC_INTEGRATION: bool = True
+    # Core Banking: LOAN-DISC Loan Management System (LMS)
+    MOCK_LOANDISC_INTEGRATION: bool = os.getenv("MOCK_LOANDISC_INTEGRATION", "true").lower() == "true"
+    LOANDISC_API_KEY: str = os.getenv("LOANDISC_API_KEY", "")
+    LOANDISC_PUBLIC_KEY: str = os.getenv("LOANDISC_PUBLIC_KEY", "")
+    LOANDISC_BASE_URL: str = os.getenv("LOANDISC_BASE_URL", "https://api.loandisc.com/v1")
+    MOCK_NAV_INTEGRATION: bool = False  # Deprecated - Loandisc is sole core lending system
 
     # Enterprise Security & Webhooks
     WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "OPTICOM_DEFAULT_WEBHOOK_SECRET_2026")

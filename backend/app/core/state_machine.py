@@ -80,13 +80,13 @@ class TransitionService:
                 return False, f"Cannot transition to Ready for Disbursement: {unmet_mandatory_conditions} mandatory conditions precedent remain unsatisfied (FR-14)."
 
         if to_state == CaseState.DISBURSED_MONITORING.value:
-            # Check that disbursement has been confirmed in Treasury & NAV
+            # Check that disbursement has been confirmed in Treasury & LOAN-DISC
             confirmed_disbursement = db.query(Disbursement).filter(
                 Disbursement.case_id == credit_case.id,
                 Disbursement.status.in_(["CONFIRMED", "RECONCILED"])
             ).first()
             if not confirmed_disbursement:
-                return False, "Cannot transition to Disbursed/Monitoring without confirmed Treasury NAV disbursement record."
+                return False, "Cannot transition to Disbursed/Monitoring without confirmed Treasury LOAN-DISC booking record."
 
         # Apply state transition
         credit_case.state = to_state
