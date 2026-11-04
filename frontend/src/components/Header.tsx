@@ -1,5 +1,19 @@
-import React from 'react';
-import { UserCheck, Radio, LogOut, ExternalLink, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  UserCheck, 
+  Radio, 
+  LogOut, 
+  ExternalLink, 
+  ShieldCheck, 
+  Bell, 
+  CheckCheck, 
+  AlertTriangle, 
+  CheckCircle2, 
+  FileText, 
+  X,
+  Zap,
+  Clock
+} from 'lucide-react';
 
 interface HeaderProps {
   currentPersona: string;
@@ -18,6 +32,68 @@ export const Header: React.FC<HeaderProps> = ({
   onSignOut,
   onExitToPublicClient
 }) => {
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    title: string;
+    message: string;
+    time: string;
+    type: 'WARNING' | 'URGENT' | 'SUCCESS' | 'INFO';
+    category: string;
+    unread: boolean;
+    caseNumber?: string;
+  }>>([
+    {
+      id: 'NOTIF-001',
+      title: 'Policy Exception Flagged',
+      message: 'Single Obligor Limit (₦50M) flagged for review by HRM Chidinma Okafor.',
+      time: '2 mins ago',
+      type: 'WARNING',
+      category: 'RISK EXCEPTION',
+      unread: true,
+      caseNumber: 'OFL-2026-0881'
+    },
+    {
+      id: 'NOTIF-002',
+      title: 'Credit Committee Approval Pending',
+      message: 'Facility #OFL-2026-0881 (₦40,000,000) is awaiting MD sanction.',
+      time: '18 mins ago',
+      type: 'URGENT',
+      category: 'SANCTION',
+      unread: true,
+      caseNumber: 'OFL-2026-0881'
+    },
+    {
+      id: 'NOTIF-003',
+      title: 'LOAN-DISC Core Booking Ready',
+      message: 'Settlement pipeline ready for 1-click disbursement execution.',
+      time: '45 mins ago',
+      type: 'SUCCESS',
+      category: 'TREASURY',
+      unread: true,
+      caseNumber: 'OFL-2026-0881'
+    },
+    {
+      id: 'NOTIF-004',
+      title: 'New Commercial Intake Ingested',
+      message: 'Applicant Leo-Akinboni Babatunde Global Enterprises submitted documents.',
+      time: '2 hours ago',
+      type: 'INFO',
+      category: 'INTAKE',
+      unread: false,
+      caseNumber: 'OFL-2026-0881'
+    }
+  ]);
+
+  const unreadCount = notifications.filter(n => n.unread).length;
+
+  const markAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+  };
+
+  const markRead = (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: false } : n));
+  };
   return (
     <header className="app-header">
       <div className="brand-badge">
@@ -113,6 +189,172 @@ export const Header: React.FC<HeaderProps> = ({
             <option value="BDO">Business Dev Officer (BDO Assisted)</option>
             <option value="AUDITOR">Compliance Auditor (Read-Only Audit)</option>
           </select>
+        </div>
+
+        {/* In-App Notifications Bell & Tray */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setShowNotifications(!showNotifications)}
+            style={{
+              position: 'relative',
+              background: showNotifications ? '#f1f5f9' : '#ffffff',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              padding: '0.45rem 0.55rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: unreadCount > 0 ? '#0096cc' : '#64748b',
+              transition: 'all 0.15s ease'
+            }}
+            title="System Alerts & Notifications"
+          >
+            <Bell size={17} />
+            {unreadCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                background: '#ef4444',
+                color: '#ffffff',
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                borderRadius: '9999px',
+                width: '18px',
+                height: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 6px rgba(239, 68, 68, 0.6)'
+              }}>
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Floating Dropdown Notification Tray */}
+          {showNotifications && (
+            <div style={{
+              position: 'absolute',
+              top: 'calc(100% + 10px)',
+              right: 0,
+              width: '380px',
+              background: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 12px 30px -4px rgba(15, 23, 42, 0.18)',
+              zIndex: 9999,
+              overflow: 'hidden'
+            }}>
+              {/* Tray Header */}
+              <div style={{
+                padding: '0.85rem 1.15rem',
+                borderBottom: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#f8fafc'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Bell size={15} color="#0096cc" />
+                  <span style={{ fontWeight: 700, fontSize: '0.88rem', color: '#0f172a' }}>
+                    Notifications &amp; Alerts
+                  </span>
+                  {unreadCount > 0 && (
+                    <span className="status-pill pill-cyan" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem' }}>
+                      {unreadCount} New
+                    </span>
+                  )}
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllRead}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#0096cc',
+                      fontSize: '0.74rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem'
+                    }}
+                  >
+                    <CheckCheck size={13} /> Mark all read
+                  </button>
+                )}
+              </div>
+
+              {/* Notification Items List */}
+              <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+                {notifications.length === 0 ? (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>
+                    No notifications
+                  </div>
+                ) : (
+                  notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      onClick={() => markRead(n.id)}
+                      style={{
+                        padding: '0.85rem 1.15rem',
+                        borderBottom: '1px solid #f1f5f9',
+                        background: n.unread ? 'rgba(0, 150, 204, 0.04)' : '#ffffff',
+                        cursor: 'pointer',
+                        transition: 'background 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = n.unread ? 'rgba(0, 150, 204, 0.04)' : '#ffffff'}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            padding: '0.15rem 0.45rem',
+                            borderRadius: '4px',
+                            background: n.type === 'URGENT' ? '#fef2f2' : n.type === 'WARNING' ? '#fffbeb' : n.type === 'SUCCESS' ? '#f0fdf4' : '#eff6ff',
+                            color: n.type === 'URGENT' ? '#b91c1c' : n.type === 'WARNING' ? '#b45309' : n.type === 'SUCCESS' ? '#15803d' : '#1d4ed8',
+                            border: `1px solid ${n.type === 'URGENT' ? '#fecaca' : n.type === 'WARNING' ? '#fde68a' : n.type === 'SUCCESS' ? '#bbf7d0' : '#bfdbfe'}`
+                          }}>
+                            {n.category}
+                          </span>
+                          <span style={{ fontWeight: 700, fontSize: '0.82rem', color: '#0f172a' }}>
+                            {n.title}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                          {n.time}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.78rem', color: '#475569', margin: '0.25rem 0 0 0', lineHeight: 1.45 }}>
+                        {n.message}
+                      </p>
+                      {n.caseNumber && (
+                        <div style={{ fontSize: '0.7rem', color: '#0096cc', fontWeight: 600, marginTop: '0.35rem' }}>
+                          Case Ref: {n.caseNumber}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Tray Footer */}
+              <div style={{
+                padding: '0.6rem 1rem',
+                background: '#f8fafc',
+                borderTop: '1px solid #e2e8f0',
+                textAlign: 'center',
+                fontSize: '0.72rem',
+                color: '#64748b'
+              }}>
+                Dispatched via Opticom Enterprise Notification Daemon
+              </div>
+            </div>
+          )}
         </div>
 
         {currentUser && (

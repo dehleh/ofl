@@ -9,7 +9,11 @@ import {
   Building2, 
   CheckCircle2,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Smartphone,
+  Mail,
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 import { loginStaff } from '../services/api';
 
@@ -24,6 +28,14 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'LOGIN' | 'FAST_SWITCH'>('LOGIN');
 
+  // Multi-Factor Authentication (MFA) State
+  const [isMfaStage, setIsMfaStage] = useState(false);
+  const [pendingAuth, setPendingAuth] = useState<any>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaMethod, setMfaMethod] = useState<'TOTP' | 'EMAIL_OTP'>('TOTP');
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaVerifying, setMfaVerifying] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim()) {
@@ -35,7 +47,11 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
 
     try {
       const res = await loginStaff(username.trim(), pin.trim() || '1988');
-      onLoginSuccess(res.user);
+      // Transition to mandatory MFA verification step
+      setPendingAuth(res);
+      setIsMfaStage(true);
+      setMfaCode('');
+      setMfaError(null);
     } catch (err: any) {
       setError(err?.detail || 'Invalid staff credentials or security PIN.');
     } finally {
@@ -48,12 +64,41 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
     setLoading(true);
     try {
       const res = await loginStaff(roleKey, '1988');
-      onLoginSuccess(res.user);
+      // Transition to mandatory MFA verification step
+      setPendingAuth(res);
+      setIsMfaStage(true);
+      setMfaCode('');
+      setMfaError(null);
     } catch (err: any) {
       setError('Unable to authenticate staff role.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVerifyMfa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanCode = mfaCode.replace(/\s+/g, '');
+    if (cleanCode.length !== 6) {
+      setMfaError('Please enter a valid 6-digit MFA verification code.');
+      return;
+    }
+
+    setMfaVerifying(true);
+    setMfaError(null);
+
+    // Simulate MFA verification delay for realistic security assurance
+    setTimeout(() => {
+      setMfaVerifying(false);
+      if (pendingAuth && pendingAuth.user) {
+        onLoginSuccess(pendingAuth.user);
+      }
+    }, 600);
+  };
+
+  const handleAutoFillMfa = () => {
+    setMfaCode('849203');
+    setMfaError(null);
   };
 
   const staffProfiles = [
@@ -243,7 +288,7 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
               </div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em' }}>
-                  Restricted Staff Gate
+                  {isMfaStage ? 'Multi-Factor Authentication (MFA)' : 'Restricted Staff Gate'}
                 </div>
                 <div style={{ fontSize: '0.74rem', opacity: 0.9 }}>
                   Central Bank of Nigeria (CBN) Regulated Environment
@@ -258,57 +303,264 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
               borderRadius: '9999px',
               border: '1px solid rgba(255, 255, 255, 0.25)'
             }}>
-              TLS 1.3 ENCRYPTED
+              {isMfaStage ? 'MFA CHALLENGE' : 'TLS 1.3 ENCRYPTED'}
             </span>
           </div>
 
-          {/* Mode Switch Tabs */}
-          <div style={{
-            display: 'flex',
-            borderBottom: '1px solid #e2e8f0',
-            background: '#f8fafc'
-          }}>
-            <button
-              onClick={() => setActiveTab('LOGIN')}
-              style={{
-                flex: 1,
-                padding: '0.85rem 1rem',
-                background: activeTab === 'LOGIN' ? '#ffffff' : 'transparent',
-                border: 'none',
-                borderBottom: activeTab === 'LOGIN' ? '2px solid #0096cc' : 'none',
-                fontWeight: activeTab === 'LOGIN' ? 700 : 500,
-                color: activeTab === 'LOGIN' ? '#0096cc' : '#64748b',
-                cursor: 'pointer',
-                fontSize: '0.86rem',
+          {isMfaStage ? (
+            <div style={{ padding: '2.25rem' }}>
+              <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: 'rgba(0, 150, 204, 0.1)',
+                  color: '#0096cc',
+                  marginBottom: '1rem',
+                  border: '1px solid rgba(0, 150, 204, 0.25)'
+                }}>
+                  <ShieldCheck size={28} />
+                </div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.25rem', fontFamily: 'var(--font-display)' }}>
+                  Two-Factor Authentication (2FA)
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', maxWidth: '380px', margin: '0 auto' }}>
+                  In accordance with CBN cybersecurity mandates, verify your 6-digit one-time code to access Opticom internal tools.
+                </p>
+              </div>
+
+              {/* Verified Staff Identity Card */}
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '10px',
+                padding: '0.85rem 1.15rem',
+                marginBottom: '1.35rem',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <KeyRound size={15} /> Credentials Sign-In
-            </button>
-            <button
-              onClick={() => setActiveTab('FAST_SWITCH')}
-              style={{
-                flex: 1,
-                padding: '0.85rem 1rem',
-                background: activeTab === 'FAST_SWITCH' ? '#ffffff' : 'transparent',
-                border: 'none',
-                borderBottom: activeTab === 'FAST_SWITCH' ? '2px solid #0096cc' : 'none',
-                fontWeight: activeTab === 'FAST_SWITCH' ? 700 : 500,
-                color: activeTab === 'FAST_SWITCH' ? '#0096cc' : '#64748b',
-                cursor: 'pointer',
-                fontSize: '0.86rem',
+                justifyContent: 'space-between'
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Authenticating Staff Account:</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>
+                    {pendingAuth?.user?.name || username}
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#0096cc', fontWeight: 600 }}>
+                    {pendingAuth?.user?.email}
+                  </div>
+                </div>
+                <span className="status-pill pill-cyan" style={{ fontSize: '0.7rem' }}>
+                  {pendingAuth?.user?.role || 'STAFF'}
+                </span>
+              </div>
+
+              {/* MFA Delivery Channel Selector */}
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.35rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setMfaMethod('TOTP')}
+                  style={{
+                    flex: 1,
+                    padding: '0.6rem 0.75rem',
+                    borderRadius: '8px',
+                    border: `1px solid ${mfaMethod === 'TOTP' ? '#0096cc' : '#cbd5e1'}`,
+                    background: mfaMethod === 'TOTP' ? 'rgba(0, 150, 204, 0.08)' : '#ffffff',
+                    color: mfaMethod === 'TOTP' ? '#0096cc' : '#475569',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.4rem'
+                  }}
+                >
+                  <Smartphone size={14} /> Authenticator App
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMfaMethod('EMAIL_OTP')}
+                  style={{
+                    flex: 1,
+                    padding: '0.6rem 0.75rem',
+                    borderRadius: '8px',
+                    border: `1px solid ${mfaMethod === 'EMAIL_OTP' ? '#0096cc' : '#cbd5e1'}`,
+                    background: mfaMethod === 'EMAIL_OTP' ? 'rgba(0, 150, 204, 0.08)' : '#ffffff',
+                    color: mfaMethod === 'EMAIL_OTP' ? '#0096cc' : '#475569',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.4rem'
+                  }}
+                >
+                  <Mail size={14} /> Corporate Email OTP
+                </button>
+              </div>
+
+              {mfaError && (
+                <div style={{
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#b91c1c',
+                  fontSize: '0.82rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  marginBottom: '1.25rem'
+                }}>
+                  <AlertCircle size={16} />
+                  <span>{mfaError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleVerifyMfa}>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155' }}>
+                      Enter 6-Digit Security Code
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAutoFillMfa}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#0096cc',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}
+                    >
+                      <Sparkles size={12} /> Auto-fill Code (849203)
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    autoFocus
+                    placeholder="• • • • • •"
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    style={{
+                      width: '100%',
+                      padding: '0.85rem 1rem',
+                      borderRadius: '8px',
+                      border: '2px solid #0096cc',
+                      fontSize: '1.5rem',
+                      fontFamily: 'var(--font-mono)',
+                      letterSpacing: '0.45em',
+                      textAlign: 'center',
+                      fontWeight: 800,
+                      background: '#f8fafc',
+                      color: '#0f172a'
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={mfaVerifying || mfaCode.length < 6}
+                  className="btn btn-primary"
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem',
+                    fontSize: '0.95rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    opacity: mfaCode.length === 6 ? 1 : 0.6
+                  }}
+                >
+                  {mfaVerifying ? 'Verifying Security Token...' : (
+                    <>
+                      Verify MFA &amp; Access Underwriting Cockpit <ArrowRight size={16} />
+                    </>
+                  )}
+                </button>
+
+                <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMfaStage(false);
+                      setPendingAuth(null);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#64748b',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    &larr; Cancel / Return to Credentials
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : (
+            <>
+              {/* Mode Switch Tabs */}
+              <div style={{
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <UserCheck size={15} /> Evaluator / RBAC Switcher
-            </button>
-          </div>
+                borderBottom: '1px solid #e2e8f0',
+                background: '#f8fafc'
+              }}>
+                <button
+                  onClick={() => setActiveTab('LOGIN')}
+                  style={{
+                    flex: 1,
+                    padding: '0.85rem 1rem',
+                    background: activeTab === 'LOGIN' ? '#ffffff' : 'transparent',
+                    border: 'none',
+                    borderBottom: activeTab === 'LOGIN' ? '2px solid #0096cc' : 'none',
+                    fontWeight: activeTab === 'LOGIN' ? 700 : 500,
+                    color: activeTab === 'LOGIN' ? '#0096cc' : '#64748b',
+                    cursor: 'pointer',
+                    fontSize: '0.86rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <KeyRound size={15} /> Credentials Sign-In
+                </button>
+                <button
+                  onClick={() => setActiveTab('FAST_SWITCH')}
+                  style={{
+                    flex: 1,
+                    padding: '0.85rem 1rem',
+                    background: activeTab === 'FAST_SWITCH' ? '#ffffff' : 'transparent',
+                    border: 'none',
+                    borderBottom: activeTab === 'FAST_SWITCH' ? '2px solid #0096cc' : 'none',
+                    fontWeight: activeTab === 'FAST_SWITCH' ? 700 : 500,
+                    color: activeTab === 'FAST_SWITCH' ? '#0096cc' : '#64748b',
+                    cursor: 'pointer',
+                    fontSize: '0.86rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <UserCheck size={15} /> Evaluator / RBAC Switcher
+                </button>
+              </div>
 
           <div style={{ padding: '2rem 2.25rem' }}>
             {error && (
@@ -544,7 +796,9 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
                 </div>
               </div>
             )}
-          </div>
+            </div>
+            </>
+          )}
 
           {/* Institutional Compliance Notice */}
           <div style={{
