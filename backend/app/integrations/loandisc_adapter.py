@@ -95,15 +95,16 @@ class LoanDiscAdapter:
                 "case_state": credit_case.state
             }
 
-        ref = disbursement_reference or f"LD-DISB-{utc_now().strftime('%Y%m')}-{generate_uuid()[:6].upper()}"
-        evidence = confirmation_evidence or "Approved commercial facility booking & bank disbursement sanction."
+        disb_amount = amount if (amount is not None and amount > 0) else app.amount
+        ref = disbursement_reference or f"LD-DISB-{credit_case.case_number}-{utc_now().strftime('%Y%m%d%H%M')}"
+        evidence = confirmation_evidence or "Automatic 1-click disbursement executed via NIP/RTGS. Synchronized to LOAN-DISC."
 
         # 2. Record or update Disbursement record
         disb = db.query(Disbursement).filter(Disbursement.case_id == credit_case.id).first()
         if not disb:
             disb = Disbursement(
                 case_id=credit_case.id,
-                amount=amount,
+                amount=disb_amount,
                 currency="NGN",
                 status="CONFIRMED",
                 nav_reference=ref,
@@ -114,7 +115,7 @@ class LoanDiscAdapter:
             db.add(disb)
             db.flush()
         else:
-            disb.amount = amount
+            disb.amount = disb_amount
             disb.status = "CONFIRMED"
             disb.nav_reference = ref
             disb.confirmation_evidence = evidence
@@ -128,7 +129,7 @@ class LoanDiscAdapter:
             "borrower_bvn": cust.bvn,
             "borrower_phone": cust.phone,
             "borrower_email": cust.email,
-            "principal_amount": amount,
+            "principal_amount": disb_amount,
             "currency": "NGN",
             "interest_rate_annual": 28.0,
             "tenor_months": app.tenor,

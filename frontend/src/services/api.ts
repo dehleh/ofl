@@ -187,11 +187,22 @@ export async function updateCondition(caseId: string, conditionId: string, statu
   return res.json();
 }
 
-export async function confirmNavDisbursement(caseId: string, data: { nav_reference: string; amount: number; confirmation_evidence: string; actor: string }) {
+export async function executeOneClickLoandiscDisbursement(caseId: string, actor: string = 'Treasury Officer') {
+  const res = await fetch(`${API_BASE}/cases/${caseId}/treasury/disburse-loandisc`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ actor })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function confirmNavDisbursement(caseId: string, data?: { nav_reference?: string; amount?: number; confirmation_evidence?: string; actor?: string }) {
   const res = await fetch(`${API_BASE}/cases/${caseId}/treasury/confirm`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(data || {})
   });
   const json = await res.json();
   if (!res.ok) throw json;

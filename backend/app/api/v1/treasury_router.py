@@ -34,11 +34,11 @@ def get_treasury_disbursement_packet(
 @router.post("/disburse-loandisc")
 def book_and_disburse_loandisc(
     case_id: str,
-    payload: TreasuryDisbursementRequest,
+    payload: Optional[TreasuryDisbursementRequest] = None,
     db: Session = Depends(get_db)
 ):
     """
-    Directly books and syncs authorized credit facility into LOAN-DISC (FR-15 / FR-16).
+    Directly books and syncs authorized credit facility into LOAN-DISC automatically in 1 click (FR-15 / FR-16).
     Enforces idempotency, creates repayment schedule, and advances case to Disbursed / Monitoring.
     """
     credit_case = db.query(CreditCase).filter(
@@ -47,13 +47,16 @@ def book_and_disburse_loandisc(
     if not credit_case:
         raise HTTPException(status_code=404, detail="Case not found.")
         
+    req = payload or TreasuryDisbursementRequest()
+    ref = req.disbursement_reference or req.nav_reference
+    
     ok, result = LoanDiscAdapter.book_and_disburse(
         db=db,
         credit_case=credit_case,
-        amount=payload.amount,
-        disbursement_reference=payload.nav_reference,
-        confirmation_evidence=payload.confirmation_evidence,
-        actor=payload.actor
+        amount=req.amount or credit_case.application.amount,
+        disbursement_reference=ref,
+        confirmation_evidence=req.confirmation_evidence,
+        actor=req.actor or "Treasury Officer"
     )
     if not ok:
         raise HTTPException(status_code=400, detail=result.get("error", "Booking failed"))

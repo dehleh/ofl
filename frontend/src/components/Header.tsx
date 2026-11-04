@@ -10,13 +10,13 @@ interface HeaderProps {
   onExitToPublicClient?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ 
-  currentPersona, 
-  onPersonaChange, 
-  backendOnline, 
+export const Header: React.FC<HeaderProps> = ({
+  currentPersona,
+  onPersonaChange,
+  backendOnline,
   currentUser,
   onSignOut,
-  onExitToPublicClient 
+  onExitToPublicClient
 }) => {
   return (
     <header className="app-header">
@@ -61,10 +61,10 @@ export const Header: React.FC<HeaderProps> = ({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
         {onExitToPublicClient && (
-          <button 
+          <button
             className="btn btn-secondary btn-sm"
             onClick={onExitToPublicClient}
-            style={{ 
+            style={{
               fontSize: '0.8rem',
               display: 'flex',
               alignItems: 'center',
@@ -98,7 +98,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="persona-switcher">
           <UserCheck size={16} color="var(--brand-cerulean)" />
           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Persona:</span>
-          <select 
+          <select
             className="persona-select"
             value={currentPersona}
             onChange={(e) => onPersonaChange(e.target.value)}

@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, FileText, CheckCircle, AlertTriangle, ShieldCheck,
   Send, RefreshCw, Cpu, UserCheck, CheckSquare, DollarSign, ExternalLink,
-  ShieldAlert, Clock, PlusCircle
+  ShieldAlert, Clock, PlusCircle, Zap
 } from 'lucide-react';
 import {
   fetchCaseWorkspace, generateAICam, updateCam, submitApprovalDecision,
   generateOffer, takeOfferAction, updateCondition, confirmNavDisbursement,
-  syncLoanDisc, raiseException, triggerYouverifyKyc
+  executeOneClickLoandiscDisbursement, syncLoanDisc, raiseException, triggerYouverifyKyc
 } from '../services/api';
 import { OpticomCamDocument } from '../components/OpticomCamDocument';
 import { BankStatementAnalyzerCard } from '../components/BankStatementAnalyzerCard';
@@ -230,6 +230,19 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
       await loadWorkspace();
     } catch (err: any) {
       setMessageBanner({ type: 'error', text: err.message });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleOneClickDisburse = async () => {
+    setActionLoading(true);
+    try {
+      const res = await executeOneClickLoandiscDisbursement(caseData.id, `${currentPersona} Treasury Officer`);
+      setMessageBanner({ type: 'success', text: res.message || 'Facility successfully disbursed and booked into LOAN-DISC!' });
+      await loadWorkspace();
+    } catch (err: any) {
+      setMessageBanner({ type: 'error', text: err.detail || err.message || 'Disbursement execution failed' });
     } finally {
       setActionLoading(false);
     }
@@ -931,43 +944,100 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleConfirmTreasuryNav}>
-                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                  <label className="form-label">Payment Voucher / Bank Transaction Reference *</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    required
-                    placeholder="e.g. LD-DISB-202611-9941 or NIP Ref"
-                    value={navReference}
-                    onChange={(e) => setNavReference(e.target.value)}
-                  />
-                  <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.25rem', display: 'block' }}>
-                    Reference from payment voucher or bank transfer advice for LOAN-DISC settlement tracking.
-                  </span>
-                </div>
+              <div>
+                {/* 1-Click Automated Execution Card */}
+                <div style={{
+                  padding: '1.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'linear-gradient(135deg, rgba(0, 150, 204, 0.05) 0%, rgba(5, 150, 105, 0.05) 100%)',
+                  border: '1px solid rgba(0, 150, 204, 0.25)',
+                  marginBottom: '1rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.65rem' }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: 'rgba(0, 150, 204, 0.12)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Zap size={18} color="#0096cc" />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>
+                        Automated 1-Click LOAN-DISC Disbursement
+                      </h4>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                        Zero manual paperwork: Clicking records disbursement and LOAN-DISC automatically picks it up.
+                      </div>
+                    </div>
+                  </div>
 
-                <div className="form-group" style={{ marginBottom: '1.75rem' }}>
-                  <label className="form-label">Disbursement Settlement Notes *</label>
-                  <textarea
-                    className="form-textarea"
-                    rows={2}
-                    required
-                    placeholder="Approved commercial facility disbursement via NIP / RTGS into borrower's verified commercial bank account."
-                    value={navEvidence}
-                    onChange={(e) => setNavEvidence(e.target.value)}
-                  />
-                </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+                    gap: '0.75rem',
+                    background: '#ffffff',
+                    padding: '1rem 1.25rem',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0',
+                    fontSize: '0.82rem',
+                    marginTop: '1.25rem',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <div>
+                      <span style={{ color: '#64748b', display: 'block', fontSize: '0.74rem' }}>Verified Borrower</span>
+                      <strong style={{ color: '#0f172a' }}>{customer.name}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748b', display: 'block', fontSize: '0.74rem' }}>Net Disbursable</span>
+                      <strong style={{ color: '#0096cc', fontFamily: 'var(--font-mono)' }}>₦{application.amount.toLocaleString()}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748b', display: 'block', fontSize: '0.74rem' }}>Auto Voucher Ref</span>
+                      <strong style={{ color: '#0f172a', fontFamily: 'var(--font-mono)' }}>LD-DISB-{caseData.case_number}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748b', display: 'block', fontSize: '0.74rem' }}>Target Core LMS</span>
+                      <strong style={{ color: '#059669' }}>LOAN-DISC Servicing</strong>
+                    </div>
+                  </div>
 
-                <button
-                  type="submit"
-                  className="btn btn-primary btn-lg"
-                  disabled={actionLoading || (caseData.state !== 'Ready for Disbursement' && caseData.state !== 'Offer Accepted')}
-                  style={{ width: '100%', justifyContent: 'center', gap: '0.5rem' }}
-                >
-                  <Send size={16} /> Book &amp; Synchronize Facility into LOAN-DISC
-                </button>
-              </form>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-lg"
+                    onClick={handleOneClickDisburse}
+                    disabled={actionLoading || (caseData.state !== 'Ready for Disbursement' && caseData.state !== 'Offer Accepted')}
+                    style={{
+                      width: '100%',
+                      padding: '1rem',
+                      fontSize: '1.02rem',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      boxShadow: '0 4px 14px rgba(0, 150, 204, 0.35)'
+                    }}
+                  >
+                    {actionLoading ? (
+                      <>
+                        <RefreshCw size={18} className="spin" /> Recording Disbursement &amp; Syncing to LOAN-DISC...
+                      </>
+                    ) : (
+                      <>
+                        <Zap size={18} /> Record Disbursement &amp; Sync to LOAN-DISC (1-Click)
+                      </>
+                    )}
+                  </button>
+
+                  <div style={{ textAlign: 'center', marginTop: '0.75rem', fontSize: '0.74rem', color: '#64748b' }}>
+                    ⚡ Automates voucher recording, schedule generation, borrower SMS dispatch, and LOAN-DISC portfolio ingestion.
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>

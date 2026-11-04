@@ -78,9 +78,10 @@ class ConditionUpdateRequest(BaseModel):
     verified_by: str = "Credit Operations"
 
 class TreasuryDisbursementRequest(BaseModel):
-    nav_reference: str = Field(..., min_length=3)
-    amount: float = Field(..., gt=0)
-    confirmation_evidence: str = Field(..., min_length=5)
+    amount: Optional[float] = None
+    nav_reference: Optional[str] = None
+    disbursement_reference: Optional[str] = None
+    confirmation_evidence: Optional[str] = None
     actor: str = "Treasury Officer"
 
 class ExceptionRaiseRequest(BaseModel):
