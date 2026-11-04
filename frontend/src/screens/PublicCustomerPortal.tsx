@@ -310,7 +310,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
               OPTICOM FINANCE LIMITED
             </div>
             <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: '0.08em' }}>
-              COMMERCIAL CREDIT & ENTERPRISE DEBT ENGINE &bull; &gt; ₦2,000,000
+              COMMERCIAL CREDIT & STRUCTURED FINANCE &bull; &gt; ₦2,000,000
             </div>
           </div>
         </div>
@@ -469,7 +469,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
             }}>
               Empowering Nigerian enterprise with tailored commercial facilities from{' '}
               <strong style={{ color: '#38bdf8', fontWeight: 700 }}>₦2,000,000 to ₦200,000,000</strong>.
-              Fast working capital, contract finance, instant statement OCR, and 48-hour term sheet execution.
+              Fast working capital, contract finance, rapid financial assessment, and 48-hour term sheet execution.
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
@@ -508,14 +508,14 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
             alignItems: 'center'
           }}>
             <div style={{
-              background: 'rgba(6, 20, 38, 0.68)',
-              border: '1px solid rgba(56, 189, 248, 0.35)',
+              background: 'rgba(6, 20, 38, 0.72)',
+              border: '1px solid rgba(56, 189, 248, 0.4)',
               backdropFilter: 'blur(16px)',
               borderRadius: '16px',
               padding: '1.75rem 2rem',
               maxWidth: '380px',
               width: '100%',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.35), 0 0 20px rgba(0, 150, 204, 0.2)',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4), 0 0 25px rgba(0, 150, 204, 0.25)',
               color: '#ffffff'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
@@ -550,8 +550,8 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   <strong style={{ color: '#38bdf8' }}>28% Per Annum</strong>
                 </div>
                 <div>
-                  <span style={{ color: '#94a3b8', display: 'block' }}>Target LMS:</span>
-                  <strong style={{ color: '#10b981' }}>LOAN-DISC</strong>
+                  <span style={{ color: '#94a3b8', display: 'block' }}>Settlement:</span>
+                  <strong style={{ color: '#10b981' }}>Automated Core Banking</strong>
                 </div>
                 <div>
                   <span style={{ color: '#94a3b8', display: 'block' }}>KYC Clearance:</span>
@@ -569,13 +569,13 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
           background: 'rgba(3, 15, 30, 0.88)',
           borderTop: '1px solid rgba(255, 255, 255, 0.08)',
           backdropFilter: 'blur(12px)',
-          padding: '1.25rem 2rem'
+          padding: '1.35rem 2rem'
         }}>
           <div style={{
             maxWidth: '1240px',
             margin: '0 auto',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '1.5rem'
           }}>
             <div>
@@ -586,7 +586,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                 ₦4.8 Billion+
               </div>
               <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: '0.15rem' }}>
-                Corporate &amp; Commercial Tiers
+                Corporate &amp; Commercial Facilities
               </div>
             </div>
 
@@ -598,7 +598,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                 &le; 48 Hours
               </div>
               <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: '0.15rem' }}>
-                Automated Credit Memo
+                Credit Committee Approval SLA
               </div>
             </div>
 
@@ -610,7 +610,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                 99.4%
               </div>
               <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: '0.15rem' }}>
-                Deterministic Financial Ratios
+                Structured Credit Appraisal
               </div>
             </div>
 
@@ -622,7 +622,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                 ₦2M – ₦200M
               </div>
               <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: '0.15rem' }}>
-                Commercial Working Capital
+                Working Capital &amp; Asset Finance
               </div>
             </div>
           </div>
@@ -1186,7 +1186,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     Attach Supporting Credit Evidence
                   </h4>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '580px', margin: '0.35rem auto 1.5rem auto' }}>
-                    Upload 6-month Bank Statement (PDF/CSV with Document AI OCR support), Contract Award / Purchase Order, and CAC Registration documents.
+                    Upload 6-month Bank Statement (PDF/CSV/Excel), Contract Award / Purchase Order, and CAC Registration documents.
                   </p>
 
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
@@ -1239,7 +1239,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                             <span style={{ fontWeight: 700, color: 'var(--text-highlight)' }}>{f.name}</span>
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({f.type} &bull; {f.size})</span>
                           </div>
-                          <span className="status-pill pill-cyan" style={{ fontSize: '0.72rem' }}>Ready for OCR ✓</span>
+                          <span className="status-pill pill-emerald" style={{ fontSize: '0.72rem' }}>Document Attached ✓</span>
                         </div>
                       ))}
                     </div>
@@ -1368,7 +1368,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
           <div className="glass-panel cyber-top-edge" style={{ padding: '2.75rem' }}>
             <div style={{ textAlign: 'center', maxWidth: '680px', margin: '0 auto 2.5rem auto' }}>
               <span className="status-pill pill-cyan" style={{ marginBottom: '0.75rem' }}>
-                DETERMINISTIC AMORTIZATION ENGINE
+                COMMERCIAL REPAYMENT SIZER
               </span>
               <h3 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-highlight)', fontFamily: 'var(--font-display)' }}>
                 Commercial Facility Amortization &amp; Fee Simulator
@@ -1683,8 +1683,25 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
         <div style={{ marginTop: '0.5rem', color: 'var(--text-muted)' }}>
           Registered Office: No.2, Rev Yinka Akinsanya Street, Gbetu Ibeju Lekki, Lagos, Nigeria.
         </div>
-        <div style={{ marginTop: '0.5rem', fontSize: '0.74rem', color: 'var(--brand-cerulean)', fontWeight: 600 }}>
-          Deterministic Underwriting Engine &bull; Document AI OCR &bull; GCP Cloud Run Enterprise Cluster
+        <div style={{ 
+          marginTop: '0.85rem', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          gap: '1.25rem', 
+          flexWrap: 'wrap',
+          fontSize: '0.76rem', 
+          color: 'var(--text-secondary)' 
+        }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <ShieldCheck size={14} color="#10b981" /> 256-Bit SSL Enterprise Security
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <CheckCircle2 size={14} color="var(--brand-cerulean)" /> NDPR Data Privacy Compliant
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Building2 size={14} color="#f59e0b" /> CBN Regulated Finance House
+          </span>
         </div>
       </footer>
     </div>
