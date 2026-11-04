@@ -2,15 +2,15 @@
 Enterprise Credit Underwriting AI Copilot & Chatbot Router
 Powered by Google Cloud Vertex AI (Gemini) with Opticom Credit Knowledge Base.
 """
-from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException
+from typing import List, Optional
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ...database import get_db
-from ...models.entities import CreditCase, Customer, Application, FinancialAssessment, KYCCheck
+from ...models.entities import CreditCase, FinancialAssessment
 from ...config import settings
-from ...core.security import get_current_user, TokenPayload
+from ...integrations.vertex_ai_service import VertexAICamService
 
 router = APIRouter(prefix="/copilot", tags=["AI Copilot & Underwriter Assistant"])
 
@@ -132,24 +132,19 @@ def chat_with_copilot(payload: CopilotQueryRequest, db: Session = Depends(get_db
                 f"* **Monthly Installment**: ₦{ratios.get('estimated_monthly_installment', 0):,.2f}"
             )
 
-    # Attempt Google Cloud Vertex AI (Gemini)
+    # Attempt Google Cloud Vertex AI (Gemini) via centralized VertexAICamService
     if settings.VERTEX_AI_ENABLED and settings.GCP_PROJECT_ID:
         try:
-            import vertexai
-            from vertexai.generative_models import GenerativeModel
-            vertexai.init(project=settings.GCP_PROJECT_ID, location=settings.GCP_LOCATION)
-            model = GenerativeModel(settings.VERTEX_AI_MODEL)
-            
             prompt = f"{OPTICOM_CREDIT_POLICY_CONTEXT}\n\n"
             if case_context:
                 prompt += f"ACTIVE CASE CONTEXT:\n{case_context}\n\n"
             prompt += f"CURRENT STAFF PERSONA: {payload.persona}\n\n"
             prompt += f"STAFF QUERY: {payload.message}\n"
             
-            response = model.generate_content(prompt)
-            if response and response.text:
+            gemini_reply = VertexAICamService.ask_gemini(prompt)
+            if gemini_reply:
                 return {
-                    "reply": response.text,
+                    "reply": gemini_reply,
                     "provider": f"Google Cloud Vertex AI ({settings.VERTEX_AI_MODEL})",
                     "grounded_on_case": bool(payload.case_id)
                 }

@@ -222,3 +222,29 @@ def test_multi_channel_notifications_and_telemetry():
     assert len(logs) >= 2
     assert any(log["id"] == sms["id"] for log in logs)
     assert any(log["id"] == email["id"] for log in logs)
+
+def test_credit_underwriting_ai_copilot():
+    """
+    Validates staff AI Copilot endpoint (/api/v1/copilot/chat).
+    Tests policy queries and active case grounding.
+    """
+    # 1. Ask policy question
+    resp = client.post("/api/v1/copilot/chat", json={
+        "message": "What is the difference between CBN 23% MPR and Opticom 28% APR?",
+        "persona": "Senior Credit Analyst"
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "reply" in data
+    assert "23.00%" in data["reply"]
+    assert "28.00%" in data["reply"]
+    assert "provider" in data
+
+    # 2. Ask ratio benchmark question
+    resp_ratios = client.post("/api/v1/copilot/chat", json={
+        "message": "What are our DSCR and ICR benchmarks?",
+        "persona": "Head of Risk Management"
+    })
+    assert resp_ratios.status_code == 200
+    assert "1.20x" in resp_ratios.json()["reply"]
+    assert "1.50x" in resp_ratios.json()["reply"]

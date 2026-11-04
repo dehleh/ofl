@@ -62,6 +62,21 @@ class VertexAICamService:
         return cls._model_client
 
     @classmethod
+    def ask_gemini(cls, prompt: str) -> Optional[str]:
+        """
+        Direct text inference with Vertex AI Gemini. Returns None if client unavailable.
+        """
+        client = cls._get_vertex_client()
+        if client:
+            try:
+                res = client.generate_content(prompt)
+                if res and res.text:
+                    return res.text
+            except Exception as e:
+                logger.warning(f"Vertex AI inference notice: {e}")
+        return None
+
+    @classmethod
     def build_opticom_cam_template_data(
         cls,
         credit_case: CreditCase,
