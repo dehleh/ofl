@@ -352,87 +352,285 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
         </div>
       </nav>
 
-      {/* Main Container */}
-      <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '3rem 1.5rem', position: 'relative', zIndex: 1 }}>
-        {/* Futuristic Hero Section */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.35rem 1rem',
-            borderRadius: 'var(--radius-full)',
-            background: 'rgba(0, 150, 204, 0.06)',
-            border: '1px solid rgba(0, 150, 204, 0.25)',
-            boxShadow: '0 1px 4px rgba(0, 150, 204, 0.08)',
-            marginBottom: '1.25rem'
-          }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0096cc', boxShadow: '0 0 8px #0096cc' }} />
-            <span style={{ fontSize: '0.76rem', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#0096cc', letterSpacing: '0.06em' }}>
-              CBN LICENSED FINANCE HOUSE &bull; RC: 347832 &bull; COMMERCIAL CREDIT GATEWAY
-            </span>
+      {/* ================================================================= */}
+      {/* FULL-WIDTH STRETCHED HERO BANNER (2 MEN COMMERCIAL TRANSACTION)  */}
+      {/* ================================================================= */}
+      <section style={{
+        position: 'relative',
+        width: '100%',
+        minHeight: '480px',
+        overflow: 'hidden',
+        background: '#041326',
+        borderBottom: '1px solid rgba(0, 150, 204, 0.25)'
+      }}>
+        {/* Colorful High-Resolution Transaction Image (Stretched Edge-to-Edge) */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundImage: 'url(/hero_transaction.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 28%',
+          filter: 'saturate(1.22) contrast(1.08) brightness(0.96)',
+          transform: 'scale(1.01)',
+          zIndex: 0
+        }} />
+
+        {/* Dynamic Dual-Tone Cerulean & Deep Space Gradient Overlay */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'linear-gradient(90deg, rgba(4, 19, 38, 0.94) 0%, rgba(4, 19, 38, 0.82) 42%, rgba(0, 150, 204, 0.42) 75%, rgba(4, 19, 38, 0.18) 100%)',
+          zIndex: 1
+        }} />
+
+        {/* Ambient Warm Golden & Cerulean Glow Accents */}
+        <div style={{
+          position: 'absolute',
+          top: '-20%',
+          right: '5%',
+          width: '450px',
+          height: '450px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(245, 158, 11, 0.2) 0%, transparent 70%)',
+          filter: 'blur(70px)',
+          pointerEvents: 'none',
+          zIndex: 1
+        }} />
+        <div style={{
+          position: 'absolute',
+          bottom: '-15%',
+          left: '10%',
+          width: '500px',
+          height: '500px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(0, 150, 204, 0.25) 0%, transparent 70%)',
+          filter: 'blur(80px)',
+          pointerEvents: 'none',
+          zIndex: 1
+        }} />
+
+        {/* Hero Content Grid Aligned With Page */}
+        <div style={{
+          maxWidth: '1240px',
+          margin: '0 auto',
+          padding: '4rem 2rem 3rem 2rem',
+          position: 'relative',
+          zIndex: 2,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          alignItems: 'center',
+          gap: '2.5rem'
+        }}>
+          {/* Left Hero Pitch */}
+          <div style={{ maxWidth: '640px' }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.35rem 1rem',
+              borderRadius: 'var(--radius-full)',
+              background: 'rgba(0, 150, 204, 0.2)',
+              border: '1px solid rgba(56, 189, 248, 0.45)',
+              backdropFilter: 'blur(8px)',
+              marginBottom: '1.25rem'
+            }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#38bdf8', boxShadow: '0 0 10px #38bdf8' }} />
+              <span style={{ fontSize: '0.74rem', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#e0f2fe', letterSpacing: '0.08em' }}>
+                CBN LICENSED FINANCE HOUSE &bull; RC: 347832 &bull; COMMERCIAL CREDIT
+              </span>
+            </div>
+
+            <h1 style={{
+              fontSize: 'clamp(2.2rem, 4.2vw, 3.4rem)',
+              fontWeight: 800,
+              fontFamily: 'var(--font-display)',
+              lineHeight: 1.14,
+              letterSpacing: '-0.03em',
+              color: '#ffffff',
+              marginBottom: '1.15rem',
+              textShadow: '0 2px 10px rgba(0, 0, 0, 0.35)'
+            }}>
+              Commercial Credit &amp; Structured Debt Financing
+            </h1>
+
+            <p style={{
+              color: '#cbd5e1',
+              fontSize: '1.08rem',
+              lineHeight: 1.6,
+              marginBottom: '2rem',
+              maxWidth: '560px',
+              textShadow: '0 1px 3px rgba(0, 0, 0, 0.3)'
+            }}>
+              Empowering Nigerian enterprise with tailored commercial facilities from{' '}
+              <strong style={{ color: '#38bdf8', fontWeight: 700 }}>₦2,000,000 to ₦200,000,000</strong>.
+              Fast working capital, contract finance, instant statement OCR, and 48-hour term sheet execution.
+            </p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
+              <button 
+                className="btn btn-primary btn-lg"
+                onClick={() => setActiveTab('APPLY')}
+                style={{
+                  fontSize: '0.96rem',
+                  padding: '0.85rem 1.75rem',
+                  boxShadow: '0 4px 18px rgba(0, 150, 204, 0.45)'
+                }}
+              >
+                <Zap size={16} /> Apply for Facility
+              </button>
+              <button 
+                className="btn btn-secondary btn-lg"
+                onClick={() => setActiveTab('CALCULATOR')}
+                style={{
+                  fontSize: '0.96rem',
+                  padding: '0.85rem 1.5rem',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: '#ffffff',
+                  borderColor: 'rgba(255, 255, 255, 0.25)',
+                  backdropFilter: 'blur(8px)'
+                }}
+              >
+                <Calculator size={16} /> Live Sizer &amp; Calculator
+              </button>
+            </div>
           </div>
 
-          <h1 style={{
-            fontSize: 'clamp(2rem, 4.5vw, 3rem)',
-            fontWeight: 800,
-            fontFamily: 'var(--font-display)',
-            lineHeight: 1.16,
-            letterSpacing: '-0.03em',
-            maxWidth: '880px',
-            margin: '0 auto 1.15rem auto',
-            color: '#0f172a'
+          {/* Right Floating Deal Card with Vibrant Lighting */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
           }}>
-            Commercial Credit &amp; Structured Debt Financing
-          </h1>
-
-          <p style={{
-            color: '#475569',
-            fontSize: '1.08rem',
-            maxWidth: '740px',
-            margin: '0 auto 2.25rem auto',
-            lineHeight: 1.6
-          }}>
-            Fast working capital, contract finance, and asset acquisition for facilities from{' '}
-            <strong style={{ color: '#0096cc', fontWeight: 700 }}>₦2,000,000 to ₦200,000,000</strong>.
-            Instant statement analysis, transparent pricing, and 48-hour term sheet execution.
-          </p>
-
-          {/* Institutional KPI Strip */}
-          <div className="metrics-grid" style={{ maxWidth: '960px', margin: '0 auto 1.5rem auto' }}>
-            <div className="metric-card" style={{ textAlign: 'left', borderLeft: '3px solid #0096cc' }}>
-              <div className="metric-label">Disbursed Volume</div>
-              <div className="metric-value">₦4.8 Billion+</div>
-              <div className="metric-footer" style={{ color: '#0096cc', fontWeight: 600 }}>
-                Corporate &amp; SME Facilities
+            <div style={{
+              background: 'rgba(6, 20, 38, 0.68)',
+              border: '1px solid rgba(56, 189, 248, 0.35)',
+              backdropFilter: 'blur(16px)',
+              borderRadius: '16px',
+              padding: '1.75rem 2rem',
+              maxWidth: '380px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.35), 0 0 20px rgba(0, 150, 204, 0.2)',
+              color: '#ffffff'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.08em', fontWeight: 600 }}>
+                  Live Commercial Transaction
+                </span>
+                <span className="status-pill pill-emerald" style={{ fontSize: '0.68rem', padding: '0.15rem 0.5rem' }}>
+                  ACTIVE DEAL
+                </span>
               </div>
-            </div>
-
-            <div className="metric-card" style={{ textAlign: 'left', borderLeft: '3px solid #2563eb' }}>
-              <div className="metric-label">Decision Turnaround</div>
-              <div className="metric-value">&le; 48 Hours</div>
-              <div className="metric-footer" style={{ color: '#2563eb', fontWeight: 600 }}>
-                Credit Committee Term Sheet
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: '#38bdf8', fontFamily: 'var(--font-mono)', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
+                ₦50,000,000
               </div>
-            </div>
-
-            <div className="metric-card" style={{ textAlign: 'left', borderLeft: '3px solid #059669' }}>
-              <div className="metric-label">Underwriting Precision</div>
-              <div className="metric-value">99.4%</div>
-              <div className="metric-footer" style={{ color: '#059669', fontWeight: 600 }}>
-                Financial Assessment Engine
+              <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, marginBottom: '1.25rem' }}>
+                Commercial Haulage &amp; Supply Fleet Facility
               </div>
-            </div>
-
-            <div className="metric-card" style={{ textAlign: 'left', borderLeft: '3px solid #d97706' }}>
-              <div className="metric-label">Facility Capability</div>
-              <div className="metric-value">₦2M – ₦200M</div>
-              <div className="metric-footer" style={{ color: '#d97706', fontWeight: 600 }}>
-                Commercial &amp; Structured Debt
+              
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.75rem',
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                paddingTop: '1rem',
+                fontSize: '0.78rem'
+              }}>
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block' }}>Approval SLA:</span>
+                  <strong style={{ color: '#ffffff' }}>48 Hours</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block' }}>Pricing APR:</span>
+                  <strong style={{ color: '#38bdf8' }}>28% Per Annum</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block' }}>Target LMS:</span>
+                  <strong style={{ color: '#10b981' }}>LOAN-DISC</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#94a3b8', display: 'block' }}>KYC Clearance:</span>
+                  <strong style={{ color: '#38bdf8' }}>NIBSS BVN ✓</strong>
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Full-Width Stretched Metrics Band */}
+        <div style={{
+          position: 'relative',
+          zIndex: 2,
+          background: 'rgba(3, 15, 30, 0.88)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          backdropFilter: 'blur(12px)',
+          padding: '1.25rem 2rem'
+        }}>
+          <div style={{
+            maxWidth: '1240px',
+            margin: '0 auto',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '1.5rem'
+          }}>
+            <div>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.07em' }}>
+                Disbursed Volume
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#38bdf8', fontFamily: 'var(--font-mono)', marginTop: '0.2rem' }}>
+                ₦4.8 Billion+
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: '0.15rem' }}>
+                Corporate &amp; Commercial Tiers
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.07em' }}>
+                Decision Turnaround
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-mono)', marginTop: '0.2rem' }}>
+                &le; 48 Hours
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: '0.15rem' }}>
+                Automated Credit Memo
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.07em' }}>
+                Underwriting Precision
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981', fontFamily: 'var(--font-mono)', marginTop: '0.2rem' }}>
+                99.4%
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: '0.15rem' }}>
+                Deterministic Financial Ratios
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.07em' }}>
+                Facility Capability
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f59e0b', fontFamily: 'var(--font-mono)', marginTop: '0.2rem' }}>
+                ₦2M – ₦200M
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: '0.15rem' }}>
+                Commercial Working Capital
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Main Container */}
+      <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '2.5rem 1.5rem', position: 'relative', zIndex: 1 }}>
 
         {/* ================================================================= */}
         {/* TAB 1: APPLY FOR LOAN */}
