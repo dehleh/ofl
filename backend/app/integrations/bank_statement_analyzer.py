@@ -46,7 +46,8 @@ class BankStatementAnalyzer:
         processor_id = getattr(settings, "GCP_DOCUMENTAI_PROCESSOR_ID", None)
         if processor_id:
             try:
-                from google.cloud import documentai
+                import importlib
+                documentai = importlib.import_module("google.cloud.documentai")
                 client = documentai.DocumentProcessorServiceClient()
                 name = client.processor_path(settings.GCP_PROJECT_ID, settings.GCP_LOCATION, processor_id)
                 raw_document = documentai.RawDocument(content=file_bytes, mime_type="application/pdf")

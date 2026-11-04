@@ -42,8 +42,10 @@ class VertexAICamService:
             cls._init_attempted = True
             if settings.VERTEX_AI_ENABLED and settings.GCP_PROJECT_ID:
                 try:
-                    import vertexai
-                    from vertexai.generative_models import GenerativeModel
+                    import importlib
+                    vertexai = importlib.import_module("vertexai")
+                    gen_models = importlib.import_module("vertexai.generative_models")
+                    GenerativeModel = getattr(gen_models, "GenerativeModel")
                     vertexai.init(
                         project=settings.GCP_PROJECT_ID, 
                         location=settings.GCP_LOCATION
