@@ -95,6 +95,50 @@ def get_admin_pricing_policy(
     """
     return ConfigManager.get_pricing_policy(db)
 
+@router.get("/fees")
+def get_fee_catalog(
+    db: Session = Depends(get_db),
+    current_user: TokenPayload = Depends(get_current_user)
+):
+    """
+    Returns master fee catalog including standard Opticom fees and bespoke fees.
+    """
+    return ConfigManager.get_fee_catalog(db)
+
+class UpdateFeeCatalogPayload(BaseModel):
+    fees: List[Dict[str, Any]]
+
+@router.put("/fees")
+def update_fee_catalog(
+    payload: UpdateFeeCatalogPayload,
+    db: Session = Depends(get_db),
+    current_user: TokenPayload = Depends(get_current_user)
+):
+    """
+    Updates master catalog of facility fees with bespoke fee additions.
+    """
+    updated_catalog = ConfigManager.update_fee_catalog(
+        db=db,
+        fees=payload.fees,
+        actor=current_user.name
+    )
+
+    GoogleCloudLoggingService.emit_audit_event(
+        actor=current_user.name,
+        role=current_user.role,
+        event="FEE_CATALOG_UPDATED",
+        entity="SYSTEM_CONFIG",
+        entity_id="FEE_CATALOG",
+        reason=f"Admin updated master fee catalog ({len(payload.fees)} items configured)",
+        correlation_id="FEE_CATALOG",
+        details={"fee_count": len(payload.fees)}
+    )
+
+    return {
+        "message": "Master fee catalog updated successfully.",
+        "fees": updated_catalog
+    }
+
 @router.post("/test-email")
 def test_email_configuration(
     payload: TestEmailPayload,

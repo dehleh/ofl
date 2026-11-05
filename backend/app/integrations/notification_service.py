@@ -163,5 +163,33 @@ class NotificationService:
         cls.send_sms(to_phone=customer_phone, message=sms_msg, template="FACILITY_DISBURSED", metadata={"case_number": case_number, "nav_ref": nav_reference})
 
     @classmethod
+    def notify_finance_and_disbursement_initiated(
+        cls,
+        case_number: str,
+        obligor_name: str,
+        amount: float,
+        final_approver: str,
+        approver_role: str
+    ):
+        """
+        Alerts Finance, Treasury, and Operations that a credit facility has received final
+        executive/board approval and disbursement preparations are initiated.
+        """
+        subject = f"[FINANCE ALERT] Case {case_number} ({obligor_name}) Approved for ₦{amount:,.2f}"
+        body = f"""
+        <h3>Opticom Finance Limited - Disbursement Notification</h3>
+        <p>Credit Case <strong>{case_number}</strong> for <strong>{obligor_name}</strong> has received final sanction from <strong>{final_approver} ({approver_role})</strong>.</p>
+        <p><strong>Approved Facility Quantum:</strong> ₦{amount:,.2f}</p>
+        <p>The formal offer letter is being dispatched to the obligor. Finance and Treasury are now in the know for conditions precedent verification and LOAN-DISC payment initiation.</p>
+        """
+        cls.send_email(
+            to_email="disbursement@opticomfinance.com", 
+            subject=subject, 
+            html_body=body, 
+            template="FINANCE_DISBURSEMENT_INITIATED",
+            metadata={"case_number": case_number, "amount": amount}
+        )
+
+    @classmethod
     def get_delivery_logs(cls, limit: int = 50) -> List[Dict[str, Any]]:
         return cls._delivery_log[:limit]

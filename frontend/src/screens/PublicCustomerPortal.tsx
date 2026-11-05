@@ -356,7 +356,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
           </button>
 
           <a 
-            href="tel:+2348033453830"
+            href="tel:+2348161813538"
             className="btn btn-secondary btn-sm"
             style={{ 
               fontSize: '0.8rem',
@@ -367,7 +367,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
               gap: '0.4rem'
             }}
           >
-            <PhoneCall size={14} color="var(--brand-cerulean)" /> Help Desk: 0803 345 3830
+            <PhoneCall size={14} color="var(--brand-cerulean)" /> Helpline: 0816 181 3538
           </a>
         </div>
       </nav>
@@ -1706,7 +1706,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
           Opticom Finance Limited &bull; RC: 347832 &bull; Licensed by the Central Bank of Nigeria (CBN)
         </div>
         <div style={{ marginTop: '0.5rem', color: 'var(--text-muted)' }}>
-          Head Office: 10th Floor, UAC House, 1-5 Odunlami St, Lagos Island, Lagos 101001, Nigeria &bull; Help-Line: 0803 345 3830 (+234 803 345 3830)
+          Head Office: 10th Floor, UAC House, 1-5 Odunlami St, Lagos Island, Lagos 101001, Nigeria &bull; Helpline: 0816 181 3538 (+234 816 181 3538) &bull; Email: info@opticomfinance.com | customercare@opticomfinance.com
         </div>
         <div style={{ 
           marginTop: '0.85rem', 

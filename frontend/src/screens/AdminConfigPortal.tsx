@@ -6,7 +6,9 @@ import {
   fetchStaffUsers, 
   createStaffUser, 
   updateStaffUser, 
-  deactivateStaffUser 
+  deactivateStaffUser,
+  fetchFeeCatalog,
+  updateFeeCatalog
 } from '../services/api';
 import { 
   Users, 
@@ -25,14 +27,20 @@ import {
   ExternalLink,
   Server,
   Zap,
-  Globe
+  Globe,
+  Receipt,
+  Trash2,
+  DollarSign,
+  Percent,
+  Edit3
 } from 'lucide-react';
 
 export const AdminConfigPortal: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'USERS' | 'SSO' | 'MFA' | 'EMAIL' | 'POLICY'>('USERS');
+  const [activeTab, setActiveTab] = useState<'USERS' | 'SSO' | 'MFA' | 'EMAIL' | 'POLICY' | 'FEES'>('USERS');
   const [loading, setLoading] = useState<boolean>(true);
   const [configs, setConfigs] = useState<Record<string, any>>({});
   const [users, setUsers] = useState<any[]>([]);
+  const [feeCatalog, setFeeCatalog] = useState<any[]>([]);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // User modal state
@@ -46,6 +54,17 @@ export const AdminConfigPortal: React.FC = () => {
     pin: '1988'
   });
   const [creatingUser, setCreatingUser] = useState<boolean>(false);
+
+  // Fee catalog modal & edit states
+  const [isAddFeeOpen, setIsAddFeeOpen] = useState<boolean>(false);
+  const [newFee, setNewFee] = useState({
+    name: '',
+    fee_type: 'PERCENTAGE',
+    rate: 1.0,
+    is_mandatory_default: true,
+    description: ''
+  });
+  const [savingFees, setSavingFees] = useState<boolean>(false);
 
   // Email test state
   const [testRecipient, setTestRecipient] = useState<string>('admin@opticom.ng');
@@ -68,12 +87,14 @@ export const AdminConfigPortal: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [configData, userData] = await Promise.all([
+      const [configData, userData, feeData] = await Promise.all([
         fetchAdminConfig(),
-        fetchStaffUsers()
+        fetchStaffUsers(),
+        fetchFeeCatalog().catch(() => [])
       ]);
       setConfigs(configData);
       setUsers(userData);
+      setFeeCatalog(Array.isArray(feeData) ? feeData : []);
 
       if (configData.SSO_CONFIG?.value) setSsoForm({ ...configData.SSO_CONFIG.value });
       if (configData.MFA_CONFIG?.value) setMfaForm({ ...configData.MFA_CONFIG.value });
@@ -85,7 +106,8 @@ export const AdminConfigPortal: React.FC = () => {
           direct_min: 2000000.01,
           analyst_limit: 2000000,
           hrm_limit: 5000000,
-          bcc_limit: 15000000,
+          md_limit: 20000000,
+          bcc_limit: 20000000,
           cbn_mpr: 23.0,
           commercial_margin: 5.0,
           effective_apr: 28.0,
@@ -286,6 +308,14 @@ export const AdminConfigPortal: React.FC = () => {
           >
             <Sliders size={16} /> Credit Limits & Webhooks
           </button>
+
+          <button
+            className={`tab-btn ${activeTab === 'FEES' ? 'active' : ''}`}
+            onClick={() => setActiveTab('FEES')}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', fontSize: '0.84rem' }}
+          >
+            <Receipt size={16} /> Fee Schedule & Bespoke Fees ({feeCatalog.length})
+          </button>
         </div>
       </div>
 
@@ -371,9 +401,10 @@ export const AdminConfigPortal: React.FC = () => {
                       onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                     >
                       <option value="ANALYST">Credit Analyst (Recommend & Review)</option>
-                      <option value="HRM">Head of Risk Management (Mandate Review &le; ₦5m)</option>
-                      <option value="BCC">BCC Chair / Authoriser (Limit &le; ₦15m)</option>
-                      <option value="MD">Managing Director (Final Sanctions &gt; ₦15m)</option>
+                      <option value="HRM">Head of Risk Management (Risk Review & Endorsement)</option>
+                      <option value="HEAD_OF_BD">Head of Business Development (Commercial Sanction)</option>
+                      <option value="MD">Managing Director (Final Sanction &le; ₦20m)</option>
+                      <option value="BCC">BCC Chair / Authoriser (Board Sanction &gt; ₦20m)</option>
                       <option value="TREASURY">Treasury & Loan Ops (NAV / LOAN-DISC)</option>
                       <option value="IT_OWNER">IT Integration Owner / DevOps</option>
                       <option value="ADMIN">System Administrator (Full Settings)</option>
@@ -1174,7 +1205,7 @@ export const AdminConfigPortal: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
               <div className="form-group">
                 <label className="form-label">Analyst Limit (₦)</label>
                 <input 
@@ -1183,7 +1214,7 @@ export const AdminConfigPortal: React.FC = () => {
                   value={policyForm.analyst_limit || 2000000}
                   onChange={(e) => setPolicyForm({ ...policyForm, analyst_limit: parseFloat(e.target.value) || 2000000 })}
                 />
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Recommend only</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Recommend &amp; review only</span>
               </div>
 
               <div className="form-group">
@@ -1194,18 +1225,31 @@ export const AdminConfigPortal: React.FC = () => {
                   value={policyForm.hrm_limit || 5000000}
                   onChange={(e) => setPolicyForm({ ...policyForm, hrm_limit: parseFloat(e.target.value) || 5000000 })}
                 />
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Final approval up to ₦5M</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Initial risk review &amp; route to Head of BD</span>
               </div>
 
               <div className="form-group">
-                <label className="form-label">BCC Approval Limit (₦)</label>
+                <label className="form-label" style={{ color: '#0096cc', fontWeight: 700 }}>MD Mandate Limit (₦)</label>
                 <input 
                   type="number"
                   className="form-input"
-                  value={policyForm.bcc_limit || 15000000}
-                  onChange={(e) => setPolicyForm({ ...policyForm, bcc_limit: parseFloat(e.target.value) || 15000000 })}
+                  style={{ borderColor: '#0096cc', fontWeight: 700 }}
+                  value={policyForm.md_limit || 20000000}
+                  onChange={(e) => setPolicyForm({ ...policyForm, md_limit: parseFloat(e.target.value) || 20000000 })}
                 />
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>BCC limit up to ₦15M</span>
+                <span style={{ fontSize: '0.72rem', color: '#0096cc' }}>Final sanction for facilities &le; ₦20M</span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ color: '#ef4444', fontWeight: 700 }}>BCC Sanction Threshold (₦)</label>
+                <input 
+                  type="number"
+                  className="form-input"
+                  style={{ borderColor: '#ef4444', fontWeight: 700 }}
+                  value={policyForm.bcc_limit || 20000000}
+                  onChange={(e) => setPolicyForm({ ...policyForm, bcc_limit: parseFloat(e.target.value) || 20000000 })}
+                />
+                <span style={{ fontSize: '0.72rem', color: '#ef4444' }}>Board Credit Committee required &gt; ₦20M</span>
               </div>
             </div>
 
@@ -1222,6 +1266,382 @@ export const AdminConfigPortal: React.FC = () => {
 
         </div>
       )}
+
+      {/* TAB 6: MASTER & BESPOKE FACILITY FEES */}
+      {activeTab === 'FEES' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '1050px' }}>
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '8px',
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  color: '#10b981',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Receipt size={22} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
+                    Opticom Master Fee Schedule &amp; Bespoke Fee Catalog
+                  </h2>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
+                    Configure basic Opticom standard charges and define bespoke fees that can be selected or customized in credit case workflows.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.65rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setIsAddFeeOpen(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <Plus size={15} /> Add Bespoke Fee
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={async () => {
+                    setSavingFees(true);
+                    try {
+                      const res = await updateFeeCatalog(feeCatalog);
+                      setFeeCatalog(res.fees || feeCatalog);
+                      showToast('Master fee catalog successfully saved to configuration.');
+                    } catch (err: any) {
+                      showToast(err.detail || 'Failed to save fee catalog.', 'error');
+                    } finally {
+                      setSavingFees(false);
+                    }
+                  }}
+                  disabled={savingFees}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  {savingFees ? 'Saving...' : 'Save Fee Catalog'}
+                </button>
+              </div>
+            </div>
+
+            {/* Statutory VAT Notice Banner */}
+            <div style={{
+              background: 'rgba(0, 150, 204, 0.06)',
+              border: '1px solid rgba(0, 150, 204, 0.25)',
+              borderRadius: '8px',
+              padding: '0.75rem 1rem',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.82rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <span style={{ background: '#0096cc', color: '#fff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 7px', borderRadius: '4px' }}>
+                  STATUTORY FIRS RULE
+                </span>
+                <span style={{ color: 'var(--text-highlight)' }}>
+                  VAT (<strong>7.5%</strong>) is legally computed on facility service fees (Management &amp; Processing charges) rather than the debt principal.
+                </span>
+              </div>
+              <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
+                RC: 347832
+              </span>
+            </div>
+
+            {/* Modal: Add Bespoke Fee */}
+            {isAddFeeOpen && (
+              <div className="card" style={{ marginBottom: '1.5rem', background: 'rgba(16, 185, 129, 0.04)', border: '1px solid #10b981' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3 style={{ fontSize: '0.98rem', fontWeight: 700, margin: 0, color: '#10b981' }}>
+                    + Define New Bespoke Facility Fee
+                  </h3>
+                  <button 
+                    onClick={() => setIsAddFeeOpen(false)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.1rem' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Fee Title / Name *</label>
+                    <input 
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Collateral Valuation Fee"
+                      value={newFee.name}
+                      onChange={(e) => setNewFee({ ...newFee, name: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Calculation Basis *</label>
+                    <select
+                      className="form-select"
+                      value={newFee.fee_type}
+                      onChange={(e) => setNewFee({ ...newFee, fee_type: e.target.value })}
+                    >
+                      <option value="PERCENTAGE">Percentage of Principal (%)</option>
+                      <option value="FLAT">Flat Fixed Amount (₦)</option>
+                      <option value="PERCENTAGE_OF_FEES">Percentage of Service Fees (%)</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Default Rate / Quantum ({newFee.fee_type === 'FLAT' ? '₦' : '%'}) *
+                    </label>
+                    <input 
+                      type="number"
+                      step={newFee.fee_type === 'FLAT' ? '1000' : '0.005'}
+                      className="form-input"
+                      value={newFee.rate}
+                      onChange={(e) => setNewFee({ ...newFee, rate: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Description / Legal Basis</label>
+                    <input 
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Independent valuation of pledged real estate or movable assets"
+                      value={newFee.description}
+                      onChange={(e) => setNewFee({ ...newFee, description: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.82rem' }}>
+                    <input 
+                      type="checkbox"
+                      checked={newFee.is_mandatory_default}
+                      onChange={(e) => setNewFee({ ...newFee, is_mandatory_default: e.target.checked })}
+                    />
+                    <span>Selected / Mandatory by default on new credit cases</span>
+                  </label>
+
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button 
+                      type="button" 
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setIsAddFeeOpen(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="button" 
+                      className="btn btn-primary btn-sm"
+                      onClick={() => {
+                        if (!newFee.name.trim()) {
+                          showToast('Please enter a valid fee name.', 'error');
+                          return;
+                        }
+                        const id = `fee_bespoke_${Date.now()}`;
+                        const updated = [...feeCatalog, { ...newFee, id }];
+                        setFeeCatalog(updated);
+                        setIsAddFeeOpen(false);
+                        setNewFee({
+                          name: '',
+                          fee_type: 'PERCENTAGE',
+                          rate: 1.0,
+                          is_mandatory_default: true,
+                          description: ''
+                        });
+                        showToast(`Bespoke fee "${newFee.name}" added to catalog. Click "Save Fee Catalog" to persist.`);
+                      }}
+                    >
+                      Add to Catalog
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Master Fee Catalog Table */}
+            <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg-dark)', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '0.75rem 1rem' }}>#</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Fee Title</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Calculation Basis</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Rate / Quantum</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Default State</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Description</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feeCatalog.map((item, idx) => (
+                    <tr 
+                      key={item.id || idx}
+                      style={{ borderBottom: '1px solid var(--border-subtle)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.01)' }}
+                    >
+                      <td style={{ padding: '0.75rem 1rem', color: 'var(--text-muted)' }}>{idx + 1}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: 'var(--text-highlight)' }}>
+                        <input 
+                          type="text"
+                          className="form-input"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', width: '180px' }}
+                          value={item.name}
+                          onChange={(e) => {
+                            const updated = [...feeCatalog];
+                            updated[idx] = { ...updated[idx], name: e.target.value };
+                            setFeeCatalog(updated);
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span style={{
+                          fontSize: '0.72rem',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontWeight: 600,
+                          background: item.fee_type === 'PERCENTAGE' 
+                            ? 'rgba(0, 150, 204, 0.12)' 
+                            : item.fee_type === 'FLAT' 
+                              ? 'rgba(234, 179, 8, 0.12)' 
+                              : 'rgba(16, 185, 129, 0.12)',
+                          color: item.fee_type === 'PERCENTAGE' 
+                            ? '#0096cc' 
+                            : item.fee_type === 'FLAT' 
+                              ? '#eab308' 
+                              : '#10b981'
+                        }}>
+                          {item.fee_type === 'PERCENTAGE' ? '% of Principal' : item.fee_type === 'FLAT' ? 'Flat Fixed (₦)' : '% of Fees (VAT)'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <input 
+                            type="number"
+                            step={item.fee_type === 'FLAT' ? '1000' : '0.005'}
+                            className="form-input"
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', width: '100px', fontFamily: 'var(--font-mono)' }}
+                            value={item.rate}
+                            onChange={(e) => {
+                              const updated = [...feeCatalog];
+                              updated[idx] = { ...updated[idx], rate: parseFloat(e.target.value) || 0 };
+                              setFeeCatalog(updated);
+                            }}
+                          />
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                            {item.fee_type === 'FLAT' ? '₦' : '%'}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
+                          <input 
+                            type="checkbox"
+                            checked={!!item.is_mandatory_default}
+                            onChange={(e) => {
+                              const updated = [...feeCatalog];
+                              updated[idx] = { ...updated[idx], is_mandatory_default: e.target.checked };
+                              setFeeCatalog(updated);
+                            }}
+                          />
+                          <span style={{ fontSize: '0.76rem', color: item.is_mandatory_default ? 'var(--text-highlight)' : 'var(--text-muted)' }}>
+                            {item.is_mandatory_default ? 'Default Active' : 'Optional / Manual'}
+                          </span>
+                        </label>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', maxWidth: '240px' }}>
+                        <input 
+                          type="text"
+                          className="form-input"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.76rem', width: '100%' }}
+                          value={item.description || ''}
+                          onChange={(e) => {
+                            const updated = [...feeCatalog];
+                            updated[idx] = { ...updated[idx], description: e.target.value };
+                            setFeeCatalog(updated);
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>
+                        {item.id?.startsWith('fee_bespoke_') ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = feeCatalog.filter((_, i) => i !== idx);
+                              setFeeCatalog(updated);
+                              showToast(`Removed bespoke fee "${item.name}".`);
+                            }}
+                            style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                            title="Delete Bespoke Fee"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Core Standard</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Live Interactive Fee Calculator on Sample Principal */}
+            <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--bg-dark)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0 0 0.75rem 0', color: 'var(--text-highlight)' }}>
+                Live Model Verification: Sample Facility Deduction Simulator (₦10,000,000)
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', fontSize: '0.8rem' }}>
+                <div style={{ padding: '0.75rem', background: 'var(--bg-card)', borderRadius: '6px' }}>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>Sample Principal</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-highlight)', fontFamily: 'var(--font-mono)' }}>
+                    ₦10,000,000.00
+                  </div>
+                </div>
+
+                <div style={{ padding: '0.75rem', background: 'var(--bg-card)', borderRadius: '6px' }}>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>Management + Processing (4%)</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0096cc', fontFamily: 'var(--font-mono)' }}>
+                    ₦400,000.00
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Mgt ₦200k + Proc ₦200k</div>
+                </div>
+
+                <div style={{ padding: '0.75rem', background: 'var(--bg-card)', borderRadius: '6px' }}>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>VAT on Fees (7.5%)</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#eab308', fontFamily: 'var(--font-mono)' }}>
+                    ₦30,000.00
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>7.5% of ₦400k service fees</div>
+                </div>
+
+                <div style={{ padding: '0.75rem', background: 'var(--bg-card)', borderRadius: '6px' }}>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>Stamp Duty (0.125%)</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#8b5cf6', fontFamily: 'var(--font-mono)' }}>
+                    ₦12,500.00
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Statutory agreement stamp</div>
+                </div>
+
+                <div style={{ padding: '0.75rem', background: 'var(--bg-card)', borderRadius: '6px', border: '1px solid #10b981' }}>
+                  <div style={{ color: '#10b981', fontSize: '0.72rem', fontWeight: 700 }}>Base Upfront Total &amp; Net Disbursed</div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#10b981', fontFamily: 'var(--font-mono)' }}>
+                    ₦9,557,500.00
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Total Deductions: ₦442,500.00 (4.425%)</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

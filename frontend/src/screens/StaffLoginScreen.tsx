@@ -110,7 +110,7 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
       badge: 'ANALYST',
       badgeClass: 'pill-cyan',
       authority: 'CAM Drafting & Assessment',
-      email: 'tunde.adebayo@opticom.ng'
+      email: 'tunde.adebayo@opticomfinance.com'
     },
     {
       roleKey: 'hrm',
@@ -119,18 +119,18 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
       department: 'Risk & Policy Oversight',
       badge: 'HRM',
       badgeClass: 'pill-purple',
-      authority: 'Approval Limit ≤ ₦5,000,000',
-      email: 'chidinma.okafor@opticom.ng'
+      authority: 'Risk Review & Final Concurrence',
+      email: 'chidinma.okafor@opticomfinance.com'
     },
     {
-      roleKey: 'bcc',
-      name: 'Emeka Nnamdi',
-      title: 'Board Credit Committee Chair',
-      department: 'Board Risk Governance',
-      badge: 'BCC',
-      badgeClass: 'pill-gold',
-      authority: 'Approval Limit ≤ ₦15,000,000',
-      email: 'emeka.nnamdi@opticom.ng'
+      roleKey: 'head_of_bd',
+      name: 'Dapo Adeleke',
+      title: 'Head of Business Development',
+      department: 'Commercial & Origination',
+      badge: 'HEAD OF BD',
+      badgeClass: 'pill-amber',
+      authority: 'Commercial Sanction & Review',
+      email: 'dapo.adeleke@opticomfinance.com'
     },
     {
       roleKey: 'md',
@@ -139,8 +139,18 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
       department: 'Executive Committee',
       badge: 'MD',
       badgeClass: 'pill-emerald',
-      authority: 'Unlimited Sanction & Final Signoff',
-      email: 'folashade.tinubu@opticom.ng'
+      authority: 'Final Sanction for Facilities ≤ ₦20,000,000',
+      email: 'folashade.tinubu@opticomfinance.com'
+    },
+    {
+      roleKey: 'bcc',
+      name: 'Emeka Nnamdi',
+      title: 'Board Credit Committee Chair',
+      department: 'Board Risk Governance',
+      badge: 'BCC',
+      badgeClass: 'pill-gold',
+      authority: 'Board Sanction for Facilities > ₦20,000,000',
+      email: 'emeka.nnamdi@opticomfinance.com'
     },
     {
       roleKey: 'treasury',
@@ -150,7 +160,7 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
       badge: 'TREASURY',
       badgeClass: 'pill-cyan',
       authority: 'LOAN-DISC Booking & Funding Execution',
-      email: 'ibrahim.musa@opticom.ng'
+      email: 'ibrahim.musa@opticomfinance.com'
     },
     {
       roleKey: 'admin',
@@ -160,7 +170,7 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
       badge: 'ADMIN',
       badgeClass: 'pill-purple',
       authority: 'Rule Engine, Directory & Audit',
-      email: 'admin@opticom.ng'
+      email: 'admin@opticomfinance.com'
     }
   ];
 
@@ -596,7 +606,7 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. tunde.adebayo@opticom.ng or analyst"
+                    placeholder="e.g. tunde.adebayo@opticomfinance.com or analyst"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required

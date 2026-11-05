@@ -31,7 +31,7 @@ class TokenPayload(BaseModel):
 STAFF_DIRECTORY: Dict[str, Dict[str, Any]] = {
     "admin": {
         "id": "USR-OFL-000",
-        "email": "admin@opticom.ng",
+        "email": "admin@opticomfinance.com",
         "name": "Opticom System Administrator",
         "role": "ADMIN",
         "pin": "1988",
@@ -39,7 +39,7 @@ STAFF_DIRECTORY: Dict[str, Dict[str, Any]] = {
     },
     "analyst": {
         "id": "USR-OFL-001",
-        "email": "tunde.adebayo@opticom.ng",
+        "email": "tunde.adebayo@opticomfinance.com",
         "name": "Babatunde Adebayo",
         "role": "ANALYST",
         "pin": "1988",
@@ -47,31 +47,39 @@ STAFF_DIRECTORY: Dict[str, Dict[str, Any]] = {
     },
     "hrm": {
         "id": "USR-OFL-002",
-        "email": "chidinma.okafor@opticom.ng",
+        "email": "chidinma.okafor@opticomfinance.com",
         "name": "Chidinma Okafor",
         "role": "HRM",
         "pin": "1988",
-        "permissions": ["approval:recommend", "approval:approve_5m", "exception:coordinate", "case:read"]
+        "permissions": ["approval:recommend", "approval:risk_review", "exception:coordinate", "case:read"]
+    },
+    "bd": {
+        "id": "USR-OFL-007",
+        "email": "dapo.adeleke@opticomfinance.com",
+        "name": "Dapo Adeleke (Head of Business Development)",
+        "role": "HEAD_OF_BD",
+        "pin": "1988",
+        "permissions": ["approval:recommend", "bd:endorse", "fees:manage", "case:read"]
     },
     "bcc": {
         "id": "USR-OFL-003",
-        "email": "emeka.nnamdi@opticom.ng",
+        "email": "emeka.nnamdi@opticomfinance.com",
         "name": "Emeka Nnamdi (BCC Chair)",
         "role": "BCC",
         "pin": "1988",
-        "permissions": ["approval:approve_15m", "rejection:recommend", "case:read"]
+        "permissions": ["approval:approve_unlimited", "rejection:recommend", "case:read"]
     },
     "md": {
         "id": "USR-OFL-004",
-        "email": "folashade.tinubu@opticom.ng",
+        "email": "folashade.tinubu@opticomfinance.com",
         "name": "Folashade Tinubu (Managing Director)",
         "role": "MD",
         "pin": "1988",
-        "permissions": ["approval:approve_unlimited", "rejection:final", "disbursement:sanction"]
+        "permissions": ["approval:approve_20m", "approval:approve_unlimited", "rejection:final", "disbursement:sanction"]
     },
     "treasury": {
         "id": "USR-OFL-005",
-        "email": "ibrahim.musa@opticom.ng",
+        "email": "ibrahim.musa@opticomfinance.com",
         "name": "Ibrahim Musa (Treasury Lead)",
         "role": "TREASURY",
         "pin": "1988",
@@ -79,7 +87,7 @@ STAFF_DIRECTORY: Dict[str, Dict[str, Any]] = {
     },
     "it_owner": {
         "id": "USR-OFL-006",
-        "email": "devops@opticom.ng",
+        "email": "devops@opticomfinance.com",
         "name": "DevOps / IT Integration Owner",
         "role": "IT_OWNER",
         "pin": "1988",

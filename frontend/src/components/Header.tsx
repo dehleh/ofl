@@ -179,12 +179,13 @@ export const Header: React.FC<HeaderProps> = ({
             value={currentPersona}
             onChange={(e) => onPersonaChange(e.target.value)}
           >
-            <option value="ADMIN">System Administrator (Settings & Config)</option>
-            <option value="ANALYST">Credit Analyst (Recommend & Review)</option>
-            <option value="HRM">Head of Risk Management (HRM Limit &le; ₦5m)</option>
-            <option value="BCC">BCC / Authoriser (Limit &le; ₦15m)</option>
-            <option value="MD">Managing Director (MD &gt; ₦15m / Final)</option>
-            <option value="OPERATIONS">Credit Operations (Offer & Conditions)</option>
+            <option value="ADMIN">System Administrator (Settings &amp; Config)</option>
+            <option value="ANALYST">Credit Analyst (Recommend &amp; Review)</option>
+            <option value="HRM">Head of Risk Management (Risk Review &amp; Concurrence)</option>
+            <option value="HEAD_OF_BD">Head of Business Development (Commercial Sanction)</option>
+            <option value="MD">Managing Director (Final Sanction &le; ₦20m)</option>
+            <option value="BCC">Board Credit Committee (Board Sanction &gt; ₦20m)</option>
+            <option value="OPERATIONS">Credit Operations (Offer &amp; Conditions)</option>
             <option value="TREASURY">Treasury &amp; Loan Operations (LOAN-DISC)</option>
             <option value="BDO">Business Dev Officer (BDO Assisted)</option>
             <option value="AUDITOR">Compliance Auditor (Read-Only Audit)</option>
@@ -370,7 +371,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {currentUser.name || 'Staff User'}
               </div>
               <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                {currentUser.email || `${currentPersona.toLowerCase()}@opticom.ng`}
+                {currentUser.email || `${currentPersona.toLowerCase()}@opticomfinance.com`}
               </div>
             </div>
             {onSignOut && (

@@ -11,9 +11,122 @@ from ...models import CreditCase, Offer, ConditionItem, CaseState, AuditEvent
 from ...schemas.schemas import OfferGenerateRequest, OfferActionRequest, ConditionUpdateRequest
 from ...core.state_machine import TransitionService
 from ...core.financial_engine import FinancialEngine
+from ...core.config_manager import ConfigManager
 from ...integrations.notification_service import NotificationService
+from pydantic import BaseModel
+
+class CaseFeeUpdateRequest(BaseModel):
+    fees: List[Dict[str, Any]]
+    actor: Optional[str] = "Credit Analyst"
+
+class CaseFeeCalculateRequest(BaseModel):
+    principal: Optional[float] = None
+    fees: List[Dict[str, Any]]
 
 router = APIRouter(prefix="/cases/{case_id}", tags=["Offer & Conditions Precedent"])
+
+@router.get("/fees")
+def get_case_fees(
+    case_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the applicable facility fee schedule for this credit case,
+    calculated against the requested/approved principal amount.
+    """
+    credit_case = db.query(CreditCase).filter(
+        (CreditCase.id == case_id) | (CreditCase.case_number == case_id)
+    ).first()
+    if not credit_case:
+        raise HTTPException(status_code=404, detail="Case not found.")
+
+    amount = credit_case.application.amount if credit_case.application else 0.0
+    latest_offer = db.query(Offer).filter(
+        Offer.case_id == credit_case.id
+    ).order_by(Offer.issued_at.desc()).first()
+
+    master_catalog = ConfigManager.get_fee_catalog(db)
+
+    # If the case already has a fee schedule saved on an offer, use it
+    if latest_offer and latest_offer.fee_schedule:
+        fee_items = latest_offer.fee_schedule
+    else:
+        # Build default fee selection from master catalog
+        fee_items = [
+            {
+                "id": f.get("id"),
+                "name": f.get("name"),
+                "fee_type": f.get("fee_type", "PERCENTAGE"),
+                "rate": f.get("rate", 0.0),
+                "is_selected": f.get("is_mandatory_default", True),
+                "description": f.get("description", "")
+            }
+            for f in master_catalog
+        ]
+
+    calc_breakdown = ConfigManager.calculate_case_fees(amount, fee_items)
+    return {
+        "case_id": credit_case.id,
+        "case_number": credit_case.case_number,
+        "principal": amount,
+        "fee_schedule": fee_items,
+        "calculation": calc_breakdown
+    }
+
+@router.put("/fees")
+def update_case_fees(
+    case_id: str,
+    payload: CaseFeeUpdateRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Updates the selected fees and bespoke fee inclusions for a credit case.
+    Saves the computed breakdown onto the active or staged Offer record.
+    """
+    credit_case = db.query(CreditCase).filter(
+        (CreditCase.id == case_id) | (CreditCase.case_number == case_id)
+    ).first()
+    if not credit_case:
+        raise HTTPException(status_code=404, detail="Case not found.")
+
+    amount = credit_case.application.amount if credit_case.application else 0.0
+    calc = ConfigManager.calculate_case_fees(amount, payload.fees)
+
+    # Update or associate with latest offer if present
+    latest_offer = db.query(Offer).filter(
+        Offer.case_id == credit_case.id
+    ).order_by(Offer.issued_at.desc()).first()
+
+    if latest_offer:
+        latest_offer.fee_schedule = payload.fees
+        latest_offer.total_fees = calc["total_fees"]
+        latest_offer.net_disbursement = calc["net_disbursement"]
+        db.commit()
+
+    return {
+        "message": "Case fee schedule updated successfully.",
+        "case_id": credit_case.id,
+        "case_number": credit_case.case_number,
+        "calculation": calc
+    }
+
+@router.post("/fees/calculate")
+def calculate_preview_fees(
+    case_id: str,
+    payload: CaseFeeCalculateRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Live real-time preview computation of fees without persisting changes.
+    """
+    credit_case = db.query(CreditCase).filter(
+        (CreditCase.id == case_id) | (CreditCase.case_number == case_id)
+    ).first()
+    principal = payload.principal if payload.principal is not None else (
+        credit_case.application.amount if credit_case and credit_case.application else 0.0
+    )
+    calc = ConfigManager.calculate_case_fees(principal, payload.fees)
+    return calc
 
 @router.post("/offer")
 def generate_credit_offer(
@@ -50,6 +163,23 @@ def generate_credit_offer(
     now = utc_now()
     expiry = now + timedelta(days=14)  # 14-day validity
     
+    # Calculate fee deductions and net disbursement
+    selected_fees = payload.fee_schedule
+    if not selected_fees:
+        master_catalog = ConfigManager.get_fee_catalog(db)
+        selected_fees = [
+            {
+                "id": f.get("id"),
+                "name": f.get("name"),
+                "fee_type": f.get("fee_type", "PERCENTAGE"),
+                "rate": f.get("rate", 0.0),
+                "is_selected": f.get("is_mandatory_default", True),
+                "description": f.get("description", "")
+            }
+            for f in master_catalog
+        ]
+    fee_calc = ConfigManager.calculate_case_fees(amount, selected_fees)
+
     offer = Offer(
         case_id=credit_case.id,
         terms_hash=terms_hash,
@@ -59,7 +189,10 @@ def generate_credit_offer(
         monthly_repayment=monthly_repayment,
         issued_at=now,
         expiry=expiry,
-        status="ISSUED"
+        status="ISSUED",
+        fee_schedule=fee_calc["itemized_fees"],
+        total_fees=fee_calc["total_fees"],
+        net_disbursement=fee_calc["net_disbursement"]
     )
     db.add(offer)
     db.commit()
@@ -81,6 +214,9 @@ def generate_credit_offer(
         "offer_id": offer.id,
         "approved_amount": amount,
         "monthly_repayment": monthly_repayment,
+        "total_fees": fee_calc["total_fees"],
+        "net_disbursement": fee_calc["net_disbursement"],
+        "fee_schedule": fee_calc["itemized_fees"],
         "expiry": expiry.isoformat()
     }
 

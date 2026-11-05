@@ -13,6 +13,7 @@ from ...models import (
 from ...schemas.schemas import WorkflowTransitionRequest, ApprovalDecisionRequest
 from ...core.state_machine import TransitionService
 from ...core.authority_matrix import AuthorityMatrix
+from ...integrations.notification_service import NotificationService
 
 router = APIRouter(prefix="/cases/{case_id}", tags=["Workflow & Approvals"])
 
@@ -145,56 +146,115 @@ def submit_approval_decision(
         next_state = CaseState.REJECTED.value
 
     elif payload.decision in ["APPROVE", "RECOMMEND_APPROVE"]:
-        # Check required chain
         chain = AuthorityMatrix.get_required_approval_chain(amount)
-        current_level = payload.role.upper()
+        current_level = payload.role.upper().replace(" ", "_")
         
-        # Determine if this level completes the required chain
-        highest_required_level = chain[-1]["level"]
-        
-        if current_level == highest_required_level or payload.decision == "APPROVE":
-            # Final authority satisfied -> Advance to OFFER_PENDING
-            ok, msg = TransitionService.execute_transition(
-                db=db,
-                credit_case=credit_case,
-                to_state=CaseState.OFFER_PENDING.value,
-                actor=payload.actor,
-                role=payload.role,
-                reason="Facility fully approved by delegated authority; ready for Offer generation."
-            )
-            next_state = CaseState.OFFER_PENDING.value
-        elif current_level == "ANALYST":
+        # Check previous approvals for this case revision
+        past_approvals = db.query(Approval).filter(
+            Approval.case_id == credit_case.id,
+            Approval.revision == credit_case.revision
+        ).all()
+        has_bd_approval = any(a.authority_level in ["HEAD_OF_BD", "BDO_HEAD", "BD"] for a in past_approvals)
+        has_bcc_approval = any(a.authority_level in ["BCC", "BOARD_CREDIT_COMMITTEE"] for a in past_approvals)
+
+        if current_level == "ANALYST":
+            # 1. Analyst -> HRM
             ok, msg = TransitionService.execute_transition(
                 db=db,
                 credit_case=credit_case,
                 to_state=CaseState.HRM_REVIEW.value,
                 actor=payload.actor,
                 role=payload.role,
-                reason="Analyst completed recommendation; routed to Head of Risk Management."
+                reason="Analyst completed CAM and recommendation; routed to Head of Risk Management."
             )
             next_state = CaseState.HRM_REVIEW.value
+
         elif current_level == "HRM":
-            # For > ₦5m, route to BCC
-            target_stage = CaseState.BCC_REVIEW.value if amount <= 15_000_000 else CaseState.MD_DECISION.value
+            # 2. HRM: If Head of BD has not reviewed yet, HRM endorses and routes to Head of BD!
+            if not has_bd_approval:
+                ok, msg = TransitionService.execute_transition(
+                    db=db,
+                    credit_case=credit_case,
+                    to_state=CaseState.HEAD_OF_BD_REVIEW.value,
+                    actor=payload.actor,
+                    role=payload.role,
+                    reason="HRM completed initial risk assessment; routed to Head of Business Development for commercial review."
+                )
+                next_state = CaseState.HEAD_OF_BD_REVIEW.value
+            else:
+                # 4. BD has already reviewed; now HRM gives final risk concurrence and routes to MD
+                target_stage = CaseState.MD_DECISION.value
+                ok, msg = TransitionService.execute_transition(
+                    db=db,
+                    credit_case=credit_case,
+                    to_state=target_stage,
+                    actor=payload.actor,
+                    role=payload.role,
+                    reason=f"HRM concurred with BD recommendation; routed to Managing Director for executive approval (Facility: ₦{amount:,.2f})."
+                )
+                next_state = target_stage
+
+        elif current_level in ["HEAD_OF_BD", "BDO_HEAD", "BD"]:
+            # 3. Head of BD provides commercial recommendation/approval -> returns to HRM!
             ok, msg = TransitionService.execute_transition(
                 db=db,
                 credit_case=credit_case,
-                to_state=target_stage,
+                to_state=CaseState.HRM_REVIEW.value,
                 actor=payload.actor,
                 role=payload.role,
-                reason=f"HRM endorsed facility; routed to {target_stage} based on authority limits."
+                reason="Head of Business Development completed commercial review; returned to HRM for final risk concurrence."
             )
-            next_state = target_stage
-        elif current_level == "BCC":
+            next_state = CaseState.HRM_REVIEW.value
+
+        elif current_level in ["MD", "MANAGING_DIRECTOR", "CEO"]:
+            # 5. If amount <= ₦20m, MD provides final sanction! If > ₦20m, routes to BCC!
+            if amount <= AuthorityMatrix.TIER_BCC_THRESHOLD or has_bcc_approval:
+                ok, msg = TransitionService.execute_transition(
+                    db=db,
+                    credit_case=credit_case,
+                    to_state=CaseState.OFFER_PENDING.value,
+                    actor=payload.actor,
+                    role=payload.role,
+                    reason="Managing Director granted final facility approval; ready for Offer letter and disbursement initiation."
+                )
+                next_state = CaseState.OFFER_PENDING.value
+                NotificationService.notify_finance_and_disbursement_initiated(
+                    case_number=credit_case.case_number,
+                    obligor_name=credit_case.application.customer.name,
+                    amount=amount,
+                    final_approver=payload.actor,
+                    approver_role="Managing Director"
+                )
+            else:
+                # Facility > ₦20m mandates Board Credit Committee (BCC) final approval
+                ok, msg = TransitionService.execute_transition(
+                    db=db,
+                    credit_case=credit_case,
+                    to_state=CaseState.BCC_REVIEW.value,
+                    actor=payload.actor,
+                    role=payload.role,
+                    reason=f"MD endorsed commercial facility exceeding ₦20m (₦{amount:,.2f}); routed to Board Credit Committee for final sanction."
+                )
+                next_state = CaseState.BCC_REVIEW.value
+
+        elif current_level in ["BCC", "BOARD_CREDIT_COMMITTEE"]:
+            # 6. BCC final sanction on facilities > ₦20m!
             ok, msg = TransitionService.execute_transition(
                 db=db,
                 credit_case=credit_case,
-                to_state=CaseState.MD_DECISION.value,
+                to_state=CaseState.OFFER_PENDING.value,
                 actor=payload.actor,
                 role=payload.role,
-                reason="BCC reviewed facility; routed to MD for final decision."
+                reason="Board Credit Committee granted final facility approval; ready for Offer letter and disbursement initiation."
             )
-            next_state = CaseState.MD_DECISION.value
+            next_state = CaseState.OFFER_PENDING.value
+            NotificationService.notify_finance_and_disbursement_initiated(
+                case_number=credit_case.case_number,
+                obligor_name=credit_case.application.customer.name,
+                amount=amount,
+                final_approver=payload.actor,
+                approver_role="Board Credit Committee"
+            )
 
     db.commit()
     db.refresh(credit_case)

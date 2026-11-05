@@ -65,6 +65,7 @@ class OfferGenerateRequest(BaseModel):
     approved_amount: Optional[float] = None
     tenor_months: Optional[int] = None
     interest_rate_pct: Optional[float] = None
+    fee_schedule: Optional[List[Dict[str, Any]]] = None
     actor: str = "Credit Operations"
 
 class OfferActionRequest(BaseModel):

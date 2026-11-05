@@ -466,3 +466,54 @@ export async function deactivateStaffUser(userId: string) {
   return json;
 }
 
+export async function fetchFeeCatalog() {
+  const res = await fetch(`${API_BASE}/admin/fees`, {
+    headers: getAuthHeaders()
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function updateFeeCatalog(fees: any[]) {
+  const res = await fetch(`${API_BASE}/admin/fees`, {
+    method: 'PUT',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ fees })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function fetchCaseFees(caseId: string) {
+  const res = await fetch(`${API_BASE}/cases/${encodeURIComponent(caseId)}/fees`, {
+    headers: getAuthHeaders()
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function updateCaseFees(caseId: string, fees: any[], actor: string = 'Credit Analyst') {
+  const res = await fetch(`${API_BASE}/cases/${encodeURIComponent(caseId)}/fees`, {
+    method: 'PUT',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ fees, actor })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function calculateCaseFeesPreview(caseId: string, fees: any[], principal?: number) {
+  const res = await fetch(`${API_BASE}/cases/${encodeURIComponent(caseId)}/fees/calculate`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ fees, principal })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+

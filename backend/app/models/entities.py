@@ -19,6 +19,7 @@ class CaseState(str, enum.Enum):
     KYC_PENDING = "KYC Pending"
     ANALYST_REVIEW = "Analyst Review"
     HRM_REVIEW = "HRM Review"
+    HEAD_OF_BD_REVIEW = "Head of BD Review"
     BCC_REVIEW = "BCC/Authorisation"
     MD_DECISION = "MD Decision"
     OFFER_PENDING = "Offer Pending"
@@ -245,6 +246,9 @@ class Offer(Base):
     status = Column(String(30), default="ISSUED")  # ISSUED, ACCEPTED, REJECTED, EXPIRED, RENEGOTIATING
     acceptance_evidence = Column(Text, nullable=True)
     accepted_at = Column(DateTime, nullable=True)
+    fee_schedule = Column(JSON, default=list)  # Itemized list of selected fees and amounts
+    total_fees = Column(Float, default=0.0)    # Total upfront fee deduction
+    net_disbursement = Column(Float, default=0.0) # Principal - total_fees
     
     credit_case = relationship("CreditCase", back_populates="offers")
 

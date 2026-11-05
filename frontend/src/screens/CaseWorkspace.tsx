@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, FileText, CheckCircle, AlertTriangle, ShieldCheck,
   Send, RefreshCw, Cpu, UserCheck, CheckSquare, DollarSign, ExternalLink,
-  ShieldAlert, Clock, PlusCircle, Zap
+  ShieldAlert, Clock, PlusCircle, Zap, Receipt, Plus, Trash2, Percent
 } from 'lucide-react';
 import {
   fetchCaseWorkspace, generateAICam, updateCam, submitApprovalDecision,
   generateOffer, takeOfferAction, updateCondition, confirmNavDisbursement,
-  executeOneClickLoandiscDisbursement, syncLoanDisc, raiseException, triggerYouverifyKyc
+  executeOneClickLoandiscDisbursement, syncLoanDisc, raiseException, triggerYouverifyKyc,
+  fetchCaseFees, updateCaseFees, calculateCaseFeesPreview
 } from '../services/api';
 import { OpticomCamDocument } from '../components/OpticomCamDocument';
 import { BankStatementAnalyzerCard } from '../components/BankStatementAnalyzerCard';
@@ -48,6 +49,75 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
 
   // Youverify Verification State
   const [kycLoading, setKycLoading] = useState(false);
+
+  // Case Fees & Upfront Deductions State
+  const [caseFees, setCaseFees] = useState<any[]>([]);
+  const [feeCalc, setFeeCalc] = useState<any>(null);
+  const [loadingFees, setLoadingFees] = useState(false);
+  const [savingCaseFees, setSavingCaseFees] = useState(false);
+  const [isAddCaseFeeOpen, setIsAddCaseFeeOpen] = useState(false);
+  const [newCaseFee, setNewCaseFee] = useState({
+    name: '',
+    fee_type: 'PERCENTAGE',
+    rate: 1.0,
+    is_selected: true,
+    description: ''
+  });
+
+  const loadCaseFees = async () => {
+    setLoadingFees(true);
+    try {
+      const data = await fetchCaseFees(caseId);
+      const fees = data.fee_schedule || [];
+      setCaseFees(fees);
+      setFeeCalc(data.calculation || null);
+    } catch (e: any) {
+      console.warn('Could not load case fees:', e);
+    } finally {
+      setLoadingFees(false);
+    }
+  };
+
+  const handleFeeToggle = async (index: number) => {
+    const updated = [...caseFees];
+    const newSelected = !updated[index].is_selected;
+    updated[index] = { ...updated[index], is_selected: newSelected, selected: newSelected };
+    setCaseFees(updated);
+    const p = workspace?.application?.amount || 0;
+    try {
+      const calc = await calculateCaseFeesPreview(caseId, updated, p);
+      setFeeCalc(calc);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleFeeRateChange = async (index: number, newRate: number) => {
+    const updated = [...caseFees];
+    updated[index] = { ...updated[index], rate: newRate };
+    setCaseFees(updated);
+    const p = workspace?.application?.amount || 0;
+    try {
+      const calc = await calculateCaseFeesPreview(caseId, updated, p);
+      setFeeCalc(calc);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSaveCaseFees = async () => {
+    setSavingCaseFees(true);
+    try {
+      const res = await updateCaseFees(caseId, caseFees, currentPersona);
+      setFeeCalc(res.calculation);
+      setMessageBanner({ type: 'success', text: 'Applicable facility fee schedule saved to case.' });
+      await loadWorkspace();
+    } catch (err: any) {
+      setMessageBanner({ type: 'error', text: err.detail || err.message || 'Failed to save fee schedule' });
+    } finally {
+      setSavingCaseFees(false);
+    }
+  };
 
   const handleRunYouverifyCheck = async () => {
     if (!workspace) return;
@@ -103,6 +173,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
       if (data.cam_versions && data.cam_versions.length > 0) {
         setSelectedCamIndex(data.cam_versions.length - 1);
       }
+      loadCaseFees();
     } catch (e: any) {
       setMessageBanner({ type: 'error', text: e.message || 'Failed to load case workspace' });
     } finally {
@@ -198,7 +269,10 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
   const handleGenerateOfferClick = async () => {
     setActionLoading(true);
     try {
-      const res = await generateOffer(caseData.id, { actor: currentPersona });
+      const res = await generateOffer(caseData.id, { 
+        actor: currentPersona,
+        fee_schedule: caseFees
+      });
       setMessageBanner({ type: 'success', text: res.message });
       await loadWorkspace();
     } catch (err: any) {
@@ -648,213 +722,572 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
 
       {/* TAB 4: APPROVALS & AUTHORITY MATRIX */}
       {activeTab === 'APPROVALS' && (
-        <div className="split-view">
-          {/* Decision Form */}
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--brand-teal-light)' }}>
-              Record Authority Decision (FR-08, FR-09, FR-10)
-            </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          
+          {/* Governance Sequence Pipeline Banner */}
+          <div className="glass-panel" style={{ padding: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ShieldCheck size={20} color="var(--brand-teal-light)" />
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
+                  Opticom Credit Governance Sequence &amp; Delegation Matrix
+                </h3>
+              </div>
+              <span className="status-pill pill-cyan" style={{ fontSize: '0.75rem' }}>
+                Current Stage: {caseData.state}
+              </span>
+            </div>
+
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-              Active Persona: <strong>{currentPersona}</strong> &bull; Loan Amount: <strong>₦{application.amount.toLocaleString()}</strong>
+              Facility Quantum: <strong>₦{application.amount.toLocaleString()}</strong> &bull; 
+              {application.amount > 20000000 ? (
+                <span style={{ color: '#ef4444', fontWeight: 700, marginLeft: '0.35rem' }}>
+                  Mandatory Board Credit Committee (BCC) Sanction (&gt; ₦20,000,000)
+                </span>
+              ) : (
+                <span style={{ color: '#0096cc', fontWeight: 700, marginLeft: '0.35rem' }}>
+                  Managing Director (MD) Final Mandate (&le; ₦20,000,000)
+                </span>
+              )}
             </p>
 
-            <div className="form-group">
-              <label className="form-label">Decision Action</label>
-              <select
-                className="form-select"
-                value={approvalDecision}
-                onChange={(e: any) => setApprovalDecision(e.target.value)}
-              >
-                <option value="APPROVE">Approve Facility (Mandate Permitted)</option>
-                <option value="RECOMMEND_APPROVE">Recommend Approval (Forward to Next Tier)</option>
-                <option value="RETURN_FOR_REWORK">Return for Internal Rework (Opens Exception)</option>
-                <option value="REJECT">Decline Application (Final Rejection)</option>
-              </select>
-            </div>
+            {/* Visual Step-by-Step Sequence */}
+            <div style={{ display: 'grid', gridTemplateColumns: application.amount > 20000000 ? 'repeat(6, 1fr)' : 'repeat(5, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
+              <div style={{
+                padding: '0.65rem 0.4rem',
+                borderRadius: '6px',
+                background: caseData.state === 'Analyst Review' ? 'rgba(0, 150, 204, 0.2)' : 'var(--bg-surface)',
+                border: `1px solid ${caseData.state === 'Analyst Review' ? '#0096cc' : 'var(--border-subtle)'}`
+              }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>STEP 1</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-highlight)' }}>Analyst</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>CAM Recommendation</div>
+              </div>
 
-            <div className="form-group">
-              <label className="form-label">Mandated Conditions Precedent (Optional)</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. Provide joint personal guarantee of company director"
-                value={mandatedCondition}
-                onChange={(e) => setMandatedCondition(e.target.value)}
-              />
-            </div>
+              <div style={{
+                padding: '0.65rem 0.4rem',
+                borderRadius: '6px',
+                background: caseData.state === 'HRM Review' ? 'rgba(0, 150, 204, 0.2)' : 'var(--bg-surface)',
+                border: `1px solid ${caseData.state === 'HRM Review' ? '#0096cc' : 'var(--border-subtle)'}`
+              }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>STEP 2</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-highlight)' }}>HRM</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Initial Risk Review</div>
+              </div>
 
-            <div className="form-group">
-              <label className="form-label">Deliberation Comments / Policy Rationale *</label>
-              <textarea
-                className="form-textarea"
-                rows={3}
-                placeholder="Record credit risk committee observations or return instructions..."
-                value={approvalComments}
-                onChange={(e) => setApprovalComments(e.target.value)}
-              />
-            </div>
+              <div style={{
+                padding: '0.65rem 0.4rem',
+                borderRadius: '6px',
+                background: caseData.state === 'Head of BD Review' ? 'rgba(234, 179, 8, 0.2)' : 'var(--bg-surface)',
+                border: `1px solid ${caseData.state === 'Head of BD Review' ? '#eab308' : 'var(--border-subtle)'}`
+              }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>STEP 3</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#eab308' }}>Head of BD</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Commercial Sanction</div>
+              </div>
 
-            <button
-              className={`btn ${approvalDecision === 'REJECT' ? 'btn-danger' : approvalDecision === 'RETURN_FOR_REWORK' ? 'btn-warning' : 'btn-primary'}`}
-              onClick={handleDecisionSubmit}
-              disabled={actionLoading}
-              style={{ width: '100%', marginTop: '0.5rem' }}
-            >
-              <Send size={16} /> Submit {approvalDecision} Decision
-            </button>
+              <div style={{
+                padding: '0.65rem 0.4rem',
+                borderRadius: '6px',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)'
+              }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>STEP 4</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-highlight)' }}>HRM</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Final Concurrence</div>
+              </div>
+
+              <div style={{
+                padding: '0.65rem 0.4rem',
+                borderRadius: '6px',
+                background: caseData.state === 'MD Decision' ? 'rgba(0, 150, 204, 0.2)' : 'var(--bg-surface)',
+                border: `1px solid ${caseData.state === 'MD Decision' ? '#0096cc' : 'var(--border-subtle)'}`
+              }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>STEP 5</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: application.amount > 20000000 ? 'var(--text-highlight)' : '#10b981' }}>
+                  MD {application.amount <= 20000000 ? '(Final Sanction)' : '(Review)'}
+                </div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Executive Endorsement</div>
+              </div>
+
+              {application.amount > 20000000 && (
+                <div style={{
+                  padding: '0.65rem 0.4rem',
+                  borderRadius: '6px',
+                  background: caseData.state === 'BCC/Authorisation' ? 'rgba(239, 68, 68, 0.2)' : 'var(--bg-surface)',
+                  border: `1px solid ${caseData.state === 'BCC/Authorisation' ? '#ef4444' : 'var(--border-subtle)'}`
+                }}>
+                  <div style={{ fontSize: '0.68rem', color: '#ef4444', fontWeight: 700 }}>FINAL TIER</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#ef4444' }}>BCC (Board)</div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Final Sanction &gt; ₦20M</div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Historical Decisions & Chain */}
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-highlight)' }}>
-              Sequential Approval Audit Trail
-            </h3>
+          <div className="split-view">
+            {/* Decision Form */}
+            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--brand-teal-light)' }}>
+                Record Authority Decision (FR-08, FR-09, FR-10)
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                Active Persona: <strong>{currentPersona}</strong> &bull; Loan Amount: <strong>₦{application.amount.toLocaleString()}</strong>
+              </p>
 
-            {approvals.length === 0 ? (
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No approval decisions logged yet.</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {approvals.map((a: any) => (
-                  <div key={a.id} style={{
-                    padding: '0.85rem',
-                    background: 'var(--bg-surface)',
-                    borderRadius: 'var(--radius-md)',
-                    border: `1px solid ${a.is_active ? 'var(--border-subtle)' : 'rgba(239, 68, 68, 0.4)'}`
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ fontSize: '0.85rem', color: 'var(--text-highlight)' }}>{a.actor} ({a.authority_level})</strong>
-                      <span className={`status-pill ${a.decision === 'APPROVE' ? 'pill-green' : a.decision === 'REJECT' ? 'pill-red' : 'pill-amber'}`}>
-                        {a.decision}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>{a.comments}</p>
-                    {!a.is_active && (
-                      <div style={{ fontSize: '0.72rem', color: 'var(--color-danger)', marginTop: '0.3rem' }}>
-                        Invalidated due to material change (FR-12)
-                      </div>
-                    )}
-                  </div>
-                ))}
+              <div className="form-group">
+                <label className="form-label">Decision Action</label>
+                <select
+                  className="form-select"
+                  value={approvalDecision}
+                  onChange={(e: any) => setApprovalDecision(e.target.value)}
+                >
+                  <option value="APPROVE">Approve Facility / Advance to Next Sequential Authority</option>
+                  <option value="RECOMMEND_APPROVE">Recommend Approval (Forward to Next Tier)</option>
+                  <option value="RETURN_FOR_REWORK">Return for Internal Rework (Opens Exception)</option>
+                  <option value="REJECT">Decline Application (Final Rejection)</option>
+                </select>
               </div>
-            )}
+
+              <div className="form-group">
+                <label className="form-label">Mandated Conditions Precedent (Optional)</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Provide joint personal guarantee of company director"
+                  value={mandatedCondition}
+                  onChange={(e) => setMandatedCondition(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Deliberation Comments / Policy Rationale *</label>
+                <textarea
+                  className="form-textarea"
+                  rows={3}
+                  placeholder="Record credit risk committee observations or return instructions..."
+                  value={approvalComments}
+                  onChange={(e) => setApprovalComments(e.target.value)}
+                />
+              </div>
+
+              <button
+                className={`btn ${approvalDecision === 'REJECT' ? 'btn-danger' : approvalDecision === 'RETURN_FOR_REWORK' ? 'btn-warning' : 'btn-primary'}`}
+                onClick={handleDecisionSubmit}
+                disabled={actionLoading}
+                style={{ width: '100%', marginTop: '0.5rem' }}
+              >
+                <Send size={16} /> Submit {approvalDecision} Decision
+              </button>
+            </div>
+
+            {/* Historical Decisions & Chain */}
+            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-highlight)' }}>
+                Sequential Approval Audit Trail
+              </h3>
+
+              {approvals.length === 0 ? (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No approval decisions logged yet.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {approvals.map((a: any) => (
+                    <div key={a.id} style={{
+                      padding: '0.85rem',
+                      background: 'var(--bg-surface)',
+                      borderRadius: 'var(--radius-md)',
+                      border: `1px solid ${a.is_active ? 'var(--border-subtle)' : 'rgba(239, 68, 68, 0.4)'}`
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: '0.85rem', color: 'var(--text-highlight)' }}>{a.actor} ({a.authority_level})</strong>
+                        <span className={`status-pill ${a.decision === 'APPROVE' ? 'pill-green' : a.decision === 'REJECT' ? 'pill-red' : 'pill-amber'}`}>
+                          {a.decision}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>{a.comments}</p>
+                      {!a.is_active && (
+                        <div style={{ fontSize: '0.72rem', color: 'var(--color-danger)', marginTop: '0.3rem' }}>
+                          Invalidated due to material change (FR-12)
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* TAB 5: OFFER & CONDITIONS PRECEDENT */}
       {activeTab === 'OFFER_CONDITIONS' && (
-        <div className="split-view">
-          {/* Offer Panel */}
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--brand-teal-light)' }}>
-              Loan Offer Letter Management (FR-13)
-            </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          
+          <div className="split-view">
+            {/* Offer Summary Panel */}
+            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--brand-teal-light)' }}>
+                Loan Offer Letter Management (FR-13)
+              </h3>
 
-            {activeOffer ? (
-              <div>
-                <div style={{
-                  padding: '1rem',
-                  background: 'var(--bg-surface)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-subtle)',
-                  marginBottom: '1rem'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Approved Facility Amount:</span>
-                    <strong style={{ fontSize: '1.1rem', color: 'var(--text-highlight)' }}>₦{activeOffer.approved_amount.toLocaleString()}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Installment:</span>
-                    <strong style={{ color: 'var(--brand-teal-light)' }}>₦{activeOffer.monthly_repayment.toLocaleString()}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Status:</span>
-                    <span className="status-pill pill-cyan">{activeOffer.status}</span>
-                  </div>
-                </div>
-
-                {activeOffer.status === 'ISSUED' && (
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => handleOfferActionClick('ACCEPT')}
-                      disabled={actionLoading}
-                      style={{ flex: 1 }}
-                    >
-                      Borrower Accepts Offer
-                    </button>
-                    <button
-                      className="btn btn-warning btn-sm"
-                      onClick={() => handleOfferActionClick('RENEGOTIATE')}
-                      disabled={actionLoading}
-                      style={{ flex: 1 }}
-                    >
-                      Renegotiate (Triggers Invalidation)
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                  Facility is approved. Generate the official binding loan offer letter.
-                </p>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleGenerateOfferClick}
-                  disabled={actionLoading}
-                >
-                  Generate Binding Offer Letter
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Conditions Precedent Checklist */}
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--brand-teal-light)' }}>
-              Conditions Precedent Checklist (FR-14)
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-              All mandatory conditions must be verified before transitioning to "Ready for Disbursement".
-            </p>
-
-            {conditions.length === 0 ? (
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No conditions precedent stipulated.</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                {conditions.map((c: any) => (
-                  <div key={c.id} style={{
-                    padding: '0.75rem',
+              {activeOffer ? (
+                <div>
+                  <div style={{
+                    padding: '1rem',
                     background: 'var(--bg-surface)',
                     borderRadius: 'var(--radius-md)',
                     border: '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
+                    marginBottom: '1rem'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                      <input
-                        type="checkbox"
-                        checked={c.status === 'SATISFIED'}
-                        onChange={() => handleConditionToggle(c.id, c.status)}
-                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--brand-teal)' }}
-                      />
-                      <div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-highlight)', fontWeight: 600 }}>{c.description}</div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                          Mandatory: {c.mandatory ? 'Yes' : 'No'} &bull; Verified By: {c.verified_by || 'Pending'}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Approved Principal Amount:</span>
+                      <strong style={{ fontSize: '1.1rem', color: 'var(--text-highlight)' }}>₦{activeOffer.approved_amount.toLocaleString()}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monthly Installment:</span>
+                      <strong style={{ color: 'var(--brand-teal-light)' }}>₦{activeOffer.monthly_repayment.toLocaleString()}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Upfront Fee Deductions:</span>
+                      <strong style={{ color: '#ef4444' }}>-₦{(activeOffer.total_fees || feeCalc?.total_fees || 0).toLocaleString()}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Net Amount Disbursed to Obligor:</span>
+                      <strong style={{ color: '#10b981', fontSize: '1.05rem', fontFamily: 'var(--font-mono)' }}>
+                        ₦{(activeOffer.net_disbursement || feeCalc?.net_disbursement || (activeOffer.approved_amount - (feeCalc?.total_fees || 0))).toLocaleString()}
+                      </strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Offer Status:</span>
+                      <span className="status-pill pill-cyan">{activeOffer.status}</span>
+                    </div>
+                  </div>
+
+                  {activeOffer.status === 'ISSUED' && (
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => handleOfferActionClick('ACCEPT')}
+                        disabled={actionLoading}
+                        style={{ flex: 1 }}
+                      >
+                        Borrower Accepts Offer
+                      </button>
+                      <button
+                        className="btn btn-warning btn-sm"
+                        onClick={() => handleOfferActionClick('RENEGOTIATE')}
+                        disabled={actionLoading}
+                        style={{ flex: 1 }}
+                      >
+                        Renegotiate (Triggers Invalidation)
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                    Facility has been reviewed. Select applicable fees below and generate the official binding loan offer letter.
+                  </p>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleGenerateOfferClick}
+                    disabled={actionLoading}
+                  >
+                    Generate Binding Offer Letter
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Conditions Precedent Checklist */}
+            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--brand-teal-light)' }}>
+                Conditions Precedent Checklist (FR-14)
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                All mandatory conditions must be verified before transitioning to "Ready for Disbursement".
+              </p>
+
+              {conditions.length === 0 ? (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No conditions precedent stipulated.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  {conditions.map((c: any) => (
+                    <div key={c.id} style={{
+                      padding: '0.75rem',
+                      background: 'var(--bg-surface)',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={c.status === 'SATISFIED'}
+                          onChange={() => handleConditionToggle(c.id, c.status)}
+                          style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--brand-teal)' }}
+                        />
+                        <div>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-highlight)', fontWeight: 600 }}>{c.description}</div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                            Mandatory: {c.mandatory ? 'Yes' : 'No'} &bull; Verified By: {c.verified_by || 'Pending'}
+                          </div>
                         </div>
                       </div>
+                      <span className={`status-pill ${c.status === 'SATISFIED' ? 'pill-green' : 'pill-amber'}`} style={{ fontSize: '0.7rem' }}>
+                        {c.status}
+                      </span>
                     </div>
-                    <span className={`status-pill ${c.status === 'SATISFIED' ? 'pill-green' : 'pill-amber'}`} style={{ fontSize: '0.7rem' }}>
-                      {c.status}
-                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* FACILITY FEES & BESPOKE DEDUCTIONS SELECTION TABLE */}
+          <div className="glass-panel" style={{ padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Receipt size={18} color="var(--brand-teal-light)" />
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
+                    Opticom Applicable Facility Fees &amp; Upfront Deductions
+                  </h3>
+                </div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0 0' }}>
+                  Select charges applicable to this facility. You may override rates, toggle optional fees (e.g. tracking, insurance), or incorporate bespoke transaction fees.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setIsAddCaseFeeOpen(!isAddCaseFeeOpen)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <Plus size={14} /> Add Case Bespoke Fee
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={handleSaveCaseFees}
+                  disabled={savingCaseFees}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  {savingCaseFees ? 'Saving...' : 'Save Facility Fee Schedule'}
+                </button>
+              </div>
+            </div>
+
+            {/* Modal: Add Case Bespoke Fee */}
+            {isAddCaseFeeOpen && (
+              <div style={{
+                background: 'rgba(0, 150, 204, 0.05)',
+                border: '1px solid rgba(0, 150, 204, 0.3)',
+                borderRadius: '8px',
+                padding: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <strong style={{ fontSize: '0.88rem', color: '#0096cc' }}>+ Add Bespoke Fee for Case {caseData.case_number}</strong>
+                  <button onClick={() => setIsAddCaseFeeOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <div>
+                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Fee Name</label>
+                    <input 
+                      type="text" 
+                      className="form-input"
+                      placeholder="e.g. Valuation / Search Fee"
+                      value={newCaseFee.name}
+                      onChange={(e) => setNewCaseFee({ ...newCaseFee, name: e.target.value })}
+                    />
                   </div>
-                ))}
+
+                  <div>
+                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Type</label>
+                    <select
+                      className="form-select"
+                      value={newCaseFee.fee_type}
+                      onChange={(e) => setNewCaseFee({ ...newCaseFee, fee_type: e.target.value as any })}
+                    >
+                      <option value="PERCENTAGE">Percentage of Principal (%)</option>
+                      <option value="FLAT">Flat Fixed (₦)</option>
+                      <option value="PERCENTAGE_OF_FEES">Percentage of Fees (VAT)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="form-label" style={{ fontSize: '0.75rem' }}>Rate / Amount ({newCaseFee.fee_type === 'FLAT' ? '₦' : '%'})</label>
+                    <input 
+                      type="number"
+                      step={newCaseFee.fee_type === 'FLAT' ? '1000' : '0.1'}
+                      className="form-input"
+                      value={newCaseFee.rate}
+                      onChange={(e) => setNewCaseFee({ ...newCaseFee, rate: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsAddCaseFeeOpen(false)}>Cancel</button>
+                  <button 
+                    type="button" 
+                    className="btn btn-primary btn-sm"
+                    onClick={async () => {
+                      if (!newCaseFee.name.trim()) return;
+                      const customId = `bespoke_${Date.now()}`;
+                      const updated = [...caseFees, { ...newCaseFee, id: customId, is_selected: true, selected: true }];
+                      setCaseFees(updated);
+                      setIsAddCaseFeeOpen(false);
+                      setNewCaseFee({ name: '', fee_type: 'PERCENTAGE', rate: 1.0, is_selected: true, description: '' });
+                      const calc = await calculateCaseFeesPreview(caseId, updated, application.amount);
+                      setFeeCalc(calc);
+                    }}
+                  >
+                    Incorporate Fee
+                  </button>
+                </div>
               </div>
             )}
+
+            {/* Fees Checklist Table */}
+            <div style={{ overflowX: 'auto', border: '1px solid var(--border-subtle)', borderRadius: '6px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
+                    <th style={{ padding: '0.65rem 0.85rem', width: '40px' }}>Apply</th>
+                    <th style={{ padding: '0.65rem 0.85rem' }}>Fee Title</th>
+                    <th style={{ padding: '0.65rem 0.85rem' }}>Basis</th>
+                    <th style={{ padding: '0.65rem 0.85rem' }}>Rate / Value</th>
+                    <th style={{ padding: '0.65rem 0.85rem' }}>Calculated Deduction</th>
+                    <th style={{ padding: '0.65rem 0.85rem' }}>Notes / Applicability</th>
+                    <th style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>Remove</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {caseFees.map((fee, idx) => {
+                    const isChecked = fee.is_selected !== false && fee.selected !== false;
+                    const deduction = feeCalc?.itemized_fees?.find((i: any) => i.id === fee.id)?.calculated_amount ?? 0;
+                    return (
+                      <tr 
+                        key={fee.id || idx}
+                        style={{
+                          borderBottom: '1px solid var(--border-subtle)',
+                          background: isChecked ? 'transparent' : 'rgba(0, 0, 0, 0.2)',
+                          opacity: isChecked ? 1 : 0.65
+                        }}
+                      >
+                        <td style={{ padding: '0.65rem 0.85rem' }}>
+                          <input 
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleFeeToggle(idx)}
+                            style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--brand-teal)' }}
+                          />
+                        </td>
+                        <td style={{ padding: '0.65rem 0.85rem', fontWeight: 600, color: 'var(--text-highlight)' }}>
+                          {fee.name}
+                        </td>
+                        <td style={{ padding: '0.65rem 0.85rem' }}>
+                          <span style={{
+                            fontSize: '0.7rem',
+                            padding: '2px 5px',
+                            borderRadius: '4px',
+                            background: fee.fee_type === 'PERCENTAGE' ? 'rgba(0, 150, 204, 0.12)' : fee.fee_type === 'FLAT' ? 'rgba(234, 179, 8, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                            color: fee.fee_type === 'PERCENTAGE' ? '#0096cc' : fee.fee_type === 'FLAT' ? '#eab308' : '#10b981'
+                          }}>
+                            {fee.fee_type === 'PERCENTAGE' ? '% of Principal' : fee.fee_type === 'FLAT' ? 'Flat Fixed (₦)' : '% of Fees (VAT)'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.65rem 0.85rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                            <input 
+                              type="number"
+                              step={fee.fee_type === 'FLAT' ? '1000' : '0.005'}
+                              className="form-input"
+                              style={{ width: '90px', padding: '0.2rem 0.4rem', fontSize: '0.8rem', fontFamily: 'var(--font-mono)' }}
+                              value={fee.rate}
+                              onChange={(e) => handleFeeRateChange(idx, parseFloat(e.target.value) || 0)}
+                            />
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              {fee.fee_type === 'FLAT' ? '₦' : '%'}
+                            </span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.65rem 0.85rem', fontFamily: 'var(--font-mono)', fontWeight: 700, color: isChecked ? '#ef4444' : 'var(--text-muted)' }}>
+                          {isChecked ? `-₦${deduction.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '₦0.00'}
+                        </td>
+                        <td style={{ padding: '0.65rem 0.85rem', fontSize: '0.74rem', color: 'var(--text-secondary)' }}>
+                          {fee.description || (fee.name.includes('Tracking') ? 'GPS unit for pledged vehicles' : fee.name.includes('Insurance') ? 'Collateral protection' : 'Facility charge')}
+                        </td>
+                        <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>
+                          {fee.id?.startsWith('bespoke_') ? (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const updated = caseFees.filter((_, i) => i !== idx);
+                                setCaseFees(updated);
+                                const calc = await calculateCaseFeesPreview(caseId, updated, application.amount);
+                                setFeeCalc(calc);
+                              }}
+                              style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Standard</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Total Fee & Net Disbursement Calculation Summary Card */}
+            <div style={{
+              marginTop: '1.25rem',
+              padding: '1rem',
+              background: 'var(--bg-surface)',
+              borderRadius: '8px',
+              border: '1px solid var(--border-subtle)',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '1rem',
+              alignItems: 'center'
+            }}>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Gross Facility Principal</div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-highlight)', fontFamily: 'var(--font-mono)' }}>
+                  ₦{application.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontSize: '0.72rem', color: '#ef4444' }}>Total Upfront Deductions ({feeCalc?.effective_fee_percentage ?? 0}%)</div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ef4444', fontFamily: 'var(--font-mono)' }}>
+                  -₦{(feeCalc?.total_fees ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+
+              <div style={{ borderLeft: '2px solid #10b981', paddingLeft: '0.75rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 700 }}>Net Disbursed to Obligor Account</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981', fontFamily: 'var(--font-mono)' }}>
+                  ₦{(feeCalc?.net_disbursement ?? application.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+            </div>
+
           </div>
+
         </div>
       )}
 

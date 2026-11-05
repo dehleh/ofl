@@ -440,8 +440,8 @@ html_content = f"""<!DOCTYPE html>
           <td>10th Floor, UAC House, 1-5 Odunlami St, Lagos Island, Lagos 101001, Nigeria</td>
         </tr>
         <tr>
-          <td><strong>Customer Help-Line</strong></td>
-          <td>+234 803 345 3830 (0803 345 3830)</td>
+          <td><strong>Customer Help-Line &amp; Enquiries</strong></td>
+          <td>+234 816 181 3538 (0816 181 3538) &bull; info@opticomfinance.com | customercare@opticomfinance.com</td>
         </tr>
         <tr>
           <td><strong>Target Obligor Profile</strong></td>
@@ -780,7 +780,7 @@ html_content = f"""<!DOCTYPE html>
         <div class="feature-box">
           <div class="feature-title">D. Role-Based Access Control (RBAC)</div>
           <p class="feature-desc">
-            Strict segregation of duties across 5 tiers: Credit Analyst, Head of Risk (HRM), Board Credit Committee (BCC), Managing Director (MD), and Treasury. Prevents unauthorized escalation or unauthorized cross-case decisioning.
+            Strict governance sequence across tiers: Credit Analyst (CAM), Head of Risk Management (HRM), Head of Business Development (Commercial Sanction), HRM (Final Risk Concurrence), MD (Final Sanction &le; ₦20M) or BCC (Board Sanction &gt; ₦20M), with automated Finance/Disbursement alerts.
           </p>
         </div>
 

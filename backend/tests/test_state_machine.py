@@ -119,14 +119,10 @@ def test_authority_limits(test_db):
     can_hrm_high, _ = AuthorityMatrix.can_user_approve("HRM", 7_000_000)
     assert can_hrm_high is False
     
-    # BCC can approve ₦12m
-    can_bcc, _ = AuthorityMatrix.can_user_approve("BCC", 12_000_000)
+    # BCC has authority for large facilities > ₦20m
+    can_bcc, _ = AuthorityMatrix.can_user_approve("BCC", 25_000_000)
     assert can_bcc is True
     
-    # BCC cannot approve ₦20m
-    can_bcc_high, _ = AuthorityMatrix.can_user_approve("BCC", 20_000_000)
-    assert can_bcc_high is False
-    
-    # MD can approve ₦20m
+    # MD can approve facilities up to ₦20m
     can_md, _ = AuthorityMatrix.can_user_approve("MD", 20_000_000)
     assert can_md is True

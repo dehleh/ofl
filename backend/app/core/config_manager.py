@@ -52,14 +52,14 @@ DEFAULT_CONFIGS: Dict[str, Dict[str, Any]] = {
         "value": {
             "mode": "CUSTOM_SMTP",  # DEFAULT_SENDGRID, CUSTOM_SMTP, CUSTOM_API
             "provider_name": "Opticom Exchange Mail Server",
-            "smtp_host": "mail.opticom.ng",
+            "smtp_host": "mail.opticomfinance.com",
             "smtp_port": 587,
             "security": "STARTTLS",  # NONE, STARTTLS, SSL_TLS
-            "username": "credit.notifications@opticom.ng",
+            "username": "customercare@opticomfinance.com",
             "password": "opticom-corporate-smtp-secret-key-2026",
             "from_name": "Opticom Finance Credit Operations",
-            "from_email": "credit.notifications@opticom.ng",
-            "reply_to": "credit-ops@opticom.ng",
+            "from_email": "info@opticomfinance.com",
+            "reply_to": "customercare@opticomfinance.com",
             "api_endpoint": "",
             "api_key": "",
             "enabled": True
@@ -73,6 +73,7 @@ DEFAULT_CONFIGS: Dict[str, Dict[str, Any]] = {
             "provider": "TERMII_NIGERIA",
             "api_key": "TER-opticom-sms-live-api-key-2026",
             "sender_id": "OPTICOM",
+            "helpline": "0816 181 3538",
             "enabled": True
         }
     },
@@ -86,11 +87,76 @@ DEFAULT_CONFIGS: Dict[str, Dict[str, Any]] = {
             "direct_min": settings.OFL_DIRECT_MIN_AMOUNT,
             "analyst_limit": settings.THRESHOLD_ANALYST_RECOMMEND_ONLY,
             "hrm_limit": settings.THRESHOLD_HRM_APPROVAL_LIMIT,
-            "bcc_limit": settings.THRESHOLD_BCC_APPROVAL_LIMIT,
+            "bcc_limit": 20000000.0,  # Facilities > ₦20m require Board Credit Committee (BCC)
             "cbn_mpr": 23.0,
             "commercial_margin": 5.0,
             "effective_apr": 28.0,
             "upfront_fee_pct": 4.5
+        }
+    },
+    "FEE_CATALOG": {
+        "category": "FEES",
+        "description": "Master Catalog of Standard & Bespoke Credit Facility Fees",
+        "is_secret": False,
+        "value": {
+            "fees": [
+                {
+                    "id": "fee_mgt_legal",
+                    "name": "Mgt/Legal fees",
+                    "fee_type": "PERCENTAGE",
+                    "rate": 2.0,
+                    "is_mandatory_default": True,
+                    "description": "Facility management, loan underwriting documentation & legal charges (2.0% of principal)"
+                },
+                {
+                    "id": "fee_processing",
+                    "name": "Processing fee",
+                    "fee_type": "PERCENTAGE",
+                    "rate": 2.0,
+                    "is_mandatory_default": True,
+                    "description": "Credit appraisal and facility processing fee (2.0% of principal)"
+                },
+                {
+                    "id": "fee_tracking",
+                    "name": "Tracking fee",
+                    "fee_type": "FLAT",
+                    "rate": 150000.0,
+                    "is_mandatory_default": False,
+                    "description": "Asset & vehicle GPS tracking unit installation and monitoring"
+                },
+                {
+                    "id": "fee_stamp_duty",
+                    "name": "Stamp Duty",
+                    "fee_type": "PERCENTAGE",
+                    "rate": 0.125,
+                    "is_mandatory_default": True,
+                    "description": "Statutory stamp duty on loan agreement & security deed (0.125% of principal)"
+                },
+                {
+                    "id": "fee_vat",
+                    "name": "VAT on fees (7.5%)",
+                    "fee_type": "PERCENTAGE_OF_FEES",
+                    "rate": 7.5,
+                    "is_mandatory_default": True,
+                    "description": "Federal Inland Revenue Service (FIRS) 7.5% Value Added Tax on management & processing fees"
+                },
+                {
+                    "id": "fee_credit_life",
+                    "name": "Credit Life Insurance",
+                    "fee_type": "PERCENTAGE",
+                    "rate": 1.0,
+                    "is_mandatory_default": False,
+                    "description": "Obligor credit life assurance protection policy"
+                },
+                {
+                    "id": "fee_comprehensive_ins",
+                    "name": "Comprehensive insurance",
+                    "fee_type": "PERCENTAGE",
+                    "rate": 3.5,
+                    "is_mandatory_default": False,
+                    "description": "Comprehensive collateral/asset insurance policy with Opticom noted as first loss payee"
+                }
+            ]
         }
     },
     "WEBHOOK_INTEGRATIONS": {
@@ -141,7 +207,7 @@ class ConfigManager:
             initial_users = [
                 {
                     "username": "admin",
-                    "email": "admin@opticom.ng",
+                    "email": "admin@opticomfinance.com",
                     "name": "Opticom System Administrator",
                     "role": "ADMIN",
                     "department": "IT & Infrastructure",
@@ -150,7 +216,7 @@ class ConfigManager:
                 },
                 {
                     "username": "analyst",
-                    "email": "tunde.adebayo@opticom.ng",
+                    "email": "tunde.adebayo@opticomfinance.com",
                     "name": "Babatunde Adebayo",
                     "role": "ANALYST",
                     "department": "Credit Underwriting",
@@ -159,34 +225,43 @@ class ConfigManager:
                 },
                 {
                     "username": "hrm",
-                    "email": "chidinma.okafor@opticom.ng",
+                    "email": "chidinma.okafor@opticomfinance.com",
                     "name": "Chidinma Okafor",
                     "role": "HRM",
                     "department": "Risk Management",
                     "pin_hash": "1988",
-                    "permissions": ["approval:recommend", "approval:approve_5m", "exception:coordinate", "case:read"]
+                    "permissions": ["approval:recommend", "approval:risk_review", "exception:coordinate", "case:read"]
+                },
+                {
+                    "username": "bd",
+                    "email": "dapo.adeleke@opticomfinance.com",
+                    "name": "Dapo Adeleke (Head of Business Development)",
+                    "role": "HEAD_OF_BD",
+                    "department": "Business Development",
+                    "pin_hash": "1988",
+                    "permissions": ["approval:recommend", "bd:endorse", "fees:manage", "case:read"]
                 },
                 {
                     "username": "bcc",
-                    "email": "emeka.nnamdi@opticom.ng",
+                    "email": "emeka.nnamdi@opticomfinance.com",
                     "name": "Emeka Nnamdi (BCC Chair)",
                     "role": "BCC",
                     "department": "Board Credit Committee",
                     "pin_hash": "1988",
-                    "permissions": ["approval:approve_15m", "rejection:recommend", "case:read"]
+                    "permissions": ["approval:approve_unlimited", "rejection:recommend", "case:read"]
                 },
                 {
                     "username": "md",
-                    "email": "folashade.tinubu@opticom.ng",
+                    "email": "folashade.tinubu@opticomfinance.com",
                     "name": "Folashade Tinubu (Managing Director)",
                     "role": "MD",
                     "department": "Executive Management",
                     "pin_hash": "1988",
-                    "permissions": ["approval:approve_unlimited", "rejection:final", "disbursement:sanction"]
+                    "permissions": ["approval:approve_20m", "approval:approve_unlimited", "rejection:final", "disbursement:sanction"]
                 },
                 {
                     "username": "treasury",
-                    "email": "ibrahim.musa@opticom.ng",
+                    "email": "ibrahim.musa@opticomfinance.com",
                     "name": "Ibrahim Musa (Treasury Lead)",
                     "role": "TREASURY",
                     "department": "Treasury Operations",
@@ -195,7 +270,7 @@ class ConfigManager:
                 },
                 {
                     "username": "it_owner",
-                    "email": "devops@opticom.ng",
+                    "email": "devops@opticomfinance.com",
                     "name": "DevOps / IT Integration Owner",
                     "role": "IT_OWNER",
                     "department": "IT Operations",
@@ -298,6 +373,100 @@ class ConfigManager:
             "commercial_margin": round(commercial_margin, 2),
             "effective_apr": round(effective_apr, 2),
             "upfront_fee_pct": round(upfront_fee_pct, 2)
+        }
+
+    @classmethod
+    def get_fee_catalog(cls, db: Session) -> List[Dict[str, Any]]:
+        """
+        Retrieves the master catalog of Opticom standard and bespoke facility fees.
+        """
+        config = cls.get_config_value(db, "FEE_CATALOG")
+        if config and isinstance(config, dict) and "fees" in config:
+            return config["fees"]
+        default_fees = DEFAULT_CONFIGS.get("FEE_CATALOG", {}).get("value", {}).get("fees", [])
+        return default_fees
+
+    @classmethod
+    def update_fee_catalog(cls, db: Session, fees: List[Dict[str, Any]], actor: str = "Admin") -> List[Dict[str, Any]]:
+        """
+        Updates the master fee catalog, preserving room for adding bespoke fee schedules.
+        """
+        cls.update_configuration(db, "FEE_CATALOG", {"fees": fees}, actor=actor)
+        return cls.get_fee_catalog(db)
+
+    @classmethod
+    def calculate_case_fees(cls, principal: float, fee_items: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Computes itemized fee breakdown, total upfront deductions, and net disbursement quantum.
+        Handles Percentage of Principal, Flat Fees, and Percentage of Fees (VAT).
+        """
+        p = float(principal) if principal else 0.0
+        calculated_items = []
+        base_fees_subtotal = 0.0
+
+        # Pass 1: Calculate standard percentage and flat fees
+        for item in fee_items:
+            # Check if active/selected
+            if item.get("selected") is False or item.get("is_selected") is False:
+                continue
+
+            f_id = item.get("id") or generate_uuid()
+            f_name = item.get("name", "Bespoke Fee")
+            f_type = (item.get("fee_type") or "PERCENTAGE").upper()
+            rate = float(item.get("rate") or 0.0)
+            desc = item.get("description", "")
+
+            if f_type == "PERCENTAGE":
+                amt = round(p * (rate / 100.0), 2)
+                base_fees_subtotal += amt
+            elif f_type == "FLAT":
+                amt = round(rate, 2)
+                base_fees_subtotal += amt
+            elif f_type == "PERCENTAGE_OF_FEES":
+                # Handled in pass 2
+                continue
+            else:
+                amt = round(rate, 2)
+                base_fees_subtotal += amt
+
+            calculated_items.append({
+                "id": f_id,
+                "name": f_name,
+                "fee_type": f_type,
+                "rate": rate,
+                "calculated_amount": amt,
+                "description": desc,
+                "is_selected": True
+            })
+
+        # Pass 2: Calculate percentage of fees (e.g. VAT on fees @ 7.5%)
+        for item in fee_items:
+            if item.get("selected") is False or item.get("is_selected") is False:
+                continue
+            f_type = (item.get("fee_type") or "").upper()
+            if f_type == "PERCENTAGE_OF_FEES":
+                rate = float(item.get("rate") or 7.5)
+                amt = round(base_fees_subtotal * (rate / 100.0), 2)
+                calculated_items.append({
+                    "id": item.get("id") or "fee_vat",
+                    "name": item.get("name", "VAT on fees (7.5%)"),
+                    "fee_type": "PERCENTAGE_OF_FEES",
+                    "rate": rate,
+                    "calculated_amount": amt,
+                    "description": item.get("description", f"VAT @ {rate}% on facility fees"),
+                    "is_selected": True
+                })
+
+        total_fees = round(sum(i["calculated_amount"] for i in calculated_items), 2)
+        net_disbursement = round(max(0.0, p - total_fees), 2)
+        effective_pct = round((total_fees / p * 100.0), 3) if p > 0 else 0.0
+
+        return {
+            "principal": p,
+            "itemized_fees": calculated_items,
+            "total_fees": total_fees,
+            "net_disbursement": net_disbursement,
+            "effective_fee_percentage": effective_pct
         }
 
     @classmethod

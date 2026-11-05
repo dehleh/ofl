@@ -8,7 +8,10 @@ import re
 import hashlib
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional, Tuple
-import pypdf
+try:
+    import pypdf
+except ImportError:
+    pypdf = None
 
 from ..config import settings
 from ..database import utc_now, generate_uuid
@@ -91,14 +94,15 @@ class BankStatementAnalyzer:
         engine_used = "NATIVE_PDF_PARSER"
 
         if lower_name.endswith(".pdf"):
-            try:
-                reader = pypdf.PdfReader(io.BytesIO(file_bytes))
-                for page in reader.pages:
-                    page_text = page.extract_text()
-                    if page_text:
-                        extracted_text += page_text + "\n"
-            except Exception as e:
-                extracted_text = ""
+            if pypdf is not None:
+                try:
+                    reader = pypdf.PdfReader(io.BytesIO(file_bytes))
+                    for page in reader.pages:
+                        page_text = page.extract_text()
+                        if page_text:
+                            extracted_text += page_text + "\n"
+                except Exception as e:
+                    extracted_text = ""
 
             # Check if PDF is a scanned photocopy or flattened image without embedded fonts
             if len(extracted_text.strip()) < 80:
