@@ -17,9 +17,19 @@ from ...models import (
 from ...schemas.schemas import DirectApplicationCreate, BestoInboundPayload
 from ...core.financial_engine import FinancialEngine
 from ...core.webhook_security import verify_hmac_signature
+from ...core.config_manager import ConfigManager
 from ...integrations.besto_adapter import BestoAdapter
 
 router = APIRouter(prefix="/intake", tags=["Application Intake"])
+
+@router.get("/pricing-policy")
+def get_public_pricing_policy(db: Session = Depends(get_db)):
+    """
+    Public pricing policy endpoint returning active Central Bank of Nigeria (CBN)
+    Monetary Policy Rate (MPR), Opticom commercial risk spread, effective APR,
+    and upfront fee benchmarks for public repayment calculators.
+    """
+    return ConfigManager.get_pricing_policy(db)
 
 @router.post("/direct", status_code=status.HTTP_201_CREATED)
 def submit_direct_application(

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Building2, 
   ArrowRight, 
@@ -25,7 +25,7 @@ import {
   ExternalLink,
   Copy
 } from 'lucide-react';
-import { submitDirectApplication, trackApplication, respondToApplicantException } from '../services/api';
+import { submitDirectApplication, trackApplication, respondToApplicantException, fetchPricingPolicy, PricingPolicy } from '../services/api';
 
 interface PublicCustomerPortalProps {
   onOpenStaffGate?: () => void;
@@ -74,6 +74,24 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
   const [trackResult, setTrackResult] = useState<any>(null);
   const [trackError, setTrackError] = useState<string | null>(null);
 
+  // Dynamic Interest Rate Policy (CBN MPR + Commercial Spread)
+  const [pricingPolicy, setPricingPolicy] = useState<PricingPolicy>({
+    cbn_mpr: 23.0,
+    commercial_margin: 5.0,
+    effective_apr: 28.0,
+    upfront_fee_pct: 4.5
+  });
+
+  useEffect(() => {
+    fetchPricingPolicy()
+      .then((res) => {
+        if (res && res.effective_apr) {
+          setPricingPolicy(res);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Boundary logic
   const isBelowBoundary = formData.amount <= 2000000;
 
@@ -81,7 +99,8 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
   const calculations = useMemo(() => {
     const P = Number(formData.amount) || 0;
     const n = Number(formData.tenor_months) || 12;
-    const r = 0.28 / 12; // 28% APR standard
+    const apr = Number(pricingPolicy.effective_apr) || 28.0;
+    const r = (apr / 100) / 12; // Dynamic APR from Admin configuration
     let pmt = 0;
     if (P > 0 && n > 0) {
       const factor = Math.pow(1 + r, n);
@@ -89,7 +108,8 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
     }
     const totalRepayment = pmt * n;
     const totalInterest = totalRepayment - P;
-    const estimatedUpfrontFees = P * 0.045; // ~4.5% upfront fees benchmark
+    const feeRate = (Number(pricingPolicy.upfront_fee_pct) || 4.5) / 100;
+    const estimatedUpfrontFees = P * feeRate;
 
     return {
       monthlyInstallment: Math.round(pmt),
@@ -97,7 +117,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
       totalInterest: Math.round(totalInterest),
       upfrontFees: Math.round(estimatedUpfrontFees)
     };
-  }, [formData.amount, formData.tenor_months]);
+  }, [formData.amount, formData.tenor_months, pricingPolicy]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, fileType: string) => {
     const file = e.target.files?.[0];
@@ -547,7 +567,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                 </div>
                 <div>
                   <span style={{ color: '#94a3b8', display: 'block' }}>Pricing APR:</span>
-                  <strong style={{ color: '#38bdf8' }}>28% Per Annum</strong>
+                  <strong style={{ color: '#38bdf8' }}>{pricingPolicy.effective_apr}% Per Annum</strong>
                 </div>
                 <div>
                   <span style={{ color: '#94a3b8', display: 'block' }}>Settlement:</span>
@@ -931,7 +951,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       ₦{calculations.monthlyInstallment.toLocaleString()}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>
-                      Principal + Interest (28% APR)
+                      Principal + Interest ({pricingPolicy.effective_apr}% APR)
                     </div>
                   </div>
 
@@ -949,7 +969,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
 
                   <div>
                     <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.06em' }}>
-                      Upfront Fees (Approx 4.5%)
+                      Upfront Fees (Approx {pricingPolicy.upfront_fee_pct}%)
                     </div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#d97706', fontFamily: 'var(--font-mono)', marginTop: '0.25rem' }}>
                       ₦{calculations.upfrontFees.toLocaleString()}
@@ -1480,11 +1500,16 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     <strong style={{ color: 'var(--text-highlight)', fontFamily: 'var(--font-mono)' }}>₦{formData.amount.toLocaleString()}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Total Interest (28% APR):</span>
+                    <div>
+                      <span style={{ color: 'var(--text-secondary)' }}>Total Interest ({pricingPolicy.effective_apr}% APR):</span>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                        Structured as CBN MPR ({pricingPolicy.cbn_mpr}%) + {pricingPolicy.commercial_margin}% Commercial Margin
+                      </div>
+                    </div>
                     <strong style={{ color: 'var(--text-highlight)', fontFamily: 'var(--font-mono)' }}>₦{calculations.totalInterest.toLocaleString()}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Upfront Processing &amp; Legal (4.5%):</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>Upfront Processing &amp; Legal ({pricingPolicy.upfront_fee_pct}%):</span>
                     <strong style={{ color: 'var(--accent-gold-light)', fontFamily: 'var(--font-mono)' }}>₦{calculations.upfrontFees.toLocaleString()}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>

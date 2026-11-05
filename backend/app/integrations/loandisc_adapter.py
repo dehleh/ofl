@@ -15,6 +15,7 @@ from ..models import (
 )
 from ..database import utc_now, generate_uuid
 from ..core.state_machine import TransitionService
+from ..core.config_manager import ConfigManager
 from ..config import settings
 from .notification_service import NotificationService
 
@@ -41,6 +42,10 @@ class LoanDiscAdapter:
         if event and event.acknowledgment:
             loandisc_id = event.acknowledgment.get("loandisc_facility_id")
 
+        # Retrieve active configured pricing policy
+        pricing = ConfigManager.get_pricing_policy(db)
+        effective_apr = pricing.get("effective_apr", 28.0)
+
         return {
             "case_number": credit_case.case_number,
             "borrower_name": cust.name,
@@ -51,7 +56,7 @@ class LoanDiscAdapter:
             "approved_amount": app.amount,
             "tenor_months": app.tenor,
             "facility_type": app.purpose,
-            "interest_rate_apr": 28.0,
+            "interest_rate_apr": effective_apr,
             "disbursement_status": disb.status if disb else "PENDING_DISBURSEMENT",
             "disbursement_reference": disb.nav_reference if disb else None,
             "loandisc_facility_id": loandisc_id,
@@ -122,6 +127,10 @@ class LoanDiscAdapter:
             disb.disbursed_at = utc_now()
             disb.actor = actor
 
+        # Retrieve active configured pricing policy
+        pricing = ConfigManager.get_pricing_policy(db)
+        effective_apr = pricing.get("effective_apr", 28.0)
+
         # 3. Build Loandisc Payload
         payload = {
             "case_number": credit_case.case_number,
@@ -131,7 +140,7 @@ class LoanDiscAdapter:
             "borrower_email": cust.email,
             "principal_amount": disb_amount,
             "currency": "NGN",
-            "interest_rate_annual": 28.0,
+            "interest_rate_annual": effective_apr,
             "tenor_months": app.tenor,
             "repayment_cycle": "MONTHLY",
             "disbursement_reference": ref,

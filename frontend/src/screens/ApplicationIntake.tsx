@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Send, AlertTriangle, CheckCircle, Calculator, FileText, ArrowRight } from 'lucide-react';
-import { submitDirectApplication } from '../services/api';
+import { submitDirectApplication, fetchPricingPolicy, PricingPolicy } from '../services/api';
 
 interface ApplicationIntakeProps {
   onSuccess: (caseNumber: string) => void;
@@ -29,11 +29,30 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successInfo, setSuccessInfo] = useState<any>(null);
 
+  // Dynamic Pricing Policy from Admin Settings
+  const [pricingPolicy, setPricingPolicy] = useState<PricingPolicy>({
+    cbn_mpr: 23.0,
+    commercial_margin: 5.0,
+    effective_apr: 28.0,
+    upfront_fee_pct: 4.5
+  });
+
+  useEffect(() => {
+    fetchPricingPolicy()
+      .then((res) => {
+        if (res && res.effective_apr) {
+          setPricingPolicy(res);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Live deterministic calculations in form
   const calculations = useMemo(() => {
     const P = Number(formData.amount) || 0;
     const n = Number(formData.tenor_months) || 12;
-    const r = 0.28 / 12; // 28% annual rate
+    const apr = Number(pricingPolicy.effective_apr) || 28.0;
+    const r = (apr / 100) / 12; // Dynamic APR from Admin
     let pmt = 0;
     if (P > 0 && n > 0) {
       const factor = Math.pow(1 + r, n);
@@ -52,7 +71,7 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
       ndi: Math.round(ndi),
       collateralRatio: Math.round(collateralRatio)
     };
-  }, [formData]);
+  }, [formData, pricingPolicy]);
 
   const isBelowBoundary = formData.amount <= 2000000;
 

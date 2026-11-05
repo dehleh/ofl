@@ -356,6 +356,28 @@ export async function trackApplication(caseNumber: string) {
 // Opticom Admin & Configuration Service APIs
 // ==========================================
 
+export interface PricingPolicy {
+  cbn_mpr: number;
+  commercial_margin: number;
+  effective_apr: number;
+  upfront_fee_pct: number;
+}
+
+export async function fetchPricingPolicy(): Promise<PricingPolicy> {
+  try {
+    const res = await fetch(`${API_BASE}/intake/pricing-policy`);
+    if (!res.ok) throw new Error('Failed to fetch pricing policy');
+    return await res.json();
+  } catch {
+    return {
+      cbn_mpr: 23.0,
+      commercial_margin: 5.0,
+      effective_apr: 28.0,
+      upfront_fee_pct: 4.5
+    };
+  }
+}
+
 export async function fetchAdminConfig() {
   const res = await fetch(`${API_BASE}/admin/config`, {
     headers: getAuthHeaders()

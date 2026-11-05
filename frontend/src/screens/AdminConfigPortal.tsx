@@ -79,7 +79,20 @@ export const AdminConfigPortal: React.FC = () => {
       if (configData.MFA_CONFIG?.value) setMfaForm({ ...configData.MFA_CONFIG.value });
       if (configData.EMAIL_CLIENT?.value) setEmailForm({ ...configData.EMAIL_CLIENT.value });
       if (configData.SMS_GATEWAY?.value) setSmsForm({ ...configData.SMS_GATEWAY.value });
-      if (configData.CREDIT_THRESHOLDS?.value) setPolicyForm({ ...configData.CREDIT_THRESHOLDS.value });
+      if (configData.CREDIT_THRESHOLDS?.value) {
+        setPolicyForm({
+          besto_max: 2000000,
+          direct_min: 2000000.01,
+          analyst_limit: 2000000,
+          hrm_limit: 5000000,
+          bcc_limit: 15000000,
+          cbn_mpr: 23.0,
+          commercial_margin: 5.0,
+          effective_apr: 28.0,
+          upfront_fee_pct: 4.5,
+          ...configData.CREDIT_THRESHOLDS.value
+        });
+      }
     } catch (err: any) {
       showToast(err.detail || 'Failed to load administrative configurations.', 'error');
     } finally {
@@ -950,98 +963,263 @@ export const AdminConfigPortal: React.FC = () => {
 
       {/* TAB 5: POLICY THRESHOLDS & WEBHOOKS */}
       {activeTab === 'POLICY' && (
-        <div className="card" style={{ maxWidth: '850px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '880px' }}>
+          
+          {/* SECTION 1: CBN BENCHMARK & COMMERCIAL APR PRICING */}
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '8px',
+                background: 'rgba(0, 150, 204, 0.12)',
+                color: '#0096cc',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Zap size={22} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
+                  Central Bank of Nigeria (CBN) Benchmark & Commercial Pricing Policy
+                </h2>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
+                  Manage the regulatory Monetary Policy Rate (MPR), commercial risk spread, and effective APR driving borrower calculators and facility term sheets.
+                </p>
+              </div>
+            </div>
+
+            {/* Live Pricing Formula Banner */}
             <div style={{
-              width: '40px',
-              height: '40px',
+              background: 'linear-gradient(135deg, rgba(0, 150, 204, 0.08) 0%, rgba(4, 19, 38, 0.04) 100%)',
+              border: '1px solid rgba(0, 150, 204, 0.25)',
               borderRadius: '8px',
-              background: 'rgba(239, 68, 68, 0.12)',
-              color: '#ef4444',
+              padding: '0.85rem 1rem',
+              marginBottom: '1.25rem',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.75rem'
             }}>
-              <Sliders size={22} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <span style={{
+                  background: '#0096cc',
+                  color: '#ffffff',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  letterSpacing: '0.04em'
+                }}>
+                  ACTIVE PRICING FORMULA
+                </span>
+                <span style={{ fontSize: '0.84rem', color: 'var(--text-highlight)' }}>
+                  CBN MPR (<strong>{policyForm.cbn_mpr ?? 23.0}%</strong>) + Risk Spread (<strong>{policyForm.commercial_margin ?? 5.0}%</strong>) =
+                  <strong style={{ color: '#0096cc', marginLeft: '0.4rem', fontSize: '1.05rem', fontFamily: 'var(--font-mono)' }}>
+                    {policyForm.effective_apr ?? 28.0}% APR
+                  </strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                onClick={() => {
+                  const mpr = policyForm.cbn_mpr ?? 23.0;
+                  const margin = policyForm.commercial_margin ?? 5.0;
+                  const autoApr = Math.round((mpr + margin) * 100) / 100;
+                  setPolicyForm({ ...policyForm, effective_apr: autoApr });
+                  showToast(`Calculated APR: ${mpr}% + ${margin}% = ${autoApr}% APR`);
+                }}
+              >
+                Sync APR = MPR + Spread
+              </button>
             </div>
-            <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
-                Credit Origination Thresholds & Approval Limits
-              </h2>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
-                Deterministic limits enforced outside the AI narrative generator (PRD Sections 7 & 17).
-              </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '0.5rem' }}>
+              <div className="form-group">
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span>CBN MPR Benchmark (%)</span>
+                </label>
+                <input 
+                  type="number"
+                  step="0.25"
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}
+                  value={policyForm.cbn_mpr ?? 23.0}
+                  onChange={(e) => {
+                    const mpr = parseFloat(e.target.value) || 0;
+                    const margin = policyForm.commercial_margin ?? 5.0;
+                    setPolicyForm({
+                      ...policyForm,
+                      cbn_mpr: mpr,
+                      effective_apr: Math.round((mpr + margin) * 100) / 100
+                    });
+                  }}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  CBN Monetary Policy Rate
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Commercial Risk Margin (%)
+                </label>
+                <input 
+                  type="number"
+                  step="0.25"
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}
+                  value={policyForm.commercial_margin ?? 5.0}
+                  onChange={(e) => {
+                    const margin = parseFloat(e.target.value) || 0;
+                    const mpr = policyForm.cbn_mpr ?? 23.0;
+                    setPolicyForm({
+                      ...policyForm,
+                      commercial_margin: margin,
+                      effective_apr: Math.round((mpr + margin) * 100) / 100
+                    });
+                  }}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Opticom commercial risk spread
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ color: '#0096cc', fontWeight: 700 }}>
+                  Effective Lending Rate (APR %)
+                </label>
+                <input 
+                  type="number"
+                  step="0.25"
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, borderColor: '#0096cc', color: '#0096cc' }}
+                  value={policyForm.effective_apr ?? 28.0}
+                  onChange={(e) => setPolicyForm({ ...policyForm, effective_apr: parseFloat(e.target.value) || 0 })}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Applied across loan calculators
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Upfront Fee Rate (%)
+                </label>
+                <input 
+                  type="number"
+                  step="0.1"
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}
+                  value={policyForm.upfront_fee_pct ?? 4.5}
+                  onChange={(e) => setPolicyForm({ ...policyForm, upfront_fee_pct: parseFloat(e.target.value) || 0 })}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Appraisal, facility &amp; legal fees
+                </span>
+              </div>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-            <div className="form-group">
-              <label className="form-label">BESTO Boundary Upper Limit (₦)</label>
-              <input 
-                type="number"
-                className="form-input"
-                value={policyForm.besto_max || 2000000}
-                onChange={(e) => setPolicyForm({ ...policyForm, besto_max: parseFloat(e.target.value) || 2000000 })}
-              />
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Applications &le; ₦2M originate in BESTO</span>
+          {/* SECTION 2: CREDIT ORIGINATION THRESHOLDS & APPROVAL LIMITS */}
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '8px',
+                background: 'rgba(239, 68, 68, 0.12)',
+                color: '#ef4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Sliders size={22} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
+                  Credit Origination Thresholds &amp; Approval Limits
+                </h2>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
+                  Deterministic limits enforced outside the AI narrative generator (PRD Sections 7 &amp; 17).
+                </p>
+              </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">OFL Direct Lower Threshold (₦)</label>
-              <input 
-                type="number"
-                className="form-input"
-                value={policyForm.direct_min || 2000000.01}
-                onChange={(e) => setPolicyForm({ ...policyForm, direct_min: parseFloat(e.target.value) || 2000000.01 })}
-              />
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Applications &gt; ₦2M originate via Direct Portal</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label">BESTO Boundary Upper Limit (₦)</label>
+                <input 
+                  type="number"
+                  className="form-input"
+                  value={policyForm.besto_max || 2000000}
+                  onChange={(e) => setPolicyForm({ ...policyForm, besto_max: parseFloat(e.target.value) || 2000000 })}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Applications &le; ₦2M originate in BESTO</span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">OFL Direct Lower Threshold (₦)</label>
+                <input 
+                  type="number"
+                  className="form-input"
+                  value={policyForm.direct_min || 2000000.01}
+                  onChange={(e) => setPolicyForm({ ...policyForm, direct_min: parseFloat(e.target.value) || 2000000.01 })}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Applications &gt; ₦2M originate via Direct Portal</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div className="form-group">
+                <label className="form-label">Analyst Limit (₦)</label>
+                <input 
+                  type="number"
+                  className="form-input"
+                  value={policyForm.analyst_limit || 2000000}
+                  onChange={(e) => setPolicyForm({ ...policyForm, analyst_limit: parseFloat(e.target.value) || 2000000 })}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Recommend only</span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">HRM Mandate Limit (₦)</label>
+                <input 
+                  type="number"
+                  className="form-input"
+                  value={policyForm.hrm_limit || 5000000}
+                  onChange={(e) => setPolicyForm({ ...policyForm, hrm_limit: parseFloat(e.target.value) || 5000000 })}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Final approval up to ₦5M</span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">BCC Approval Limit (₦)</label>
+                <input 
+                  type="number"
+                  className="form-input"
+                  value={policyForm.bcc_limit || 15000000}
+                  onChange={(e) => setPolicyForm({ ...policyForm, bcc_limit: parseFloat(e.target.value) || 15000000 })}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>BCC limit up to ₦15M</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+              <button 
+                className="btn btn-primary"
+                onClick={() => handleSaveConfig('CREDIT_THRESHOLDS', policyForm)}
+                disabled={savingKey === 'CREDIT_THRESHOLDS'}
+              >
+                {savingKey === 'CREDIT_THRESHOLDS' ? 'Saving Policy...' : 'Save Credit Policy & Pricing Parameters'}
+              </button>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
-            <div className="form-group">
-              <label className="form-label">Analyst Limit (₦)</label>
-              <input 
-                type="number"
-                className="form-input"
-                value={policyForm.analyst_limit || 2000000}
-                onChange={(e) => setPolicyForm({ ...policyForm, analyst_limit: parseFloat(e.target.value) || 2000000 })}
-              />
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Recommend only</span>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">HRM Mandate Limit (₦)</label>
-              <input 
-                type="number"
-                className="form-input"
-                value={policyForm.hrm_limit || 5000000}
-                onChange={(e) => setPolicyForm({ ...policyForm, hrm_limit: parseFloat(e.target.value) || 5000000 })}
-              />
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Final approval up to ₦5M</span>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">BCC Approval Limit (₦)</label>
-              <input 
-                type="number"
-                className="form-input"
-                value={policyForm.bcc_limit || 15000000}
-                onChange={(e) => setPolicyForm({ ...policyForm, bcc_limit: parseFloat(e.target.value) || 15000000 })}
-              />
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>BCC limit up to ₦15M</span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button 
-              className="btn btn-primary"
-              onClick={() => handleSaveConfig('CREDIT_THRESHOLDS', policyForm)}
-              disabled={savingKey === 'CREDIT_THRESHOLDS'}
-            >
-              {savingKey === 'CREDIT_THRESHOLDS' ? 'Saving Limits...' : 'Save Credit Policy Parameters'}
-            </button>
-          </div>
         </div>
       )}
     </div>

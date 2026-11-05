@@ -78,7 +78,7 @@ DEFAULT_CONFIGS: Dict[str, Dict[str, Any]] = {
     },
     "CREDIT_THRESHOLDS": {
         "category": "POLICY",
-        "description": "Credit Origination Boundary and Approval Authority Limits",
+        "description": "Credit Origination Boundary, MPR / APR Pricing and Approval Authority Limits",
         "is_secret": False,
         "value": {
             "besto_min": settings.BESTO_MIN_AMOUNT,
@@ -86,7 +86,11 @@ DEFAULT_CONFIGS: Dict[str, Dict[str, Any]] = {
             "direct_min": settings.OFL_DIRECT_MIN_AMOUNT,
             "analyst_limit": settings.THRESHOLD_ANALYST_RECOMMEND_ONLY,
             "hrm_limit": settings.THRESHOLD_HRM_APPROVAL_LIMIT,
-            "bcc_limit": settings.THRESHOLD_BCC_APPROVAL_LIMIT
+            "bcc_limit": settings.THRESHOLD_BCC_APPROVAL_LIMIT,
+            "cbn_mpr": 23.0,
+            "commercial_margin": 5.0,
+            "effective_apr": 28.0,
+            "upfront_fee_pct": 4.5
         }
     },
     "WEBHOOK_INTEGRATIONS": {
@@ -228,6 +232,16 @@ class ConfigManager:
 
         for cfg in configs:
             val = dict(cfg.value) if isinstance(cfg.value, dict) else cfg.value
+            if cfg.key == "CREDIT_THRESHOLDS" and isinstance(val, dict):
+                # Ensure interest rate & benchmark keys are populated
+                if "cbn_mpr" not in val:
+                    val["cbn_mpr"] = 23.0
+                if "commercial_margin" not in val:
+                    val["commercial_margin"] = 5.0
+                if "effective_apr" not in val:
+                    val["effective_apr"] = float(val["cbn_mpr"]) + float(val["commercial_margin"])
+                if "upfront_fee_pct" not in val:
+                    val["upfront_fee_pct"] = 4.5
             if mask_secrets and isinstance(val, dict):
                 val = cls._mask_dict(val)
             result[cfg.key] = {
@@ -251,6 +265,40 @@ class ConfigManager:
             return cfg.value
         default_cfg = DEFAULT_CONFIGS.get(key)
         return default_cfg["value"] if default_cfg else None
+
+    @classmethod
+    def get_pricing_policy(cls, db: Session) -> Dict[str, float]:
+        """
+        Retrieves active CBN MPR, commercial risk spread, effective APR, and upfront fee rates.
+        Falls back to approved defaults (23.0% MPR, 5.0% margin, 28.0% APR, 4.5% fees).
+        """
+        thresholds = cls.get_config_value(db, "CREDIT_THRESHOLDS") or {}
+        try:
+            cbn_mpr = float(thresholds.get("cbn_mpr", 23.0) or 23.0)
+        except (ValueError, TypeError):
+            cbn_mpr = 23.0
+
+        try:
+            commercial_margin = float(thresholds.get("commercial_margin", 5.0) or 5.0)
+        except (ValueError, TypeError):
+            commercial_margin = 5.0
+
+        try:
+            effective_apr = float(thresholds.get("effective_apr", cbn_mpr + commercial_margin) or (cbn_mpr + commercial_margin))
+        except (ValueError, TypeError):
+            effective_apr = cbn_mpr + commercial_margin
+
+        try:
+            upfront_fee_pct = float(thresholds.get("upfront_fee_pct", 4.5) or 4.5)
+        except (ValueError, TypeError):
+            upfront_fee_pct = 4.5
+
+        return {
+            "cbn_mpr": round(cbn_mpr, 2),
+            "commercial_margin": round(commercial_margin, 2),
+            "effective_apr": round(effective_apr, 2),
+            "upfront_fee_pct": round(upfront_fee_pct, 2)
+        }
 
     @classmethod
     def update_configuration(

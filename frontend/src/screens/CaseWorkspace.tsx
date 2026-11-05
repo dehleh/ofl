@@ -22,7 +22,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
   const [workspace, setWorkspace] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'DOSSIER' | 'FINANCIALS' | 'CAM' | 'APPROVALS' | 'OFFER_CONDITIONS' | 'TREASURY' | 'EXCEPTIONS'>('DOSSIER');
-  
+
   // State for actions
   const [actionLoading, setActionLoading] = useState(false);
   const [messageBanner, setMessageBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -896,7 +896,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
               <div>
                 <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 600 }}>Tenor &amp; Rate</div>
                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0096cc', marginTop: '0.2rem' }}>
-                  {application.tenor} Mos @ 28% APR
+                  {application.tenor} Mos @ {activeOffer?.interest_rate_pct || 28}% APR
                 </div>
               </div>
               <div>
@@ -1071,7 +1071,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {exceptions.map((ex: any) => (
-                <div 
+                <div
                   key={ex.id}
                   style={{
                     background: 'var(--bg-surface)',

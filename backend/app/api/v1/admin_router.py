@@ -85,6 +85,16 @@ def update_system_configuration(
         "config": updated
     }
 
+@router.get("/pricing-policy")
+def get_admin_pricing_policy(
+    db: Session = Depends(get_db),
+    current_user: TokenPayload = Depends(get_current_user)
+):
+    """
+    Returns active pricing policy and interest rate benchmarks for administration.
+    """
+    return ConfigManager.get_pricing_policy(db)
+
 @router.post("/test-email")
 def test_email_configuration(
     payload: TestEmailPayload,
