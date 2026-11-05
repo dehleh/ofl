@@ -5,14 +5,31 @@ import { fetchCases } from '../services/api';
 interface CaseQueueProps {
   onSelectCase: (caseId: string) => void;
   onNewApplication: () => void;
+  currentPersona?: string;
 }
 
-export const CaseQueue: React.FC<CaseQueueProps> = ({ onSelectCase, onNewApplication }) => {
+export const CaseQueue: React.FC<CaseQueueProps> = ({ onSelectCase, onNewApplication, currentPersona = 'ANALYST' }) => {
+  const getRoleStageDefault = (role: string) => {
+    switch (role.toUpperCase()) {
+      case 'ANALYST': return 'Analyst Review';
+      case 'HRM': return 'HRM Review';
+      case 'HEAD_OF_BD': return 'Head of BD Review';
+      case 'MD': return 'MD Decision';
+      case 'BCC': return 'BCC/Authorisation';
+      case 'TREASURY': return 'Ready for Disbursement';
+      default: return 'ALL';
+    }
+  };
+
   const [cases, setCases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stageFilter, setStageFilter] = useState('ALL');
+  const [stageFilter, setStageFilter] = useState(() => getRoleStageDefault(currentPersona));
   const [channelFilter, setChannelFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    setStageFilter(getRoleStageDefault(currentPersona));
+  }, [currentPersona]);
 
   const loadData = async () => {
     setLoading(true);
@@ -160,8 +177,9 @@ export const CaseQueue: React.FC<CaseQueueProps> = ({ onSelectCase, onNewApplica
             <option value="KYC Pending">KYC Pending</option>
             <option value="Analyst Review">Analyst Review</option>
             <option value="HRM Review">HRM Review</option>
-            <option value="BCC/Authorisation">BCC / Authorisation</option>
+            <option value="Head of BD Review">Head of BD Review</option>
             <option value="MD Decision">MD Decision</option>
+            <option value="BCC/Authorisation">BCC / Authorisation</option>
             <option value="Offer Pending">Offer Pending</option>
             <option value="Conditions Pending">Conditions Pending</option>
             <option value="Ready for Disbursement">Ready for Disbursement</option>

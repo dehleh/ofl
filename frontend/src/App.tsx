@@ -13,6 +13,51 @@ import { CreditCopilotDrawer } from './components/CreditCopilotDrawer';
 import { fetchExceptions } from './services/api';
 import { Inbox, FilePlus, Database, AlertCircle, BarChart3, Settings } from 'lucide-react';
 
+export type ScreenId = 'QUEUE' | 'WORKSPACE' | 'INTAKE' | 'BESTO_LAB' | 'EXCEPTIONS' | 'AUDIT' | 'ADMIN';
+
+// Role-Based Access Control (RBAC) screen authorization matrix
+export const ROLE_PERMITTED_SCREENS: Record<string, ScreenId[]> = {
+  ADMIN: ['ADMIN', 'QUEUE', 'AUDIT', 'BESTO_LAB', 'EXCEPTIONS', 'INTAKE'],
+  IT_OWNER: ['ADMIN', 'AUDIT', 'BESTO_LAB', 'QUEUE', 'EXCEPTIONS'],
+  ANALYST: ['QUEUE', 'EXCEPTIONS'],
+  HRM: ['QUEUE', 'EXCEPTIONS', 'AUDIT'],
+  HEAD_OF_BD: ['QUEUE', 'INTAKE', 'EXCEPTIONS'],
+  BDO: ['INTAKE', 'QUEUE'],
+  MD: ['QUEUE', 'EXCEPTIONS', 'AUDIT'],
+  BCC: ['QUEUE', 'AUDIT'],
+  OPERATIONS: ['QUEUE', 'EXCEPTIONS', 'AUDIT'],
+  TREASURY: ['QUEUE', 'AUDIT'],
+  AUDITOR: ['AUDIT', 'QUEUE']
+};
+
+export const ROLE_DEFAULT_SCREEN: Record<string, ScreenId> = {
+  ADMIN: 'ADMIN',
+  IT_OWNER: 'ADMIN',
+  ANALYST: 'QUEUE',
+  HRM: 'QUEUE',
+  HEAD_OF_BD: 'QUEUE',
+  BDO: 'INTAKE',
+  MD: 'QUEUE',
+  BCC: 'QUEUE',
+  OPERATIONS: 'QUEUE',
+  TREASURY: 'QUEUE',
+  AUDITOR: 'AUDIT'
+};
+
+export const ROLE_QUEUE_LABELS: Record<string, string> = {
+  ADMIN: 'System Work Queue',
+  IT_OWNER: 'Technical Queue',
+  ANALYST: 'Underwriting Queue',
+  HRM: 'Risk Review Queue',
+  HEAD_OF_BD: 'Commercial Sanction Queue',
+  BDO: 'My Originations',
+  MD: 'MD Sanctions Queue (≤₦20M)',
+  BCC: 'BCC Board Sanctions (>₦20M)',
+  OPERATIONS: 'Operations Work Queue',
+  TREASURY: 'Disbursement & LOAN-DISC Queue',
+  AUDITOR: 'Inspection Work Queue'
+};
+
 export const App: React.FC = () => {
   // Determine initial platform mode strictly from route or host
   const checkIsStaffRoute = () => {
@@ -95,7 +140,21 @@ export const App: React.FC = () => {
     setCurrentUser(user);
     if (user?.role) {
       setCurrentPersona(user.role);
+      setCurrentScreen(ROLE_DEFAULT_SCREEN[user.role] || 'QUEUE');
     }
+  };
+
+  const handlePersonaChange = (newPersona: string) => {
+    setCurrentPersona(newPersona);
+    const permitted = ROLE_PERMITTED_SCREENS[newPersona] || ['QUEUE'];
+    if (currentScreen !== 'WORKSPACE' && !permitted.includes(currentScreen)) {
+      setCurrentScreen(ROLE_DEFAULT_SCREEN[newPersona] || 'QUEUE');
+    }
+  };
+
+  const isScreenPermitted = (screen: ScreenId) => {
+    const permitted = ROLE_PERMITTED_SCREENS[currentPersona] || ['QUEUE'];
+    return permitted.includes(screen);
   };
 
   const handleStaffSignOut = () => {
@@ -150,7 +209,7 @@ export const App: React.FC = () => {
     <div>
       <Header
         currentPersona={currentPersona}
-        onPersonaChange={setCurrentPersona}
+        onPersonaChange={handlePersonaChange}
         backendOnline={backendOnline}
         currentUser={currentUser}
         onSignOut={handleStaffSignOut}
@@ -160,55 +219,85 @@ export const App: React.FC = () => {
       />
 
       <div className="nav-bar">
-        <button
-          className={`nav-item ${currentScreen === 'QUEUE' ? 'active' : ''}`}
-          onClick={() => setCurrentScreen('QUEUE')}
-        >
-          <Inbox size={16} /> Work Queue
-        </button>
+        {isScreenPermitted('QUEUE') && (
+          <button
+            className={`nav-item ${currentScreen === 'QUEUE' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('QUEUE')}
+          >
+            <Inbox size={16} /> {ROLE_QUEUE_LABELS[currentPersona] || 'Work Queue'}
+          </button>
+        )}
 
-        <button
-          className={`nav-item ${currentScreen === 'INTAKE' ? 'active' : ''}`}
-          onClick={() => setCurrentScreen('INTAKE')}
-        >
-          <FilePlus size={16} /> BDO Assisted Intake (&gt;₦2m)
-        </button>
+        {isScreenPermitted('INTAKE') && (
+          <button
+            className={`nav-item ${currentScreen === 'INTAKE' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('INTAKE')}
+          >
+            <FilePlus size={16} /> BDO Assisted Intake (&gt;₦2m)
+          </button>
+        )}
 
-        <button
-          className={`nav-item ${currentScreen === 'BESTO_LAB' ? 'active' : ''}`}
-          onClick={() => setCurrentScreen('BESTO_LAB')}
-        >
-          <Database size={16} /> BESTO Simulator & Quarantine
-        </button>
+        {isScreenPermitted('BESTO_LAB') && (
+          <button
+            className={`nav-item ${currentScreen === 'BESTO_LAB' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('BESTO_LAB')}
+          >
+            <Database size={16} /> BESTO Simulator &amp; Quarantine
+          </button>
+        )}
 
-        <button
-          className={`nav-item ${currentScreen === 'EXCEPTIONS' ? 'active' : ''}`}
-          onClick={() => setCurrentScreen('EXCEPTIONS')}
-        >
-          <AlertCircle size={16} /> Exceptions & Rework
-          {openExceptionsCount > 0 && (
-            <span className="nav-badge alert">{openExceptionsCount}</span>
-          )}
-        </button>
+        {isScreenPermitted('EXCEPTIONS') && (
+          <button
+            className={`nav-item ${currentScreen === 'EXCEPTIONS' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('EXCEPTIONS')}
+          >
+            <AlertCircle size={16} /> Exceptions &amp; Rework
+            {openExceptionsCount > 0 && (
+              <span className="nav-badge alert">{openExceptionsCount}</span>
+            )}
+          </button>
+        )}
 
-        <button
-          className={`nav-item ${currentScreen === 'AUDIT' ? 'active' : ''}`}
-          onClick={() => setCurrentScreen('AUDIT')}
-        >
-          <BarChart3 size={16} /> Audit Trail & GCP Telemetry
-        </button>
+        {isScreenPermitted('AUDIT') && (
+          <button
+            className={`nav-item ${currentScreen === 'AUDIT' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('AUDIT')}
+          >
+            <BarChart3 size={16} /> Audit Trail &amp; GCP Telemetry
+          </button>
+        )}
 
-        <button
-          className={`nav-item ${currentScreen === 'ADMIN' ? 'active' : ''}`}
-          onClick={() => setCurrentScreen('ADMIN')}
-        >
-          <Settings size={16} /> Admin & Settings
-        </button>
+        {isScreenPermitted('ADMIN') && (
+          <button
+            className={`nav-item ${currentScreen === 'ADMIN' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('ADMIN')}
+          >
+            <Settings size={16} /> Admin &amp; Settings
+          </button>
+        )}
+
+        {/* RBAC Scope Indicator Badge */}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', paddingRight: '0.75rem' }}>
+          <span style={{
+            fontSize: '0.68rem',
+            fontWeight: 700,
+            letterSpacing: '0.04em',
+            padding: '3px 8px',
+            borderRadius: '4px',
+            background: 'rgba(0, 150, 204, 0.12)',
+            color: '#0096cc',
+            border: '1px solid rgba(0, 150, 204, 0.25)',
+            textTransform: 'uppercase'
+          }}>
+            RBAC: {currentPersona.replace(/_/g, ' ')} SCOPE
+          </span>
+        </div>
       </div>
 
       <main className="main-content">
         {currentScreen === 'QUEUE' && (
           <CaseQueue
+            currentPersona={currentPersona}
             onSelectCase={handleOpenCase}
             onNewApplication={() => setCurrentScreen('INTAKE')}
           />

@@ -20,16 +20,49 @@ interface CaseWorkspaceProps {
 }
 
 export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPersona, onBack }) => {
+  const getDefaultWorkspaceTab = (role: string) => {
+    switch (role.toUpperCase()) {
+      case 'TREASURY': return 'TREASURY';
+      case 'MD':
+      case 'BCC': return 'APPROVALS';
+      default: return 'DOSSIER';
+    }
+  };
+
+  const isWorkspaceTabPermitted = (tab: string) => {
+    switch (currentPersona.toUpperCase()) {
+      case 'ANALYST':
+        return ['DOSSIER', 'FINANCIALS', 'CAM', 'APPROVALS', 'OFFER_CONDITIONS', 'EXCEPTIONS'].includes(tab);
+      case 'HRM':
+        return ['DOSSIER', 'FINANCIALS', 'CAM', 'APPROVALS', 'OFFER_CONDITIONS', 'EXCEPTIONS'].includes(tab);
+      case 'HEAD_OF_BD':
+        return ['DOSSIER', 'CAM', 'APPROVALS', 'OFFER_CONDITIONS', 'EXCEPTIONS'].includes(tab);
+      case 'BDO':
+        return ['DOSSIER', 'CAM', 'EXCEPTIONS'].includes(tab);
+      case 'MD':
+      case 'BCC':
+        return ['CAM', 'APPROVALS', 'DOSSIER', 'OFFER_CONDITIONS', 'EXCEPTIONS'].includes(tab);
+      case 'TREASURY':
+        return ['TREASURY', 'OFFER_CONDITIONS', 'DOSSIER', 'EXCEPTIONS'].includes(tab);
+      case 'AUDITOR':
+        return ['DOSSIER', 'FINANCIALS', 'CAM', 'APPROVALS', 'OFFER_CONDITIONS', 'TREASURY', 'EXCEPTIONS'].includes(tab);
+      default:
+        return true;
+    }
+  };
+
   const [workspace, setWorkspace] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'DOSSIER' | 'FINANCIALS' | 'CAM' | 'APPROVALS' | 'OFFER_CONDITIONS' | 'TREASURY' | 'EXCEPTIONS'>('DOSSIER');
+  const [activeTab, setActiveTab] = useState<'DOSSIER' | 'FINANCIALS' | 'CAM' | 'APPROVALS' | 'OFFER_CONDITIONS' | 'TREASURY' | 'EXCEPTIONS'>(() => getDefaultWorkspaceTab(currentPersona));
 
   // State for actions
   const [actionLoading, setActionLoading] = useState(false);
   const [messageBanner, setMessageBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Approval Form State
-  const [approvalDecision, setApprovalDecision] = useState<'APPROVE' | 'RECOMMEND_APPROVE' | 'RETURN_FOR_REWORK' | 'REJECT'>('APPROVE');
+  const [approvalDecision, setApprovalDecision] = useState<'APPROVE' | 'RECOMMEND_APPROVE' | 'RETURN_FOR_REWORK' | 'REJECT'>(() => {
+    return currentPersona === 'ANALYST' ? 'RECOMMEND_APPROVE' : 'APPROVE';
+  });
   const [approvalComments, setApprovalComments] = useState('');
   const [mandatedCondition, setMandatedCondition] = useState('');
 
@@ -423,27 +456,41 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
 
       {/* Dossier Tabs */}
       <div className="nav-bar" style={{ padding: '0.5rem 0', background: 'transparent', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.5rem', overflowX: 'auto', display: 'flex', gap: '0.35rem' }}>
-        <button className={`nav-item ${activeTab === 'DOSSIER' ? 'active' : ''}`} onClick={() => setActiveTab('DOSSIER')}>
-          1. Dossier ({documents.length})
-        </button>
-        <button className={`nav-item ${activeTab === 'FINANCIALS' ? 'active' : ''}`} onClick={() => setActiveTab('FINANCIALS')}>
-          2. Financial Analysis {flags.length > 0 && <span className="nav-badge alert">{flags.length}</span>}
-        </button>
-        <button className={`nav-item ${activeTab === 'CAM' ? 'active' : ''}`} onClick={() => setActiveTab('CAM')}>
-          3. AI CAM ({cam_versions.length})
-        </button>
-        <button className={`nav-item ${activeTab === 'APPROVALS' ? 'active' : ''}`} onClick={() => setActiveTab('APPROVALS')}>
-          4. Approvals ({approvals.length})
-        </button>
-        <button className={`nav-item ${activeTab === 'OFFER_CONDITIONS' ? 'active' : ''}`} onClick={() => setActiveTab('OFFER_CONDITIONS')}>
-          5. Offer & Conditions ({conditions.length})
-        </button>
-        <button className={`nav-item ${activeTab === 'TREASURY' ? 'active' : ''}`} onClick={() => setActiveTab('TREASURY')}>
-          6. Treasury LOAN-DISC
-        </button>
-        <button className={`nav-item ${activeTab === 'EXCEPTIONS' ? 'active' : ''}`} onClick={() => setActiveTab('EXCEPTIONS')}>
-          7. Exceptions ({exceptions.length})
-        </button>
+        {isWorkspaceTabPermitted('DOSSIER') && (
+          <button className={`nav-item ${activeTab === 'DOSSIER' ? 'active' : ''}`} onClick={() => setActiveTab('DOSSIER')}>
+            1. Dossier ({documents.length})
+          </button>
+        )}
+        {isWorkspaceTabPermitted('FINANCIALS') && (
+          <button className={`nav-item ${activeTab === 'FINANCIALS' ? 'active' : ''}`} onClick={() => setActiveTab('FINANCIALS')}>
+            2. Financial Analysis {flags.length > 0 && <span className="nav-badge alert">{flags.length}</span>}
+          </button>
+        )}
+        {isWorkspaceTabPermitted('CAM') && (
+          <button className={`nav-item ${activeTab === 'CAM' ? 'active' : ''}`} onClick={() => setActiveTab('CAM')}>
+            3. AI CAM ({cam_versions.length})
+          </button>
+        )}
+        {isWorkspaceTabPermitted('APPROVALS') && (
+          <button className={`nav-item ${activeTab === 'APPROVALS' ? 'active' : ''}`} onClick={() => setActiveTab('APPROVALS')}>
+            4. Approvals ({approvals.length})
+          </button>
+        )}
+        {isWorkspaceTabPermitted('OFFER_CONDITIONS') && (
+          <button className={`nav-item ${activeTab === 'OFFER_CONDITIONS' ? 'active' : ''}`} onClick={() => setActiveTab('OFFER_CONDITIONS')}>
+            5. Offer & Conditions ({conditions.length})
+          </button>
+        )}
+        {isWorkspaceTabPermitted('TREASURY') && (
+          <button className={`nav-item ${activeTab === 'TREASURY' ? 'active' : ''}`} onClick={() => setActiveTab('TREASURY')}>
+            6. Treasury LOAN-DISC
+          </button>
+        )}
+        {isWorkspaceTabPermitted('EXCEPTIONS') && (
+          <button className={`nav-item ${activeTab === 'EXCEPTIONS' ? 'active' : ''}`} onClick={() => setActiveTab('EXCEPTIONS')}>
+            7. Exceptions ({exceptions.length})
+          </button>
+        )}
       </div>
 
       {/* TAB 1: DOSSIER & DOCUMENTS */}
@@ -835,50 +882,103 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                 Active Persona: <strong>{currentPersona}</strong> &bull; Loan Amount: <strong>₦{application.amount.toLocaleString()}</strong>
               </p>
 
-              <div className="form-group">
-                <label className="form-label">Decision Action</label>
-                <select
-                  className="form-select"
-                  value={approvalDecision}
-                  onChange={(e: any) => setApprovalDecision(e.target.value)}
-                >
-                  <option value="APPROVE">Approve Facility / Advance to Next Sequential Authority</option>
-                  <option value="RECOMMEND_APPROVE">Recommend Approval (Forward to Next Tier)</option>
-                  <option value="RETURN_FOR_REWORK">Return for Internal Rework (Opens Exception)</option>
-                  <option value="REJECT">Decline Application (Final Rejection)</option>
-                </select>
-              </div>
+              {['TREASURY', 'AUDITOR'].includes(currentPersona.toUpperCase()) ? (
+                <div style={{
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  background: 'rgba(0, 150, 204, 0.08)',
+                  border: '1px solid rgba(0, 150, 204, 0.25)',
+                  fontSize: '0.82rem',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '1rem'
+                }}>
+                  <strong style={{ color: 'var(--brand-teal-light)', display: 'block', marginBottom: '0.25rem' }}>
+                    Read-Only Underwriting Audit
+                  </strong>
+                  Your role (<strong>{currentPersona}</strong>) has operational oversight. Credit sanction authority decisions are restricted to Credit Underwriting, Risk Management, and Board Committees.
+                </div>
+              ) : (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Decision Action</label>
+                    <select
+                      className="form-select"
+                      value={approvalDecision}
+                      onChange={(e: any) => setApprovalDecision(e.target.value)}
+                    >
+                      {currentPersona === 'ANALYST' ? (
+                        <>
+                          <option value="RECOMMEND_APPROVE">Recommend Approval &amp; Forward to HRM</option>
+                          <option value="RETURN_FOR_REWORK">Return for Internal Rework (Opens Exception)</option>
+                          <option value="REJECT">Recommend Application Decline</option>
+                        </>
+                      ) : currentPersona === 'HEAD_OF_BD' ? (
+                        <>
+                          <option value="APPROVE">Endorse Commercial Viability &amp; Sanction</option>
+                          <option value="RETURN_FOR_REWORK">Return for Commercial Rework</option>
+                          <option value="REJECT">Commercial Decline</option>
+                        </>
+                      ) : currentPersona === 'HRM' ? (
+                        <>
+                          <option value="APPROVE">Grant Risk Concurrence &amp; Forward to Next Tier</option>
+                          <option value="RETURN_FOR_REWORK">Return for Risk Mitigation Rework</option>
+                          <option value="REJECT">Decline Application on Risk Grounds</option>
+                        </>
+                      ) : currentPersona === 'MD' ? (
+                        <>
+                          <option value="APPROVE">MD Final Sanction (or Endorsement if &gt; ₦20M)</option>
+                          <option value="RETURN_FOR_REWORK">Return for Executive Review Rework</option>
+                          <option value="REJECT">Executive Decline</option>
+                        </>
+                      ) : currentPersona === 'BCC' ? (
+                        <>
+                          <option value="APPROVE">BCC Final Board Sanction (&gt; ₦20M)</option>
+                          <option value="RETURN_FOR_REWORK">Return for Board Credit Rework</option>
+                          <option value="REJECT">Board Credit Decline</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="APPROVE">Approve Facility / Advance to Next Sequential Authority</option>
+                          <option value="RECOMMEND_APPROVE">Recommend Approval (Forward to Next Tier)</option>
+                          <option value="RETURN_FOR_REWORK">Return for Internal Rework (Opens Exception)</option>
+                          <option value="REJECT">Decline Application (Final Rejection)</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
 
-              <div className="form-group">
-                <label className="form-label">Mandated Conditions Precedent (Optional)</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Provide joint personal guarantee of company director"
-                  value={mandatedCondition}
-                  onChange={(e) => setMandatedCondition(e.target.value)}
-                />
-              </div>
+                  <div className="form-group">
+                    <label className="form-label">Mandated Conditions Precedent (Optional)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Provide joint personal guarantee of company director"
+                      value={mandatedCondition}
+                      onChange={(e) => setMandatedCondition(e.target.value)}
+                    />
+                  </div>
 
-              <div className="form-group">
-                <label className="form-label">Deliberation Comments / Policy Rationale *</label>
-                <textarea
-                  className="form-textarea"
-                  rows={3}
-                  placeholder="Record credit risk committee observations or return instructions..."
-                  value={approvalComments}
-                  onChange={(e) => setApprovalComments(e.target.value)}
-                />
-              </div>
+                  <div className="form-group">
+                    <label className="form-label">Deliberation Comments / Policy Rationale *</label>
+                    <textarea
+                      className="form-textarea"
+                      rows={3}
+                      placeholder="Record credit risk committee observations or return instructions..."
+                      value={approvalComments}
+                      onChange={(e) => setApprovalComments(e.target.value)}
+                    />
+                  </div>
 
-              <button
-                className={`btn ${approvalDecision === 'REJECT' ? 'btn-danger' : approvalDecision === 'RETURN_FOR_REWORK' ? 'btn-warning' : 'btn-primary'}`}
-                onClick={handleDecisionSubmit}
-                disabled={actionLoading}
-                style={{ width: '100%', marginTop: '0.5rem' }}
-              >
-                <Send size={16} /> Submit {approvalDecision} Decision
-              </button>
+                  <button
+                    className={`btn ${approvalDecision === 'REJECT' ? 'btn-danger' : approvalDecision === 'RETURN_FOR_REWORK' ? 'btn-warning' : 'btn-primary'}`}
+                    onClick={handleDecisionSubmit}
+                    disabled={actionLoading}
+                    style={{ width: '100%', marginTop: '0.5rem' }}
+                  >
+                    <Send size={16} /> Submit {approvalDecision} Decision
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Historical Decisions & Chain */}
