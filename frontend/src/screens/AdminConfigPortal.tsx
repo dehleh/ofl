@@ -1,29 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  fetchAdminConfig, 
-  updateAdminConfig, 
-  sendTestEmail, 
-  fetchStaffUsers, 
-  createStaffUser, 
-  updateStaffUser, 
+import {
+  fetchAdminConfig,
+  updateAdminConfig,
+  sendTestEmail,
+  fetchStaffUsers,
+  createStaffUser,
+  updateStaffUser,
   deactivateStaffUser,
   fetchFeeCatalog,
   updateFeeCatalog
 } from '../services/api';
-import { 
-  Users, 
-  Key, 
-  Mail, 
-  ShieldCheck, 
-  Sliders, 
-  Send, 
-  CheckCircle2, 
-  AlertTriangle, 
-  RefreshCw, 
-  Plus, 
-  UserCheck, 
-  UserX, 
-  Lock, 
+import {
+  Users,
+  Key,
+  Mail,
+  ShieldCheck,
+  Sliders,
+  Send,
+  CheckCircle2,
+  AlertTriangle,
+  RefreshCw,
+  Plus,
+  UserCheck,
+  UserX,
+  Lock,
   ExternalLink,
   Server,
   Zap,
@@ -116,7 +116,7 @@ export const AdminConfigPortal: React.FC = () => {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    } catch {}
+    } catch { }
     return DEFAULT_STAFF_USERS;
   });
   const [feeCatalog, setFeeCatalog] = useState<any[]>(() => {
@@ -126,7 +126,7 @@ export const AdminConfigPortal: React.FC = () => {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    } catch {}
+    } catch { }
     return DEFAULT_FEE_CATALOG;
   });
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -183,11 +183,11 @@ export const AdminConfigPortal: React.FC = () => {
       setConfigs(configData);
       const activeUsers = Array.isArray(userData) && userData.length > 0 ? userData : DEFAULT_STAFF_USERS;
       setUsers(activeUsers);
-      try { localStorage.setItem('ofl_staff_users', JSON.stringify(activeUsers)); } catch {}
+      try { localStorage.setItem('ofl_staff_users', JSON.stringify(activeUsers)); } catch { }
 
       const activeFees = Array.isArray(feeData) && feeData.length > 0 ? feeData : DEFAULT_FEE_CATALOG;
       setFeeCatalog(activeFees);
-      try { localStorage.setItem('ofl_fee_catalog', JSON.stringify(activeFees)); } catch {}
+      try { localStorage.setItem('ofl_fee_catalog', JSON.stringify(activeFees)); } catch { }
 
       if (configData.SSO_CONFIG?.value) setSsoForm({ ...configData.SSO_CONFIG.value });
       if (configData.MFA_CONFIG?.value) setMfaForm({ ...configData.MFA_CONFIG.value });
@@ -226,18 +226,18 @@ export const AdminConfigPortal: React.FC = () => {
       const resFee = await updateFeeCatalog(feeCatalog);
       const updatedFees = resFee.fees || feeCatalog;
       setFeeCatalog(updatedFees);
-      try { localStorage.setItem('ofl_fee_catalog', JSON.stringify(updatedFees)); } catch {}
+      try { localStorage.setItem('ofl_fee_catalog', JSON.stringify(updatedFees)); } catch { }
 
       // 2. Update credit policy & CBN pricing parameters (MPR, Spread, APR)
       await updateAdminConfig('CREDIT_THRESHOLDS', policyForm);
-      try { localStorage.setItem('ofl_pricing_policy', JSON.stringify(policyForm)); } catch {}
+      try { localStorage.setItem('ofl_pricing_policy', JSON.stringify(policyForm)); } catch { }
 
       showToast('All pricing parameters (CBN MPR, APR) and master fee schedule saved successfully.');
       const refreshed = await fetchAdminConfig();
       setConfigs(refreshed);
     } catch (err: any) {
-      try { localStorage.setItem('ofl_fee_catalog', JSON.stringify(feeCatalog)); } catch {}
-      try { localStorage.setItem('ofl_pricing_policy', JSON.stringify(policyForm)); } catch {}
+      try { localStorage.setItem('ofl_fee_catalog', JSON.stringify(feeCatalog)); } catch { }
+      try { localStorage.setItem('ofl_pricing_policy', JSON.stringify(policyForm)); } catch { }
       showToast(err.detail || 'Saved fee catalog and pricing locally.', 'success');
     } finally {
       setSavingFees(false);
@@ -373,7 +373,7 @@ export const AdminConfigPortal: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <button 
+            <button
               className="btn btn-secondary btn-sm"
               onClick={loadData}
               disabled={loading}
@@ -449,7 +449,7 @@ export const AdminConfigPortal: React.FC = () => {
                 Manage internal underwriters, risk officers, BCC members, and executive committee credentials.
               </p>
             </div>
-            <button 
+            <button
               className="btn btn-primary btn-sm"
               onClick={() => setIsAddUserOpen(true)}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
@@ -465,7 +465,7 @@ export const AdminConfigPortal: React.FC = () => {
                 <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--brand-teal-light)' }}>
                   Create New Internal Staff Account
                 </h3>
-                <button 
+                <button
                   onClick={() => setIsAddUserOpen(false)}
                   style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                 >
@@ -477,9 +477,9 @@ export const AdminConfigPortal: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                   <div className="form-group">
                     <label className="form-label">Full Name *</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
+                    <input
+                      type="text"
+                      className="form-input"
                       placeholder="e.g. Dapo Adeleke"
                       value={newUser.name}
                       onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
@@ -489,9 +489,9 @@ export const AdminConfigPortal: React.FC = () => {
 
                   <div className="form-group">
                     <label className="form-label">Corporate Email Address *</label>
-                    <input 
-                      type="email" 
-                      className="form-input" 
+                    <input
+                      type="email"
+                      className="form-input"
                       placeholder="e.g. dapo.adeleke@opticom.ng"
                       value={newUser.email}
                       onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
@@ -501,9 +501,9 @@ export const AdminConfigPortal: React.FC = () => {
 
                   <div className="form-group">
                     <label className="form-label">Username / Staff Identifier *</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
+                    <input
+                      type="text"
+                      className="form-input"
                       placeholder="e.g. dadeleke"
                       value={newUser.username}
                       onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
@@ -513,7 +513,7 @@ export const AdminConfigPortal: React.FC = () => {
 
                   <div className="form-group">
                     <label className="form-label">Assigned Role *</label>
-                    <select 
+                    <select
                       className="form-select"
                       value={newUser.role}
                       onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
@@ -531,9 +531,9 @@ export const AdminConfigPortal: React.FC = () => {
 
                   <div className="form-group">
                     <label className="form-label">Department</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
+                    <input
+                      type="text"
+                      className="form-input"
                       placeholder="e.g. Credit Underwriting"
                       value={newUser.department}
                       onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
@@ -542,9 +542,9 @@ export const AdminConfigPortal: React.FC = () => {
 
                   <div className="form-group">
                     <label className="form-label">Access PIN (Default: 1988)</label>
-                    <input 
-                      type="password" 
-                      className="form-input" 
+                    <input
+                      type="password"
+                      className="form-input"
                       placeholder="1988"
                       value={newUser.pin}
                       onChange={(e) => setNewUser({ ...newUser, pin: e.target.value })}
@@ -553,15 +553,15 @@ export const AdminConfigPortal: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn btn-secondary btn-sm"
                     onClick={() => setIsAddUserOpen(false)}
                   >
                     Cancel
                   </button>
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     className="btn btn-primary btn-sm"
                     disabled={creatingUser}
                   >
@@ -597,12 +597,11 @@ export const AdminConfigPortal: React.FC = () => {
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{u.email}</div>
                     </td>
                     <td>
-                      <span className={`badge ${
-                        u.role === 'MD' ? 'badge-primary' :
-                        u.role === 'BCC' ? 'badge-warning' :
-                        u.role === 'HRM' ? 'badge-teal' :
-                        u.role === 'ADMIN' ? 'badge-danger' : 'badge-neutral'
-                      }`}>
+                      <span className={`badge ${u.role === 'MD' ? 'badge-primary' :
+                          u.role === 'BCC' ? 'badge-warning' :
+                            u.role === 'HRM' ? 'badge-teal' :
+                              u.role === 'ADMIN' ? 'badge-danger' : 'badge-neutral'
+                        }`}>
                         {u.role}
                       </span>
                     </td>
@@ -665,7 +664,7 @@ export const AdminConfigPortal: React.FC = () => {
 
             <div className="form-group" style={{ marginBottom: '1rem' }}>
               <label className="form-label">Integration Mode</label>
-              <select 
+              <select
                 className="form-select"
                 value={emailForm.mode || 'CUSTOM_SMTP'}
                 onChange={(e) => setEmailForm({ ...emailForm, mode: e.target.value })}
@@ -678,7 +677,7 @@ export const AdminConfigPortal: React.FC = () => {
 
             <div className="form-group" style={{ marginBottom: '1rem' }}>
               <label className="form-label">Mail Client / Provider Name</label>
-              <input 
+              <input
                 type="text"
                 className="form-input"
                 placeholder="e.g. Opticom Exchange Mail Server"
@@ -690,7 +689,7 @@ export const AdminConfigPortal: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
               <div className="form-group">
                 <label className="form-label">SMTP Server Host</label>
-                <input 
+                <input
                   type="text"
                   className="form-input"
                   placeholder="e.g. mail.opticom.ng or smtp.office365.com"
@@ -701,7 +700,7 @@ export const AdminConfigPortal: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label">Port</label>
-                <input 
+                <input
                   type="number"
                   className="form-input"
                   placeholder="587"
@@ -713,7 +712,7 @@ export const AdminConfigPortal: React.FC = () => {
 
             <div className="form-group" style={{ marginBottom: '1rem' }}>
               <label className="form-label">Transport Encryption Security</label>
-              <select 
+              <select
                 className="form-select"
                 value={emailForm.security || 'STARTTLS'}
                 onChange={(e) => setEmailForm({ ...emailForm, security: e.target.value })}
@@ -727,7 +726,7 @@ export const AdminConfigPortal: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
               <div className="form-group">
                 <label className="form-label">Username / Account ID</label>
-                <input 
+                <input
                   type="text"
                   className="form-input"
                   placeholder="e.g. credit.notifications@opticom.ng"
@@ -738,7 +737,7 @@ export const AdminConfigPortal: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label">Password / App Secret</label>
-                <input 
+                <input
                   type="password"
                   className="form-input"
                   placeholder="••••••••••••"
@@ -751,7 +750,7 @@ export const AdminConfigPortal: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
               <div className="form-group">
                 <label className="form-label">Sender Display Name</label>
-                <input 
+                <input
                   type="text"
                   className="form-input"
                   placeholder="Opticom Finance Credit Operations"
@@ -762,7 +761,7 @@ export const AdminConfigPortal: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label">Sender Email Address</label>
-                <input 
+                <input
                   type="email"
                   className="form-input"
                   placeholder="credit.notifications@opticom.ng"
@@ -773,7 +772,7 @@ export const AdminConfigPortal: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button 
+              <button
                 className="btn btn-primary"
                 onClick={() => handleSaveConfig('EMAIL_CLIENT', emailForm)}
                 disabled={savingKey === 'EMAIL_CLIENT'}
@@ -811,14 +810,14 @@ export const AdminConfigPortal: React.FC = () => {
             <div className="form-group" style={{ marginBottom: '1.25rem' }}>
               <label className="form-label">Destination Test Recipient</label>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input 
+                <input
                   type="email"
                   className="form-input"
                   placeholder="e.g. compliance@opticom.ng"
                   value={testRecipient}
                   onChange={(e) => setTestRecipient(e.target.value)}
                 />
-                <button 
+                <button
                   className="btn btn-primary"
                   onClick={handleTestEmail}
                   disabled={testingEmail}
@@ -874,7 +873,7 @@ export const AdminConfigPortal: React.FC = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                 <div className="form-group">
                   <label className="form-label">SMS Provider</label>
-                  <select 
+                  <select
                     className="form-select"
                     value={smsForm.provider || 'TERMII_NIGERIA'}
                     onChange={(e) => setSmsForm({ ...smsForm, provider: e.target.value })}
@@ -886,7 +885,7 @@ export const AdminConfigPortal: React.FC = () => {
 
                 <div className="form-group">
                   <label className="form-label">Sender ID</label>
-                  <input 
+                  <input
                     type="text"
                     className="form-input"
                     placeholder="OPTICOM"
@@ -897,7 +896,7 @@ export const AdminConfigPortal: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button 
+                <button
                   className="btn btn-secondary btn-sm"
                   onClick={() => handleSaveConfig('SMS_GATEWAY', smsForm)}
                   disabled={savingKey === 'SMS_GATEWAY'}
@@ -939,7 +938,7 @@ export const AdminConfigPortal: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
             <div className="form-group">
               <label className="form-label">SSO Identity Provider</label>
-              <select 
+              <select
                 className="form-select"
                 value={ssoForm.provider || 'google-workspace'}
                 onChange={(e) => setSsoForm({ ...ssoForm, provider: e.target.value })}
@@ -953,7 +952,7 @@ export const AdminConfigPortal: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label">Tenant ID / SSID Domain</label>
-              <input 
+              <input
                 type="text"
                 className="form-input"
                 placeholder="e.g. opticom.ng"
@@ -965,7 +964,7 @@ export const AdminConfigPortal: React.FC = () => {
 
           <div className="form-group" style={{ marginBottom: '1rem' }}>
             <label className="form-label">OAuth2 / OIDC Client ID</label>
-            <input 
+            <input
               type="text"
               className="form-input"
               placeholder="e.g. opticom-google-sso-client-id-2026.apps.googleusercontent.com"
@@ -976,7 +975,7 @@ export const AdminConfigPortal: React.FC = () => {
 
           <div className="form-group" style={{ marginBottom: '1rem' }}>
             <label className="form-label">OAuth2 / OIDC Client Secret</label>
-            <input 
+            <input
               type="password"
               className="form-input"
               placeholder="••••••••••••"
@@ -987,7 +986,7 @@ export const AdminConfigPortal: React.FC = () => {
 
           <div className="form-group" style={{ marginBottom: '1rem' }}>
             <label className="form-label">Authorized Redirect URI</label>
-            <input 
+            <input
               type="text"
               className="form-input"
               value={ssoForm.redirect_uri || 'https://credit.opticom.ng/api/v1/auth/sso-callback'}
@@ -998,7 +997,7 @@ export const AdminConfigPortal: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
             <div className="form-group">
               <label className="form-label">Default Role for New Users</label>
-              <select 
+              <select
                 className="form-select"
                 value={ssoForm.default_role || 'ANALYST'}
                 onChange={(e) => setSsoForm({ ...ssoForm, default_role: e.target.value })}
@@ -1010,7 +1009,7 @@ export const AdminConfigPortal: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', marginTop: '1.5rem', gap: '0.5rem' }}>
-              <input 
+              <input
                 type="checkbox"
                 id="autoProvision"
                 checked={ssoForm.auto_provision_users ?? true}
@@ -1023,7 +1022,7 @@ export const AdminConfigPortal: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button 
+            <button
               className="btn btn-primary"
               onClick={() => handleSaveConfig('SSO_CONFIG', ssoForm)}
               disabled={savingKey === 'SSO_CONFIG'}
@@ -1062,7 +1061,7 @@ export const AdminConfigPortal: React.FC = () => {
 
           <div className="form-group" style={{ marginBottom: '1.25rem' }}>
             <label className="form-label">MFA Enforcement Policy</label>
-            <select 
+            <select
               className="form-select"
               value={mfaForm.enforcement || 'HIGH_RISK_ONLY'}
               onChange={(e) => setMfaForm({ ...mfaForm, enforcement: e.target.value })}
@@ -1076,7 +1075,7 @@ export const AdminConfigPortal: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
             <div className="form-group">
               <label className="form-label">Session Lifetime (Minutes)</label>
-              <input 
+              <input
                 type="number"
                 className="form-input"
                 placeholder="720"
@@ -1088,7 +1087,7 @@ export const AdminConfigPortal: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label">Max Failed Attempts Before Lockout</label>
-              <input 
+              <input
                 type="number"
                 className="form-input"
                 placeholder="5"
@@ -1099,7 +1098,7 @@ export const AdminConfigPortal: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button 
+            <button
               className="btn btn-primary"
               onClick={() => handleSaveConfig('MFA_CONFIG', mfaForm)}
               disabled={savingKey === 'MFA_CONFIG'}
@@ -1113,7 +1112,7 @@ export const AdminConfigPortal: React.FC = () => {
       {/* TAB 5: POLICY THRESHOLDS & WEBHOOKS */}
       {activeTab === 'POLICY' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '880px' }}>
-          
+
           {/* SECTION 1: CBN BENCHMARK & COMMERCIAL APR PRICING */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
@@ -1202,7 +1201,7 @@ export const AdminConfigPortal: React.FC = () => {
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                   <span>CBN MPR Benchmark (%)</span>
                 </label>
-                <input 
+                <input
                   type="number"
                   step="0.25"
                   className="form-input"
@@ -1227,7 +1226,7 @@ export const AdminConfigPortal: React.FC = () => {
                 <label className="form-label">
                   Commercial Risk Margin (%)
                 </label>
-                <input 
+                <input
                   type="number"
                   step="0.25"
                   className="form-input"
@@ -1252,7 +1251,7 @@ export const AdminConfigPortal: React.FC = () => {
                 <label className="form-label" style={{ color: '#0096cc', fontWeight: 700 }}>
                   Effective Lending Rate (APR %)
                 </label>
-                <input 
+                <input
                   type="number"
                   step="0.25"
                   className="form-input"
@@ -1269,7 +1268,7 @@ export const AdminConfigPortal: React.FC = () => {
                 <label className="form-label">
                   Upfront Fee Rate (%)
                 </label>
-                <input 
+                <input
                   type="number"
                   step="0.1"
                   className="form-input"
@@ -1312,7 +1311,7 @@ export const AdminConfigPortal: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
               <div className="form-group">
                 <label className="form-label">BESTO Boundary Upper Limit (₦)</label>
-                <input 
+                <input
                   type="number"
                   className="form-input"
                   value={policyForm.besto_max || 2000000}
@@ -1323,7 +1322,7 @@ export const AdminConfigPortal: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label">OFL Direct Lower Threshold (₦)</label>
-                <input 
+                <input
                   type="number"
                   className="form-input"
                   value={policyForm.direct_min || 2000000.01}
@@ -1336,7 +1335,7 @@ export const AdminConfigPortal: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
               <div className="form-group">
                 <label className="form-label">Analyst Limit (₦)</label>
-                <input 
+                <input
                   type="number"
                   className="form-input"
                   value={policyForm.analyst_limit || 2000000}
@@ -1347,7 +1346,7 @@ export const AdminConfigPortal: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label">HRM Mandate Limit (₦)</label>
-                <input 
+                <input
                   type="number"
                   className="form-input"
                   value={policyForm.hrm_limit || 5000000}
@@ -1358,7 +1357,7 @@ export const AdminConfigPortal: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label" style={{ color: '#0096cc', fontWeight: 700 }}>MD Mandate Limit (₦)</label>
-                <input 
+                <input
                   type="number"
                   className="form-input"
                   style={{ borderColor: '#0096cc', fontWeight: 700 }}
@@ -1370,7 +1369,7 @@ export const AdminConfigPortal: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label" style={{ color: '#ef4444', fontWeight: 700 }}>BCC Sanction Threshold (₦)</label>
-                <input 
+                <input
                   type="number"
                   className="form-input"
                   style={{ borderColor: '#ef4444', fontWeight: 700 }}
@@ -1382,7 +1381,7 @@ export const AdminConfigPortal: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
-              <button 
+              <button
                 className="btn btn-primary"
                 onClick={() => handleSaveConfig('CREDIT_THRESHOLDS', policyForm)}
                 disabled={savingKey === 'CREDIT_THRESHOLDS'}
@@ -1398,7 +1397,7 @@ export const AdminConfigPortal: React.FC = () => {
       {/* TAB 6: MASTER & BESPOKE FACILITY FEES WITH CENTRALIZED MPR / APR PRICING */}
       {activeTab === 'FEES' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '1050px' }}>
-          
+
           {/* SECTION 1: CBN BENCHMARK & COMMERCIAL PRICING POLICY (MPR / APR) */}
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -1492,7 +1491,7 @@ export const AdminConfigPortal: React.FC = () => {
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                   <span>CBN MPR Benchmark (%)</span>
                 </label>
-                <input 
+                <input
                   type="number"
                   step="0.25"
                   className="form-input"
@@ -1517,7 +1516,7 @@ export const AdminConfigPortal: React.FC = () => {
                 <label className="form-label">
                   Commercial Risk Margin (%)
                 </label>
-                <input 
+                <input
                   type="number"
                   step="0.25"
                   className="form-input"
@@ -1542,7 +1541,7 @@ export const AdminConfigPortal: React.FC = () => {
                 <label className="form-label" style={{ color: '#0096cc', fontWeight: 700 }}>
                   Effective Lending Rate (APR %)
                 </label>
-                <input 
+                <input
                   type="number"
                   step="0.25"
                   className="form-input"
@@ -1559,7 +1558,7 @@ export const AdminConfigPortal: React.FC = () => {
                 <label className="form-label" style={{ color: '#10b981', fontWeight: 700 }}>
                   Monthly Equivalent Rate (MPR %)
                 </label>
-                <input 
+                <input
                   type="text"
                   readOnly
                   className="form-input"
@@ -1653,7 +1652,7 @@ export const AdminConfigPortal: React.FC = () => {
                   <h3 style={{ fontSize: '0.98rem', fontWeight: 700, margin: 0, color: '#10b981' }}>
                     + Define New Bespoke Facility Fee
                   </h3>
-                  <button 
+                  <button
                     onClick={() => setIsAddFeeOpen(false)}
                     style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.1rem' }}
                   >
@@ -1664,7 +1663,7 @@ export const AdminConfigPortal: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                   <div className="form-group">
                     <label className="form-label">Fee Title / Name *</label>
-                    <input 
+                    <input
                       type="text"
                       className="form-input"
                       placeholder="e.g. Collateral Valuation Fee"
@@ -1690,7 +1689,7 @@ export const AdminConfigPortal: React.FC = () => {
                     <label className="form-label">
                       Default Rate / Quantum ({newFee.fee_type === 'FLAT' ? '₦' : '%'}) *
                     </label>
-                    <input 
+                    <input
                       type="number"
                       step={newFee.fee_type === 'FLAT' ? '1000' : '0.005'}
                       className="form-input"
@@ -1701,7 +1700,7 @@ export const AdminConfigPortal: React.FC = () => {
 
                   <div className="form-group">
                     <label className="form-label">Description / Legal Basis</label>
-                    <input 
+                    <input
                       type="text"
                       className="form-input"
                       placeholder="e.g. Independent valuation of pledged real estate or movable assets"
@@ -1713,7 +1712,7 @@ export const AdminConfigPortal: React.FC = () => {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.82rem' }}>
-                    <input 
+                    <input
                       type="checkbox"
                       checked={newFee.is_mandatory_default}
                       onChange={(e) => setNewFee({ ...newFee, is_mandatory_default: e.target.checked })}
@@ -1722,15 +1721,15 @@ export const AdminConfigPortal: React.FC = () => {
                   </label>
 
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className="btn btn-secondary btn-sm"
                       onClick={() => setIsAddFeeOpen(false)}
                     >
                       Cancel
                     </button>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className="btn btn-primary btn-sm"
                       onClick={() => {
                         if (!newFee.name.trim()) {
@@ -1774,13 +1773,13 @@ export const AdminConfigPortal: React.FC = () => {
                 </thead>
                 <tbody>
                   {feeCatalog.map((item, idx) => (
-                    <tr 
+                    <tr
                       key={item.id || idx}
                       style={{ borderBottom: '1px solid var(--border-subtle)', background: idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.01)' }}
                     >
                       <td style={{ padding: '0.75rem 1rem', color: 'var(--text-muted)' }}>{idx + 1}</td>
                       <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: 'var(--text-highlight)' }}>
-                        <input 
+                        <input
                           type="text"
                           className="form-input"
                           style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', width: '180px' }}
@@ -1798,15 +1797,15 @@ export const AdminConfigPortal: React.FC = () => {
                           padding: '2px 6px',
                           borderRadius: '4px',
                           fontWeight: 600,
-                          background: item.fee_type === 'PERCENTAGE' 
-                            ? 'rgba(0, 150, 204, 0.12)' 
-                            : item.fee_type === 'FLAT' 
-                              ? 'rgba(234, 179, 8, 0.12)' 
+                          background: item.fee_type === 'PERCENTAGE'
+                            ? 'rgba(0, 150, 204, 0.12)'
+                            : item.fee_type === 'FLAT'
+                              ? 'rgba(234, 179, 8, 0.12)'
                               : 'rgba(16, 185, 129, 0.12)',
-                          color: item.fee_type === 'PERCENTAGE' 
-                            ? '#0096cc' 
-                            : item.fee_type === 'FLAT' 
-                              ? '#eab308' 
+                          color: item.fee_type === 'PERCENTAGE'
+                            ? '#0096cc'
+                            : item.fee_type === 'FLAT'
+                              ? '#eab308'
                               : '#10b981'
                         }}>
                           {item.fee_type === 'PERCENTAGE' ? '% of Principal' : item.fee_type === 'FLAT' ? 'Flat Fixed (₦)' : '% of Fees (VAT)'}
@@ -1814,7 +1813,7 @@ export const AdminConfigPortal: React.FC = () => {
                       </td>
                       <td style={{ padding: '0.75rem 1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                          <input 
+                          <input
                             type="number"
                             step={item.fee_type === 'FLAT' ? '1000' : '0.005'}
                             className="form-input"
@@ -1833,7 +1832,7 @@ export const AdminConfigPortal: React.FC = () => {
                       </td>
                       <td style={{ padding: '0.75rem 1rem' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
-                          <input 
+                          <input
                             type="checkbox"
                             checked={!!item.is_mandatory_default}
                             onChange={(e) => {
@@ -1848,7 +1847,7 @@ export const AdminConfigPortal: React.FC = () => {
                         </label>
                       </td>
                       <td style={{ padding: '0.75rem 1rem', color: 'var(--text-secondary)', maxWidth: '240px' }}>
-                        <input 
+                        <input
                           type="text"
                           className="form-input"
                           style={{ padding: '0.25rem 0.5rem', fontSize: '0.76rem', width: '100%' }}
