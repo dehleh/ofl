@@ -75,7 +75,7 @@ STAFF_DIRECTORY: Dict[str, Dict[str, Any]] = {
         "name": "Folashade Tinubu (Managing Director)",
         "role": "MD",
         "pin": "1988",
-        "permissions": ["approval:approve_20m", "approval:approve_unlimited", "rejection:final", "disbursement:sanction"]
+        "permissions": ["admin:config", "admin:users", "admin:audit", "approval:approve_20m", "approval:approve_unlimited", "rejection:final", "disbursement:sanction", "fees:manage", "*"]
     },
     "treasury": {
         "id": "USR-OFL-005",

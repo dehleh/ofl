@@ -16,14 +16,15 @@ import { Inbox, FilePlus, Database, AlertCircle, BarChart3, Settings } from 'luc
 export type ScreenId = 'QUEUE' | 'WORKSPACE' | 'INTAKE' | 'BESTO_LAB' | 'EXCEPTIONS' | 'AUDIT' | 'ADMIN';
 
 // Role-Based Access Control (RBAC) screen authorization matrix
+// MD (Managing Director) and ADMIN (System Administrator) hold highest executive admin authority across all platform modules
 export const ROLE_PERMITTED_SCREENS: Record<string, ScreenId[]> = {
   ADMIN: ['ADMIN', 'QUEUE', 'AUDIT', 'BESTO_LAB', 'EXCEPTIONS', 'INTAKE'],
+  MD: ['ADMIN', 'QUEUE', 'AUDIT', 'BESTO_LAB', 'EXCEPTIONS', 'INTAKE'],
   IT_OWNER: ['ADMIN', 'AUDIT', 'BESTO_LAB', 'QUEUE', 'EXCEPTIONS'],
   ANALYST: ['QUEUE', 'EXCEPTIONS'],
   HRM: ['QUEUE', 'EXCEPTIONS', 'AUDIT'],
   HEAD_OF_BD: ['QUEUE', 'INTAKE', 'EXCEPTIONS'],
   BDO: ['INTAKE', 'QUEUE'],
-  MD: ['QUEUE', 'EXCEPTIONS', 'AUDIT'],
   BCC: ['QUEUE', 'AUDIT'],
   OPERATIONS: ['QUEUE', 'EXCEPTIONS', 'AUDIT'],
   TREASURY: ['QUEUE', 'AUDIT'],
@@ -146,6 +147,7 @@ export const App: React.FC = () => {
 
   const handlePersonaChange = (newPersona: string) => {
     setCurrentPersona(newPersona);
+    if (newPersona === 'MD' || newPersona === 'ADMIN') return;
     const permitted = ROLE_PERMITTED_SCREENS[newPersona] || ['QUEUE'];
     if (currentScreen !== 'WORKSPACE' && !permitted.includes(currentScreen)) {
       setCurrentScreen(ROLE_DEFAULT_SCREEN[newPersona] || 'QUEUE');
@@ -153,6 +155,8 @@ export const App: React.FC = () => {
   };
 
   const isScreenPermitted = (screen: ScreenId) => {
+    // Managing Director and System Administrator have full unconstrained administrative access
+    if (currentPersona === 'MD' || currentPersona === 'ADMIN') return true;
     const permitted = ROLE_PERMITTED_SCREENS[currentPersona] || ['QUEUE'];
     return permitted.includes(screen);
   };

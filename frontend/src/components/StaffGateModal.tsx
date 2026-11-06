@@ -53,15 +53,15 @@ export const StaffGateModal: React.FC<StaffGateModalProps> = ({
   return (
     <div className="modal-overlay">
       <div className="modal-card cyber-top-edge" style={{ maxWidth: '500px', position: 'relative' }}>
-        <button 
-          onClick={onClose} 
-          style={{ 
-            position: 'absolute', 
-            top: '1.25rem', 
-            right: '1.25rem', 
-            background: 'var(--bg-dark)', 
-            border: '1px solid var(--border-subtle)', 
-            color: 'var(--text-muted)', 
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '1.25rem',
+            right: '1.25rem',
+            background: 'var(--bg-dark)',
+            border: '1px solid var(--border-subtle)',
+            color: 'var(--text-muted)',
             cursor: 'pointer',
             borderRadius: '50%',
             width: '32px',
@@ -114,17 +114,17 @@ export const StaffGateModal: React.FC<StaffGateModalProps> = ({
             <label className="form-label">
               <UserCheck size={14} color="var(--brand-cyan)" /> Staff Role / Mandate Authority
             </label>
-            <select 
+            <select
               className="form-select"
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
               style={{ fontSize: '0.92rem' }}
             >
-              <option value="ADMIN">System Administrator (Settings, Database &amp; Config)</option>
+              <option value="MD">Managing Director (MD &bull; Highest Executive &amp; Admin Authority)</option>
+              <option value="ADMIN">System Administrator (Full Enterprise Admin &amp; Config)</option>
               <option value="ANALYST">Credit Analyst (Dossier &amp; CAM Synthesis)</option>
               <option value="HRM">Head of Risk Management (Risk Review &amp; Concurrence)</option>
               <option value="HEAD_OF_BD">Head of Business Development (Commercial Sanction)</option>
-              <option value="MD">Managing Director (Final Sanction &le; ₦20M)</option>
               <option value="BCC">Board Credit Committee (Board Sanction &gt; ₦20M)</option>
               <option value="TREASURY">Treasury &amp; Loan Operations (LOAN-DISC / NAV)</option>
             </select>
@@ -148,9 +148,9 @@ export const StaffGateModal: React.FC<StaffGateModalProps> = ({
             />
           </div>
 
-          <button 
-            type="submit" 
-            className="btn btn-primary btn-lg" 
+          <button
+            type="submit"
+            className="btn btn-primary btn-lg"
             style={{ width: '100%', marginBottom: '1.25rem' }}
             disabled={loading}
           >
@@ -163,29 +163,29 @@ export const StaffGateModal: React.FC<StaffGateModalProps> = ({
             Instant Evaluation Fast-Track (Demo Bypass)
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
-            <button 
-              className="btn btn-secondary btn-sm" 
+            <button
+              className="btn btn-secondary btn-sm"
               onClick={() => handleQuickDemoEnter('ANALYST')}
               style={{ fontSize: '0.75rem', padding: '0.45rem' }}
             >
               Analyst
             </button>
-            <button 
-              className="btn btn-secondary btn-sm" 
+            <button
+              className="btn btn-secondary btn-sm"
               onClick={() => handleQuickDemoEnter('HRM')}
               style={{ fontSize: '0.75rem', padding: '0.45rem' }}
             >
               HRM
             </button>
-            <button 
-              className="btn btn-secondary btn-sm" 
+            <button
+              className="btn btn-secondary btn-sm"
               onClick={() => handleQuickDemoEnter('MD')}
               style={{ fontSize: '0.75rem', padding: '0.45rem' }}
             >
               MD
             </button>
-            <button 
-              className="btn btn-secondary btn-sm" 
+            <button
+              className="btn btn-secondary btn-sm"
               onClick={() => handleQuickDemoEnter('ADMIN')}
               style={{ fontSize: '0.75rem', padding: '0.45rem', borderColor: 'var(--brand-cyan)', color: 'var(--brand-cyan)' }}
             >

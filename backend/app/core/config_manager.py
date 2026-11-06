@@ -280,7 +280,7 @@ class ConfigManager:
                     "role": "MD",
                     "department": "Executive Management",
                     "pin_hash": "1988",
-                    "permissions": ["approval:approve_20m", "approval:approve_unlimited", "rejection:final", "disbursement:sanction"]
+                    "permissions": ["admin:config", "admin:users", "admin:audit", "approval:approve_20m", "approval:approve_unlimited", "rejection:final", "disbursement:sanction", "fees:manage", "*"]
                 },
                 {
                     "username": "treasury",
@@ -327,11 +327,13 @@ class ConfigManager:
                     is_active=True,
                     permissions=["approval:recommend", "bd:endorse", "fees:manage", "case:read"]
                 ))
-            # Migrate any @opticom.ng emails to @opticomfinance.com
+            # Migrate any @opticom.ng emails to @opticomfinance.com and grant highest privileges to MD & ADMIN
             staff_list = db.query(StaffUser).all()
             for s in staff_list:
                 if s.email and "@opticom.ng" in s.email:
                     s.email = s.email.replace("@opticom.ng", "@opticomfinance.com")
+                if s.role in ["MD", "ADMIN"]:
+                    s.permissions = ["admin:config", "admin:users", "admin:audit", "approval:approve_20m", "approval:approve_unlimited", "rejection:final", "disbursement:sanction", "fees:manage", "*"]
 
         try:
             db.commit()
@@ -421,11 +423,12 @@ class ConfigManager:
     def get_fee_catalog(cls, db: Session) -> List[Dict[str, Any]]:
         """
         Retrieves the master catalog of Opticom standard and bespoke facility fees.
+        Guarantees fallback to approved standard fee catalog if store is uninitialized.
         """
-        config = cls.get_config_value(db, "FEE_CATALOG")
-        if config and isinstance(config, dict) and "fees" in config:
-            return config["fees"]
         default_fees = DEFAULT_CONFIGS.get("FEE_CATALOG", {}).get("value", {}).get("fees", [])
+        config = cls.get_config_value(db, "FEE_CATALOG")
+        if config and isinstance(config, dict) and "fees" in config and len(config["fees"]) > 0:
+            return config["fees"]
         return default_fees
 
     @classmethod

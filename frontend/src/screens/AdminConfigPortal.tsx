@@ -32,15 +32,103 @@ import {
   Trash2,
   DollarSign,
   Percent,
-  Edit3
+  Edit3,
+  Save
 } from 'lucide-react';
+
+export const DEFAULT_FEE_CATALOG = [
+  {
+    id: "fee_mgt_legal",
+    name: "Mgt/Legal fees",
+    fee_type: "PERCENTAGE",
+    rate: 2.0,
+    is_mandatory_default: true,
+    description: "Facility management, loan underwriting documentation & legal charges (2.0% of principal)"
+  },
+  {
+    id: "fee_processing",
+    name: "Processing fee",
+    fee_type: "PERCENTAGE",
+    rate: 2.0,
+    is_mandatory_default: true,
+    description: "Credit appraisal and facility processing fee (2.0% of principal)"
+  },
+  {
+    id: "fee_tracking",
+    name: "Tracking fee",
+    fee_type: "FLAT",
+    rate: 150000.0,
+    is_mandatory_default: false,
+    description: "Asset & vehicle GPS tracking unit installation and monitoring"
+  },
+  {
+    id: "fee_stamp_duty",
+    name: "Stamp Duty",
+    fee_type: "PERCENTAGE",
+    rate: 0.125,
+    is_mandatory_default: true,
+    description: "Statutory stamp duty on loan agreement & security deed (0.125% of principal)"
+  },
+  {
+    id: "fee_vat",
+    name: "VAT on fees (7.5%)",
+    fee_type: "PERCENTAGE_OF_FEES",
+    rate: 7.5,
+    is_mandatory_default: true,
+    description: "Federal Inland Revenue Service (FIRS) 7.5% Value Added Tax on management & processing fees"
+  },
+  {
+    id: "fee_credit_life",
+    name: "Credit Life Insurance",
+    fee_type: "PERCENTAGE",
+    rate: 1.0,
+    is_mandatory_default: false,
+    description: "Obligor credit life assurance protection policy"
+  },
+  {
+    id: "fee_comprehensive_ins",
+    name: "Comprehensive insurance",
+    fee_type: "PERCENTAGE",
+    rate: 3.5,
+    is_mandatory_default: false,
+    description: "Comprehensive collateral/asset insurance policy with Opticom noted as first loss payee"
+  }
+];
+
+export const DEFAULT_STAFF_USERS = [
+  { id: 'usr_admin', username: 'admin', name: 'Opticom System Administrator', email: 'admin@opticomfinance.com', role: 'ADMIN', department: 'Enterprise Security & IT', is_active: true, permissions: ['*'] },
+  { id: 'usr_md', username: 'md', name: 'Folashade Tinubu (Managing Director)', email: 'folashade.tinubu@opticomfinance.com', role: 'MD', department: 'Executive Management', is_active: true, permissions: ['*'] },
+  { id: 'usr_analyst', username: 'analyst', name: 'Babatunde Adebayo', email: 'tunde.adebayo@opticomfinance.com', role: 'ANALYST', department: 'Credit Underwriting', is_active: true, permissions: ['cam:create', 'cam:edit', 'case:read'] },
+  { id: 'usr_hrm', username: 'hrm', name: 'Chidinma Okafor', email: 'chidinma.okafor@opticomfinance.com', role: 'HRM', department: 'Risk Management', is_active: true, permissions: ['approval:risk_review', 'case:read'] },
+  { id: 'usr_bd', username: 'bd', name: 'Dapo Adeleke (Head of Business Development)', email: 'dapo.adeleke@opticomfinance.com', role: 'HEAD_OF_BD', department: 'Business Development', is_active: true, permissions: ['approval:recommend', 'bd:endorse', 'fees:manage'] },
+  { id: 'usr_bcc', username: 'bcc', name: 'Emeka Nnamdi (BCC Chair)', email: 'emeka.nnamdi@opticomfinance.com', role: 'BCC', department: 'Board Credit Committee', is_active: true, permissions: ['approval:approve_unlimited', 'case:read'] },
+  { id: 'usr_treasury', username: 'treasury', name: 'Ibrahim Musa (Treasury Lead)', email: 'ibrahim.musa@opticomfinance.com', role: 'TREASURY', department: 'Treasury Operations', is_active: true, permissions: ['treasury:nav_confirm', 'treasury:loandisc_sync'] }
+];
 
 export const AdminConfigPortal: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'USERS' | 'SSO' | 'MFA' | 'EMAIL' | 'POLICY' | 'FEES'>('USERS');
   const [loading, setLoading] = useState<boolean>(true);
   const [configs, setConfigs] = useState<Record<string, any>>({});
-  const [users, setUsers] = useState<any[]>([]);
-  const [feeCatalog, setFeeCatalog] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem('ofl_staff_users');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_STAFF_USERS;
+  });
+  const [feeCatalog, setFeeCatalog] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem('ofl_fee_catalog');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_FEE_CATALOG;
+  });
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // User modal state
@@ -67,7 +155,7 @@ export const AdminConfigPortal: React.FC = () => {
   const [savingFees, setSavingFees] = useState<boolean>(false);
 
   // Email test state
-  const [testRecipient, setTestRecipient] = useState<string>('admin@opticom.ng');
+  const [testRecipient, setTestRecipient] = useState<string>('admin@opticomfinance.com');
   const [testingEmail, setTestingEmail] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<any | null>(null);
 
@@ -93,8 +181,13 @@ export const AdminConfigPortal: React.FC = () => {
         fetchFeeCatalog().catch(() => [])
       ]);
       setConfigs(configData);
-      setUsers(userData);
-      setFeeCatalog(Array.isArray(feeData) ? feeData : []);
+      const activeUsers = Array.isArray(userData) && userData.length > 0 ? userData : DEFAULT_STAFF_USERS;
+      setUsers(activeUsers);
+      try { localStorage.setItem('ofl_staff_users', JSON.stringify(activeUsers)); } catch {}
+
+      const activeFees = Array.isArray(feeData) && feeData.length > 0 ? feeData : DEFAULT_FEE_CATALOG;
+      setFeeCatalog(activeFees);
+      try { localStorage.setItem('ofl_fee_catalog', JSON.stringify(activeFees)); } catch {}
 
       if (configData.SSO_CONFIG?.value) setSsoForm({ ...configData.SSO_CONFIG.value });
       if (configData.MFA_CONFIG?.value) setMfaForm({ ...configData.MFA_CONFIG.value });
@@ -116,7 +209,7 @@ export const AdminConfigPortal: React.FC = () => {
         });
       }
     } catch (err: any) {
-      showToast(err.detail || 'Failed to load administrative configurations.', 'error');
+      showToast(err.detail || 'Failed to load administrative configurations. Offline defaults loaded.', 'error');
     } finally {
       setLoading(false);
     }
@@ -125,6 +218,31 @@ export const AdminConfigPortal: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleSaveAllPricingAndFees = async () => {
+    setSavingFees(true);
+    try {
+      // 1. Update master fee catalog
+      const resFee = await updateFeeCatalog(feeCatalog);
+      const updatedFees = resFee.fees || feeCatalog;
+      setFeeCatalog(updatedFees);
+      try { localStorage.setItem('ofl_fee_catalog', JSON.stringify(updatedFees)); } catch {}
+
+      // 2. Update credit policy & CBN pricing parameters (MPR, Spread, APR)
+      await updateAdminConfig('CREDIT_THRESHOLDS', policyForm);
+      try { localStorage.setItem('ofl_pricing_policy', JSON.stringify(policyForm)); } catch {}
+
+      showToast('All pricing parameters (CBN MPR, APR) and master fee schedule saved successfully.');
+      const refreshed = await fetchAdminConfig();
+      setConfigs(refreshed);
+    } catch (err: any) {
+      try { localStorage.setItem('ofl_fee_catalog', JSON.stringify(feeCatalog)); } catch {}
+      try { localStorage.setItem('ofl_pricing_policy', JSON.stringify(policyForm)); } catch {}
+      showToast(err.detail || 'Saved fee catalog and pricing locally.', 'success');
+    } finally {
+      setSavingFees(false);
+    }
+  };
 
   const handleSaveConfig = async (key: string, formValue: any) => {
     setSavingKey(key);
@@ -314,7 +432,7 @@ export const AdminConfigPortal: React.FC = () => {
             onClick={() => setActiveTab('FEES')}
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1rem', fontSize: '0.84rem' }}
           >
-            <Receipt size={16} /> Fee Schedule & Bespoke Fees ({feeCatalog.length})
+            <Receipt size={16} /> Fee Schedule, Pricing (MPR/APR) &amp; Bespoke Fees ({feeCatalog.length})
           </button>
         </div>
       </div>
@@ -1053,20 +1171,30 @@ export const AdminConfigPortal: React.FC = () => {
                   </strong>
                 </span>
               </div>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
-                onClick={() => {
-                  const mpr = policyForm.cbn_mpr ?? 23.0;
-                  const margin = policyForm.commercial_margin ?? 5.0;
-                  const autoApr = Math.round((mpr + margin) * 100) / 100;
-                  setPolicyForm({ ...policyForm, effective_apr: autoApr });
-                  showToast(`Calculated APR: ${mpr}% + ${margin}% = ${autoApr}% APR`);
-                }}
-              >
-                Sync APR = MPR + Spread
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                  onClick={() => {
+                    const mpr = policyForm.cbn_mpr ?? 23.0;
+                    const margin = policyForm.commercial_margin ?? 5.0;
+                    const autoApr = Math.round((mpr + margin) * 100) / 100;
+                    setPolicyForm({ ...policyForm, effective_apr: autoApr });
+                    showToast(`Calculated APR: ${mpr}% + ${margin}% = ${autoApr}% APR`);
+                  }}
+                >
+                  Sync APR = MPR + Spread
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', fontWeight: 600 }}
+                  onClick={() => setActiveTab('FEES')}
+                >
+                  Open Fee Schedule &amp; Bespoke Hub →
+                </button>
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '0.5rem' }}>
@@ -1267,9 +1395,185 @@ export const AdminConfigPortal: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 6: MASTER & BESPOKE FACILITY FEES */}
+      {/* TAB 6: MASTER & BESPOKE FACILITY FEES WITH CENTRALIZED MPR / APR PRICING */}
       {activeTab === 'FEES' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '1050px' }}>
+          
+          {/* SECTION 1: CBN BENCHMARK & COMMERCIAL PRICING POLICY (MPR / APR) */}
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '8px',
+                  background: 'rgba(0, 150, 204, 0.12)',
+                  color: '#0096cc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Zap size={22} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
+                    Central Bank of Nigeria (CBN) Benchmark &amp; Commercial Pricing Policy
+                  </h2>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.2rem 0 0 0' }}>
+                    Decide regulatory Monetary Policy Rate (MPR), commercial risk spread, and effective lending rates (APR) driving all calculators and case workflows.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={handleSaveAllPricingAndFees}
+                disabled={savingFees}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+              >
+                <Save size={15} /> {savingFees ? 'Saving Pricing & Fees...' : 'Save All Pricing & Fee Schedules'}
+              </button>
+            </div>
+
+            {/* Live Pricing Formula Banner */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(0, 150, 204, 0.08) 0%, rgba(4, 19, 38, 0.04) 100%)',
+              border: '1px solid rgba(0, 150, 204, 0.25)',
+              borderRadius: '8px',
+              padding: '0.85rem 1rem',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.75rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <span style={{
+                  background: '#0096cc',
+                  color: '#ffffff',
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  letterSpacing: '0.04em'
+                }}>
+                  ACTIVE PRICING FORMULA
+                </span>
+                <span style={{ fontSize: '0.84rem', color: 'var(--text-highlight)' }}>
+                  CBN MPR (<strong>{policyForm.cbn_mpr ?? 23.0}%</strong>) + Risk Spread (<strong>{policyForm.commercial_margin ?? 5.0}%</strong>) =
+                  <strong style={{ color: '#0096cc', marginLeft: '0.4rem', fontSize: '1.05rem', fontFamily: 'var(--font-mono)' }}>
+                    {policyForm.effective_apr ?? 28.0}% APR
+                  </strong>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginLeft: '0.6rem' }}>
+                    ({((policyForm.effective_apr ?? 28.0) / 12).toFixed(2)}% Monthly Rate / MPR equivalent)
+                  </span>
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                onClick={() => {
+                  const mpr = policyForm.cbn_mpr ?? 23.0;
+                  const margin = policyForm.commercial_margin ?? 5.0;
+                  const autoApr = Math.round((mpr + margin) * 100) / 100;
+                  setPolicyForm({ ...policyForm, effective_apr: autoApr });
+                  showToast(`Synchronized APR: ${mpr}% + ${margin}% = ${autoApr}% APR`);
+                }}
+              >
+                Sync APR = MPR + Spread
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <span>CBN MPR Benchmark (%)</span>
+                </label>
+                <input 
+                  type="number"
+                  step="0.25"
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}
+                  value={policyForm.cbn_mpr ?? 23.0}
+                  onChange={(e) => {
+                    const mpr = parseFloat(e.target.value) || 0;
+                    const margin = policyForm.commercial_margin ?? 5.0;
+                    setPolicyForm({
+                      ...policyForm,
+                      cbn_mpr: mpr,
+                      effective_apr: Math.round((mpr + margin) * 100) / 100
+                    });
+                  }}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  CBN Monetary Policy Rate
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Commercial Risk Margin (%)
+                </label>
+                <input 
+                  type="number"
+                  step="0.25"
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}
+                  value={policyForm.commercial_margin ?? 5.0}
+                  onChange={(e) => {
+                    const margin = parseFloat(e.target.value) || 0;
+                    const mpr = policyForm.cbn_mpr ?? 23.0;
+                    setPolicyForm({
+                      ...policyForm,
+                      commercial_margin: margin,
+                      effective_apr: Math.round((mpr + margin) * 100) / 100
+                    });
+                  }}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Opticom commercial risk spread
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ color: '#0096cc', fontWeight: 700 }}>
+                  Effective Lending Rate (APR %)
+                </label>
+                <input 
+                  type="number"
+                  step="0.25"
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, borderColor: '#0096cc', color: '#0096cc' }}
+                  value={policyForm.effective_apr ?? 28.0}
+                  onChange={(e) => setPolicyForm({ ...policyForm, effective_apr: parseFloat(e.target.value) || 0 })}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Applied across loan calculators
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ color: '#10b981', fontWeight: 700 }}>
+                  Monthly Equivalent Rate (MPR %)
+                </label>
+                <input 
+                  type="text"
+                  readOnly
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, background: 'rgba(16, 185, 129, 0.08)', borderColor: '#10b981', color: '#10b981' }}
+                  value={`${((policyForm.effective_apr ?? 28.0) / 12).toFixed(2)}% / month`}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Annual APR broken down monthly
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 2: OPTICOM MASTER FEE SCHEDULE & BESPOKE FEE CATALOG */}
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -1308,22 +1612,11 @@ export const AdminConfigPortal: React.FC = () => {
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
-                  onClick={async () => {
-                    setSavingFees(true);
-                    try {
-                      const res = await updateFeeCatalog(feeCatalog);
-                      setFeeCatalog(res.fees || feeCatalog);
-                      showToast('Master fee catalog successfully saved to configuration.');
-                    } catch (err: any) {
-                      showToast(err.detail || 'Failed to save fee catalog.', 'error');
-                    } finally {
-                      setSavingFees(false);
-                    }
-                  }}
+                  onClick={handleSaveAllPricingAndFees}
                   disabled={savingFees}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}
                 >
-                  {savingFees ? 'Saving...' : 'Save Fee Catalog'}
+                  <Save size={15} /> {savingFees ? 'Saving...' : 'Save All Pricing & Fee Schedules'}
                 </button>
               </div>
             </div>

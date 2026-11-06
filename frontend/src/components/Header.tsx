@@ -179,11 +179,11 @@ export const Header: React.FC<HeaderProps> = ({
             value={currentPersona}
             onChange={(e) => onPersonaChange(e.target.value)}
           >
-            <option value="ADMIN">System Administrator (Settings &amp; Config)</option>
+            <option value="MD">Managing Director (MD &bull; Highest Executive &amp; Admin Authority)</option>
+            <option value="ADMIN">System Administrator (Full Enterprise Admin &amp; Config)</option>
             <option value="ANALYST">Credit Analyst (Recommend &amp; Review)</option>
             <option value="HRM">Head of Risk Management (Risk Review &amp; Concurrence)</option>
             <option value="HEAD_OF_BD">Head of Business Development (Commercial Sanction)</option>
-            <option value="MD">Managing Director (Final Sanction &le; ₦20m)</option>
             <option value="BCC">Board Credit Committee (Board Sanction &gt; ₦20m)</option>
             <option value="OPERATIONS">Credit Operations (Offer &amp; Conditions)</option>
             <option value="TREASURY">Treasury &amp; Loan Operations (LOAN-DISC)</option>

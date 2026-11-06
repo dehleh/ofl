@@ -1,17 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Building2, 
-  ArrowRight, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Calculator, 
-  FileText, 
-  UploadCloud, 
-  Search, 
-  Lock, 
-  ShieldCheck, 
-  DollarSign, 
-  Clock, 
+import {
+  Building2,
+  ArrowRight,
+  CheckCircle2,
+  AlertTriangle,
+  Calculator,
+  FileText,
+  UploadCloud,
+  Search,
+  Lock,
+  ShieldCheck,
+  DollarSign,
+  Clock,
   Briefcase,
   HelpCircle,
   PhoneCall,
@@ -90,7 +90,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
           setPricingPolicy(res);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Boundary logic
@@ -312,9 +312,9 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
             border: '1px solid rgba(0, 150, 204, 0.25)',
             boxShadow: '0 2px 8px rgba(0, 150, 204, 0.12)'
           }}>
-            <img 
-              src="/opticom_logo.jpg" 
-              alt="Opticom Finance Limited" 
+            <img
+              src="/opticom_logo.jpg"
+              alt="Opticom Finance Limited"
               style={{ height: '40px', borderRadius: '8px', background: '#fff', padding: '2px 6px', display: 'block' }}
             />
           </div>
@@ -338,29 +338,29 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <button 
+          <button
             className={`btn btn-sm ${activeTab === 'APPLY' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setActiveTab('APPLY')}
           >
             <Zap size={14} /> Apply for Loan
           </button>
-          <button 
+          <button
             className={`btn btn-sm ${activeTab === 'CALCULATOR' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setActiveTab('CALCULATOR')}
           >
             <Calculator size={14} /> Live Calculator
           </button>
-          <button 
+          <button
             className={`btn btn-sm ${activeTab === 'TRACK' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setActiveTab('TRACK')}
           >
             <Search size={14} /> Track Status
           </button>
 
-          <a 
+          <a
             href="tel:+2348161813538"
             className="btn btn-secondary btn-sm"
-            style={{ 
+            style={{
               fontSize: '0.8rem',
               fontWeight: 500,
               textDecoration: 'none',
@@ -495,7 +495,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
-              <button 
+              <button
                 className="btn btn-primary btn-lg"
                 onClick={() => setActiveTab('APPLY')}
                 style={{
@@ -506,7 +506,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
               >
                 <Zap size={16} /> Apply for Facility
               </button>
-              <button 
+              <button
                 className="btn btn-secondary btn-lg"
                 onClick={() => setActiveTab('CALCULATOR')}
                 style={{
@@ -554,7 +554,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
               <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600, marginBottom: '1.25rem' }}>
                 Commercial Haulage &amp; Supply Fleet Facility
               </div>
-              
+
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
@@ -685,9 +685,9 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     </div>
                   </div>
                 </div>
-                <button 
-                  type="button" 
-                  className="btn btn-warning btn-sm" 
+                <button
+                  type="button"
+                  className="btn btn-warning btn-sm"
                   onClick={() => setFormData(prev => ({ ...prev, amount: 2500000 }))}
                 >
                   Adjust to ₦2,500,000 Commercial Tier <ArrowRight size={14} />
@@ -983,8 +983,8 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn btn-primary btn-lg"
                     onClick={() => setStep(2)}
                     disabled={isBelowBoundary || !formData.amount}
@@ -1104,8 +1104,8 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   <button type="button" className="btn btn-secondary" onClick={() => setStep(1)}>
                     ← Back to Facility Architecture
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn btn-primary btn-lg"
                     onClick={() => setStep(3)}
                     disabled={!formData.applicant_name || !formData.email || !formData.bvn}
@@ -1214,41 +1214,41 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
                     <label className="btn btn-secondary btn-sm btn-glow-cyan" style={{ cursor: 'pointer' }}>
                       + Bank Statement (PDF/CSV)
-                      <input 
-                        type="file" 
-                        accept=".pdf,.csv,.xlsx" 
-                        style={{ display: 'none' }} 
-                        onChange={(e) => handleFileUpload(e, 'BANK_STATEMENT')} 
+                      <input
+                        type="file"
+                        accept=".pdf,.csv,.xlsx"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleFileUpload(e, 'BANK_STATEMENT')}
                       />
                     </label>
 
                     <label className="btn btn-secondary btn-sm btn-glow-cyan" style={{ cursor: 'pointer' }}>
                       + Contract / PO Award
-                      <input 
-                        type="file" 
-                        accept=".pdf,.jpg,.jpeg,.png" 
-                        style={{ display: 'none' }} 
-                        onChange={(e) => handleFileUpload(e, 'CONTRACT_PO')} 
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleFileUpload(e, 'CONTRACT_PO')}
                       />
                     </label>
 
                     <label className="btn btn-secondary btn-sm btn-glow-cyan" style={{ cursor: 'pointer' }}>
                       + CAC Registration Proof
-                      <input 
-                        type="file" 
-                        accept=".pdf,.jpg,.jpeg,.png" 
-                        style={{ display: 'none' }} 
-                        onChange={(e) => handleFileUpload(e, 'CAC_REGISTRATION')} 
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleFileUpload(e, 'CAC_REGISTRATION')}
                       />
                     </label>
 
                     <label className="btn btn-secondary btn-sm btn-glow-cyan" style={{ cursor: 'pointer', background: 'rgba(0, 150, 204, 0.12)', border: '1px solid rgba(0, 150, 204, 0.45)', color: '#0096cc', fontWeight: 700 }}>
                       + Upload Other Supporting Documents
-                      <input 
-                        type="file" 
-                        accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx" 
-                        style={{ display: 'none' }} 
-                        onChange={(e) => handleFileUpload(e, 'OTHER_SUPPORTING')} 
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx"
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleFileUpload(e, 'OTHER_SUPPORTING')}
                       />
                     </label>
                   </div>
@@ -1256,11 +1256,11 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   {uploadedFiles.length > 0 && (
                     <div style={{ marginTop: '1.75rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                       {uploadedFiles.map((f, i) => {
-                        const typeLabel = 
+                        const typeLabel =
                           f.type === 'BANK_STATEMENT' ? 'Bank Statement' :
-                          f.type === 'CONTRACT_PO' ? 'Contract / PO' :
-                          f.type === 'CAC_REGISTRATION' ? 'CAC Registration' :
-                          'Supporting Document';
+                            f.type === 'CONTRACT_PO' ? 'Contract / PO' :
+                              f.type === 'CAC_REGISTRATION' ? 'CAC Registration' :
+                                'Supporting Document';
                         return (
                           <div key={i} style={{
                             display: 'flex',
@@ -1299,8 +1299,8 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   <button type="button" className="btn btn-secondary" onClick={() => setStep(2)}>
                     ← Back to Entity Profile
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn btn-primary btn-lg"
                     onClick={handleSubmit}
                     disabled={loading}
@@ -1375,7 +1375,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     {submissionSuccess.case_number}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <button 
+                    <button
                       className="btn btn-secondary btn-sm"
                       onClick={() => copyToClipboard(submissionSuccess.case_number)}
                       style={{ fontSize: '0.78rem' }}
@@ -1386,7 +1386,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '1.25rem' }}>
-                  <button 
+                  <button
                     className="btn btn-secondary btn-lg"
                     onClick={() => {
                       setTrackRef(submissionSuccess.case_number);
@@ -1395,7 +1395,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   >
                     <Search size={18} /> Track Application Live
                   </button>
-                  <button 
+                  <button
                     className="btn btn-primary btn-lg"
                     onClick={() => {
                       setStep(1);
@@ -1442,7 +1442,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       ₦{formData.amount.toLocaleString()}
                     </span>
                   </div>
-                  
+
                   <input
                     type="range"
                     min={2000000}
@@ -1547,8 +1547,8 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   </div>
                 </div>
 
-                <button 
-                  className="btn btn-primary btn-lg" 
+                <button
+                  className="btn btn-primary btn-lg"
                   style={{ marginTop: '2rem', width: '100%' }}
                   onClick={() => setActiveTab('APPLY')}
                 >
@@ -1737,15 +1737,15 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
         <div style={{ marginTop: '0.5rem', color: 'var(--text-muted)' }}>
           Head Office: 10th Floor, UAC House, 1-5 Odunlami St, Lagos Island, Lagos 101001, Nigeria &bull; Helpline: 0816 181 3538 (+234 816 181 3538) &bull; Email: info@opticomfinance.com | customercare@opticomfinance.com
         </div>
-        <div style={{ 
-          marginTop: '0.85rem', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          gap: '1.25rem', 
+        <div style={{
+          marginTop: '0.85rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '1.25rem',
           flexWrap: 'wrap',
-          fontSize: '0.76rem', 
-          color: 'var(--text-secondary)' 
+          fontSize: '0.76rem',
+          color: 'var(--text-secondary)'
         }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
             <ShieldCheck size={14} color="#10b981" /> 256-Bit SSL Enterprise Security

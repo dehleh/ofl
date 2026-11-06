@@ -59,10 +59,10 @@ class AuthorityMatrix:
                 return True, f"Authorized for risk management approval up to ₦{cls.TIER_1_LIMIT:,.2f}."
             return False, f"Facility quantum (₦{amount:,.2f}) exceeds HRM standalone mandate limit of ₦{cls.TIER_1_LIMIT:,.2f}; escalation required."
             
-        if role in ["MD", "CEO", "MANAGING_DIRECTOR"]:
+        if role in ["MD", "CEO", "MANAGING_DIRECTOR", "ADMIN", "SYSADMIN", "SUPERADMIN"]:
             if amount <= cls.TIER_BCC_THRESHOLD:
-                return True, f"Authorized for final approval mandate (up to ₦{cls.TIER_BCC_THRESHOLD:,.2f})."
-            return True, f"Authorized for Executive Endorsement (> ₦{cls.TIER_BCC_THRESHOLD:,.2f}) prior to BCC final sign-off."
+                return True, f"Authorized with highest executive administrative approval mandate (up to ₦{cls.TIER_BCC_THRESHOLD:,.2f})."
+            return True, f"Authorized for Executive Endorsement / Administrative Sanction (> ₦{cls.TIER_BCC_THRESHOLD:,.2f}) prior to BCC final sign-off."
             
         if role in ["BCC", "BOARD_CREDIT_COMMITTEE"]:
             return True, "Authorized for Board Credit Committee final sanction (mandatory for > ₦20,000,000)."
