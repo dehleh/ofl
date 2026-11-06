@@ -200,8 +200,31 @@ class ConfigManager:
                     description=conf.get("description", "")
                 )
                 db.add(item)
+            else:
+                # Sync policy thresholds & contact details if outdated in existing persistent store
+                if key == "CREDIT_THRESHOLDS" and isinstance(existing.value, dict):
+                    val = dict(existing.value)
+                    changed = False
+                    if val.get("bcc_limit") != 20000000.0 or val.get("md_limit") != 20000000.0:
+                        val["bcc_limit"] = 20000000.0
+                        val["md_limit"] = 20000000.0
+                        changed = True
+                    if changed:
+                        existing.value = val
+                elif key == "EMAIL_CLIENT" and isinstance(existing.value, dict):
+                    val = dict(existing.value)
+                    if "opticom.ng" in str(val.get("from_email", "")) or "opticom.ng" in str(val.get("reply_to", "")):
+                        val["from_email"] = "info@opticomfinance.com"
+                        val["reply_to"] = "customercare@opticomfinance.com"
+                        val["smtp_host"] = "mail.opticomfinance.com"
+                        existing.value = val
+                elif key == "SMS_GATEWAY" and isinstance(existing.value, dict):
+                    val = dict(existing.value)
+                    if val.get("helpline") != "0816 181 3538":
+                        val["helpline"] = "0816 181 3538"
+                        existing.value = val
 
-        # Seed initial staff directory
+        # Seed initial staff directory & ensure new roles exist
         user_count = db.query(StaffUser).count()
         if user_count == 0:
             initial_users = [
@@ -290,6 +313,25 @@ class ConfigManager:
                     permissions=u["permissions"]
                 )
                 db.add(staff)
+        else:
+            # Ensure HEAD_OF_BD is in staff directory
+            bd_exists = db.query(StaffUser).filter(StaffUser.role == "HEAD_OF_BD").first()
+            if not bd_exists:
+                db.add(StaffUser(
+                    username="bd",
+                    email="dapo.adeleke@opticomfinance.com",
+                    name="Dapo Adeleke (Head of Business Development)",
+                    role="HEAD_OF_BD",
+                    department="Business Development",
+                    pin_hash="1988",
+                    is_active=True,
+                    permissions=["approval:recommend", "bd:endorse", "fees:manage", "case:read"]
+                ))
+            # Migrate any @opticom.ng emails to @opticomfinance.com
+            staff_list = db.query(StaffUser).all()
+            for s in staff_list:
+                if s.email and "@opticom.ng" in s.email:
+                    s.email = s.email.replace("@opticom.ng", "@opticomfinance.com")
 
         try:
             db.commit()

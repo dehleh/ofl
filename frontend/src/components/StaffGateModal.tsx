@@ -122,10 +122,11 @@ export const StaffGateModal: React.FC<StaffGateModalProps> = ({
             >
               <option value="ADMIN">System Administrator (Settings, Database &amp; Config)</option>
               <option value="ANALYST">Credit Analyst (Dossier &amp; CAM Synthesis)</option>
-              <option value="HRM">Head of Risk Management (Limit &le; ₦5M Review)</option>
-              <option value="BCC">Board Credit Committee (Limit &le; ₦15M Sanction)</option>
-              <option value="MD">Managing Director (Limit &gt; ₦15M / Executive)</option>
-              <option value="TREASURY">Treasury &amp; Loan Operations (NAV Disbursal)</option>
+              <option value="HRM">Head of Risk Management (Risk Review &amp; Concurrence)</option>
+              <option value="HEAD_OF_BD">Head of Business Development (Commercial Sanction)</option>
+              <option value="MD">Managing Director (Final Sanction &le; ₦20M)</option>
+              <option value="BCC">Board Credit Committee (Board Sanction &gt; ₦20M)</option>
+              <option value="TREASURY">Treasury &amp; Loan Operations (LOAN-DISC / NAV)</option>
             </select>
           </div>
 

@@ -32,11 +32,11 @@ class Settings(BaseSettings):
     BESTO_MAX_AMOUNT: float = 2_000_000.0  # Exact 2,000,000 boundary belongs to BESTO
     OFL_DIRECT_MIN_AMOUNT: float = 2_000_000.01
     
-    # Approval Authority Thresholds (FR-09)
+    # Approval Authority Thresholds (FR-09 & Governance Matrix)
     THRESHOLD_ANALYST_RECOMMEND_ONLY: float = 2_000_000.0
     THRESHOLD_HRM_APPROVAL_LIMIT: float = 5_000_000.0
-    THRESHOLD_BCC_APPROVAL_LIMIT: float = 15_000_000.0
-    # MD approval required for > 15,000,000
+    THRESHOLD_MD_APPROVAL_LIMIT: float = 20_000_000.0      # Facilities <= ₦20m final sanction by MD
+    THRESHOLD_BCC_APPROVAL_LIMIT: float = 20_000_000.0     # Facilities > ₦20m mandate BCC final sanction
     
     # Google Cloud Platform (GCP) Configuration
     GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "opticom-ofl-platform")

@@ -23,7 +23,8 @@ import {
   Zap,
   ChevronRight,
   ExternalLink,
-  Copy
+  Copy,
+  Trash2
 } from 'lucide-react';
 import { submitDirectApplication, trackApplication, respondToApplicantException, fetchPricingPolicy, PricingPolicy } from '../services/api';
 
@@ -124,13 +125,14 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
     if (!file) return;
 
     setUploadedFiles(prev => [
-      ...prev.filter(f => f.type !== fileType),
+      ...prev.filter(f => fileType === 'OTHER_SUPPORTING' ? f.name !== file.name : f.type !== fileType),
       {
         name: file.name,
         type: fileType,
         size: `${(file.size / 1024 / 1024).toFixed(2)} MB`
       }
     ]);
+    e.target.value = '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1205,8 +1207,8 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-highlight)', fontFamily: 'var(--font-display)' }}>
                     Attach Supporting Credit Evidence
                   </h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '580px', margin: '0.35rem auto 1.5rem auto' }}>
-                    Upload 6-month Bank Statement (PDF/CSV/Excel), Contract Award / Purchase Order, and CAC Registration documents.
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '620px', margin: '0.35rem auto 1.5rem auto' }}>
+                    Upload 6-month Bank Statement (PDF/CSV/Excel), Contract Award / Purchase Order, CAC Registration, and any other supporting documents.
                   </p>
 
                   <div style={{ display: 'flex', justifyContent: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
@@ -1224,7 +1226,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       + Contract / PO Award
                       <input 
                         type="file" 
-                        accept=".pdf,.jpg,.png" 
+                        accept=".pdf,.jpg,.jpeg,.png" 
                         style={{ display: 'none' }} 
                         onChange={(e) => handleFileUpload(e, 'CONTRACT_PO')} 
                       />
@@ -1234,34 +1236,61 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       + CAC Registration Proof
                       <input 
                         type="file" 
-                        accept=".pdf,.jpg,.png" 
+                        accept=".pdf,.jpg,.jpeg,.png" 
                         style={{ display: 'none' }} 
                         onChange={(e) => handleFileUpload(e, 'CAC_REGISTRATION')} 
+                      />
+                    </label>
+
+                    <label className="btn btn-secondary btn-sm btn-glow-cyan" style={{ cursor: 'pointer', background: 'rgba(0, 150, 204, 0.12)', border: '1px solid rgba(0, 150, 204, 0.45)', color: '#0096cc', fontWeight: 700 }}>
+                      + Upload Other Supporting Documents
+                      <input 
+                        type="file" 
+                        accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx" 
+                        style={{ display: 'none' }} 
+                        onChange={(e) => handleFileUpload(e, 'OTHER_SUPPORTING')} 
                       />
                     </label>
                   </div>
 
                   {uploadedFiles.length > 0 && (
                     <div style={{ marginTop: '1.75rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                      {uploadedFiles.map((f, i) => (
-                        <div key={i} style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '0.75rem 1.15rem',
-                          background: 'var(--bg-surface)',
-                          border: '1px solid var(--border-medium)',
-                          borderRadius: 'var(--radius-md)',
-                          fontSize: '0.85rem'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                            <FileText size={18} color="var(--brand-cerulean)" />
-                            <span style={{ fontWeight: 700, color: 'var(--text-highlight)' }}>{f.name}</span>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({f.type} &bull; {f.size})</span>
+                      {uploadedFiles.map((f, i) => {
+                        const typeLabel = 
+                          f.type === 'BANK_STATEMENT' ? 'Bank Statement' :
+                          f.type === 'CONTRACT_PO' ? 'Contract / PO' :
+                          f.type === 'CAC_REGISTRATION' ? 'CAC Registration' :
+                          'Supporting Document';
+                        return (
+                          <div key={i} style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '0.75rem 1.15rem',
+                            background: 'var(--bg-surface)',
+                            border: '1px solid var(--border-medium)',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: '0.85rem'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                              <FileText size={18} color="var(--brand-cerulean)" />
+                              <span style={{ fontWeight: 700, color: 'var(--text-highlight)' }}>{f.name}</span>
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({typeLabel} &bull; {f.size})</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                              <span className="status-pill pill-emerald" style={{ fontSize: '0.72rem' }}>Attached ✓</span>
+                              <button
+                                type="button"
+                                onClick={() => setUploadedFiles(prev => prev.filter((_, idx) => idx !== i))}
+                                style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px 4px', display: 'flex', alignItems: 'center' }}
+                                title="Remove file"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </div>
-                          <span className="status-pill pill-emerald" style={{ fontSize: '0.72rem' }}>Document Attached ✓</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
