@@ -561,8 +561,11 @@ def build_pdf():
       <div class="step-box">
         <div class="step-num">1</div>
         <div class="step-content">
-          <div class="step-title">Intake: Client Direct Portal OR BDO Assisted Intake</div>
-          <div class="step-text">Prospective obligor applies via public portal or BDO submits request from field visit with bank statements, CAC certificate, board resolution, and collateral profile. Facility enters <code>Submitted / Analyst Review</code>.</div>
+          <div class="step-title">Intake: Client Direct Portal (with Automated BVN Auto-Fill) OR BDO Assisted Intake</div>
+          <div class="step-text">
+            &bull; <strong>Direct Customer Portal:</strong> Prospective borrower inputs BVN (10/11-digit) &rarr; Youverify/NIBSS adapter resolves and auto-populates legal name, phone, email, NIN, RC number, registered business address, and promoter residential address. Mandatory fields (* compulsory) and 9 essential document upload slots are enforced: <strong>Valid Means of ID (NIN, Voter's Card, Passport, Driver's License)</strong>, <strong>Valid Utility Bill (&le; 6 months)</strong>, <strong>Passport Photo</strong>, <strong>Valid Work ID</strong>, <strong>CAC Registration Proof</strong>, <strong>6-Month Bank Statement</strong>, <strong>Collateral Documents</strong>, <strong>Contract / PO Award</strong>, and <strong>Other Supporting Documents</strong>.<br />
+            &bull; <strong>BDO Assisted Intake:</strong> BDO captures customer request in-field with BVN auto-fill. Facility enters <code>Submitted / Analyst Review</code>.
+          </div>
         </div>
       </div>
 
@@ -1013,8 +1016,8 @@ def build_pdf():
       <div class="step-box">
         <div class="step-num">1</div>
         <div class="step-content">
-          <div class="step-title">ACT 1: Intake Options — Public Portal &amp; BDO Assisted Origination</div>
-          <div class="step-text">Show borrower self-service calculator at <code>http://localhost:5173/</code> with 28% APR. Then switch to <code>Business Dev Officer (BDO)</code> in internal cockpit to show in-field assisted loan capture.</div>
+          <div class="step-title">ACT 1: Intake Options — Public Portal (BVN Auto-Fill &amp; 9 Essential Docs) &amp; BDO Intake</div>
+          <div class="step-text">Show borrower self-service portal at <code>http://localhost:5173/</code>. Demonstrate entering BVN (e.g. <code>2233307057</code>) which triggers instant NIBSS/Youverify identity resolution populating applicant name, registered corporate address, residential address, and unexpired ID. Highlight mandatory red asterisks (*) and 9 upload slots: Bank Statement, Valid ID (NIN/Passport/DL), Utility Bill (&le; 6 months), Passport Photo, Work ID, CAC Proof, Collateral Documents, Contract/PO Award, and Other Supporting Documents. Then switch to <code>Business Dev Officer (BDO)</code> in internal cockpit for in-field origination.</div>
         </div>
       </div>
 

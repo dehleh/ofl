@@ -14,11 +14,12 @@ from ...models import (
     FinancialAssessment, IntegrationEvent, CaseState, IntakeChannel,
     ExceptionItem, AuditEvent
 )
-from ...schemas.schemas import DirectApplicationCreate, BestoInboundPayload
+from ...schemas.schemas import DirectApplicationCreate, BestoInboundPayload, BVNResolveRequest
 from ...core.financial_engine import FinancialEngine
 from ...core.webhook_security import verify_hmac_signature
 from ...core.config_manager import ConfigManager
 from ...integrations.besto_adapter import BestoAdapter
+from ...integrations.youverify_adapter import YouverifyAdapter
 
 router = APIRouter(prefix="/intake", tags=["Application Intake"])
 
@@ -30,6 +31,20 @@ def get_public_pricing_policy(db: Session = Depends(get_db)):
     and upfront fee benchmarks for public repayment calculators.
     """
     return ConfigManager.get_pricing_policy(db)
+
+@router.post("/resolve-bvn")
+def resolve_bvn_identity(payload: BVNResolveRequest, db: Session = Depends(get_db)):
+    """
+    Resolves NIBSS Bank Verification Number (BVN) via Youverify or deterministic NIBSS identity directory.
+    Auto-populates borrower legal name, registered business address, residential address, telephone, email, and NIN.
+    """
+    res = YouverifyAdapter.resolve_bvn(payload.bvn, db=db)
+    if not res.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=res.get("error", "Unable to resolve BVN.")
+        )
+    return res
 
 @router.post("/direct", status_code=status.HTTP_201_CREATED)
 def submit_direct_application(
@@ -59,6 +74,15 @@ def submit_direct_application(
     if payload.bvn:
         customer = db.query(Customer).filter(Customer.bvn == payload.bvn).first()
         
+    verified_data = {
+        "business_address": payload.business_address,
+        "residential_address": payload.residential_address,
+        "means_of_id_type": payload.means_of_id_type,
+        "means_of_id_number": payload.means_of_id_number,
+        "collateral_description": payload.collateral_description,
+        "facility_type": payload.facility_type
+    }
+
     if not customer:
         customer = Customer(
             customer_type=payload.applicant_type,
@@ -68,9 +92,21 @@ def submit_direct_application(
             bvn=payload.bvn,
             nin=payload.nin,
             rc_number=payload.rc_number,
+            verified_attributes=verified_data,
             external_references={"channel": "OFL_DIRECT"}
         )
         db.add(customer)
+        db.flush()
+    else:
+        # Update existing customer details
+        attrs = dict(customer.verified_attributes or {})
+        attrs.update({k: v for k, v in verified_data.items() if v is not None})
+        customer.verified_attributes = attrs
+        if payload.applicant_name: customer.name = payload.applicant_name
+        if payload.phone: customer.phone = payload.phone
+        if payload.email: customer.email = payload.email
+        if payload.nin: customer.nin = payload.nin
+        if payload.rc_number: customer.rc_number = payload.rc_number
         db.flush()
         
     # Create Application

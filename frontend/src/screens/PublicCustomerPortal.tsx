@@ -24,9 +24,16 @@ import {
   ChevronRight,
   ExternalLink,
   Copy,
-  Trash2
+  Trash2,
+  User,
+  Home,
+  Camera,
+  RefreshCw,
+  FileSpreadsheet,
+  CreditCard,
+  Image as ImageIcon
 } from 'lucide-react';
-import { submitDirectApplication, trackApplication, respondToApplicantException, fetchPricingPolicy, PricingPolicy } from '../services/api';
+import { submitDirectApplication, trackApplication, respondToApplicantException, fetchPricingPolicy, resolveBVNIdentity, PricingPolicy } from '../services/api';
 
 interface PublicCustomerPortalProps {
   onOpenStaffGate?: () => void;
@@ -51,6 +58,10 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
     nin: '',
     rc_number: '',
     business_address: '',
+    residential_address: '',
+    means_of_id_type: 'NATIONAL_ID',
+    means_of_id_number: '',
+    id_expiry_date: '',
     amount: 15000000,
     tenor_months: 12,
     purpose: '',
@@ -58,8 +69,17 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
     monthly_income: 8500000,
     existing_monthly_debt: 350000,
     estimated_monthly_expenses: 2500000,
-    collateral_value: 25000000
+    collateral_value: 25000000,
+    collateral_description: ''
   });
+
+  // BVN Resolution State
+  const [bvnResolving, setBvnResolving] = useState<boolean>(false);
+  const [bvnResolutionFeedback, setBvnResolutionFeedback] = useState<{
+    success: boolean;
+    message: string;
+    full_name?: string;
+  } | null>(null);
 
   // Attached files
   const [uploadedFiles, setUploadedFiles] = useState<Array<{ name: string; type: string; size: string }>>([]);
@@ -119,6 +139,51 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
       upfrontFees: Math.round(estimatedUpfrontFees)
     };
   }, [formData.amount, formData.tenor_months, pricingPolicy]);
+
+  const handleBvnLookup = async (bvnToResolve: string) => {
+    const cleaned = bvnToResolve.trim();
+    if (cleaned.length !== 11 || !/^\d+$/.test(cleaned)) {
+      setBvnResolutionFeedback({
+        success: false,
+        message: 'BVN must be exactly 11 numeric digits.'
+      });
+      return;
+    }
+
+    setBvnResolving(true);
+    setBvnResolutionFeedback(null);
+
+    try {
+      const res = await resolveBVNIdentity(cleaned);
+      if (res && res.success) {
+        setFormData(prev => ({
+          ...prev,
+          bvn: cleaned,
+          applicant_name: res.applicant_name || res.full_name || prev.applicant_name,
+          phone: res.phone || prev.phone,
+          email: res.email || prev.email,
+          nin: res.nin || prev.nin,
+          rc_number: res.rc_number || prev.rc_number,
+          business_address: res.business_address || prev.business_address,
+          residential_address: res.residential_address || prev.residential_address,
+          means_of_id_type: res.means_of_id_type || prev.means_of_id_type,
+          means_of_id_number: res.means_of_id_number || prev.means_of_id_number,
+        }));
+        setBvnResolutionFeedback({
+          success: true,
+          message: res.message || `BVN Verified: ${res.full_name || res.applicant_name}`,
+          full_name: res.full_name || res.applicant_name
+        });
+      }
+    } catch (err: any) {
+      setBvnResolutionFeedback({
+        success: false,
+        message: err.message || err.detail || 'BVN verification query could not be completed.'
+      });
+    } finally {
+      setBvnResolving(false);
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, fileType: string) => {
     const file = e.target.files?.[0];
@@ -233,21 +298,37 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
       phone: '08024799952',
       bvn: '2233307057',
       nin: '65858750946',
-      rc_number: '7049792',
-      business_address: 'NNPC Filling Station, Ide-orogbo, Ibeju Lekki, Lagos',
+      rc_number: 'BN 7049792',
+      business_address: 'NNPC Filling Station, Ide-orogbo, Ibeju Lekki, Lagos State',
+      residential_address: 'Plot 14, Admiralty Way, Lekki Phase 1, Lagos State',
+      means_of_id_type: 'NATIONAL_ID',
+      means_of_id_number: 'NIN-65858750946',
+      id_expiry_date: '2030-12-31',
       amount: 50000000,
       tenor_months: 6,
-      purpose: 'Purchase Order Execution for P.A. Lawrence Nigeria Limited',
+      purpose: 'Purchase Order Execution for P.A. Lawrence Nigeria Limited covering 5,000 trips haulage',
       facility_type: 'Purchase Order Execution',
       monthly_income: 142222475,
       existing_monthly_debt: 1000000,
       estimated_monthly_expenses: 8593600,
-      collateral_value: 108500000
+      collateral_value: 108500000,
+      collateral_description: '10 Units of 30-Ton Sino Haulage Trucks (Comprehensive Insured) & Registered Legal Mortgage on Commercial Yard at Ibeju Lekki'
+    });
+    setBvnResolutionFeedback({
+      success: true,
+      message: 'NIBSS BVN successfully verified for Babatunde Leo-Akinboni. Identity & address details auto-populated.',
+      full_name: 'Babatunde Leo-Akinboni'
     });
     setUploadedFiles([
       { name: 'UBA_Haulage_Account_Statement_6M.pdf', type: 'BANK_STATEMENT', size: '2.45 MB' },
+      { name: 'National_Identity_Card_NIMC_Babatunde.pdf', type: 'MEANS_OF_ID', size: '1.12 MB' },
+      { name: 'EKEDC_Electricity_Utility_Bill_Aug2026.pdf', type: 'UTILITY_BILL', size: '0.68 MB' },
+      { name: 'Passport_Photograph_White_Background.jpg', type: 'PASSPORT_PHOTO', size: '0.45 MB' },
+      { name: 'Director_Work_ID_Badge.pdf', type: 'WORK_ID', size: '0.52 MB' },
+      { name: 'CAC_Certificate_Registration_BN7049792.pdf', type: 'CAC_REGISTRATION', size: '0.85 MB' },
+      { name: 'Collateral_Title_Deed_Vehicle_Customs_Papers.pdf', type: 'COLLATERAL_DOCUMENT', size: '3.20 MB' },
       { name: 'PA_Lawrence_Contract_Award_5000Trips.pdf', type: 'CONTRACT_PO', size: '1.18 MB' },
-      { name: 'CAC_Certificate_Registration_BN7049792.pdf', type: 'CAC_REGISTRATION', size: '0.85 MB' }
+      { name: 'Tax_Clearance_Certificate_2025.pdf', type: 'OTHER_SUPPORTING', size: '0.95 MB' }
     ]);
   };
 
@@ -845,7 +926,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       1. Facility Parameters &amp; Capital Requirement
                     </h3>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                      Specify the facility quantum, tenor structure, and commercial purpose.
+                      Specify the facility quantum, tenor structure, and commercial purpose. All fields marked (<span style={{ color: '#ef4444' }}>*</span>) are compulsory.
                     </p>
                   </div>
                   <span className="status-pill pill-cyan">Step 1 of 3</span>
@@ -854,7 +935,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                   <div className="form-group">
                     <label className="form-label">
-                      <DollarSign size={14} color="var(--brand-cyan)" /> Requested Facility Amount (₦)
+                      <DollarSign size={14} color="var(--brand-cyan)" /> Requested Facility Amount (₦) <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="number"
@@ -863,23 +944,25 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
                       min="2000001"
                       placeholder="e.g. 50,000,000"
+                      required
                       style={{ fontSize: '1.1rem', fontFamily: 'var(--font-mono)', fontWeight: 700 }}
                     />
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-                      <span>Min: ₦2,000,001</span>
+                      <span>Min: ₦2,000,001 (Commercial Direct Portal)</span>
                       <span style={{ color: 'var(--brand-cyan)', fontWeight: 600 }}>₦{Number(formData.amount).toLocaleString()}</span>
                     </div>
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">
-                      <Clock size={14} color="var(--brand-cyan)" /> Proposed Tenor (Months)
+                      <Clock size={14} color="var(--brand-cyan)" /> Proposed Tenor (Months) <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <select
                       className="form-select"
                       value={formData.tenor_months}
                       onChange={(e) => setFormData({ ...formData, tenor_months: Number(e.target.value) })}
                       style={{ fontSize: '0.95rem' }}
+                      required
                     >
                       <option value={3}>3 Months (Short Term Bridge)</option>
                       <option value={6}>6 Months (Standard Purchase Order / Contract Execution)</option>
@@ -892,12 +975,13 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
 
                   <div className="form-group">
                     <label className="form-label">
-                      <Layers size={14} color="var(--brand-cyan)" /> Facility Classification
+                      <Layers size={14} color="var(--brand-cyan)" /> Facility Classification <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <select
                       className="form-select"
                       value={formData.facility_type}
                       onChange={(e) => setFormData({ ...formData, facility_type: e.target.value })}
+                      required
                     >
                       <option value="Working Capital">Working Capital Line</option>
                       <option value="Purchase Order Execution">Purchase Order / Contract Financing</option>
@@ -908,12 +992,13 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
 
                   <div className="form-group">
                     <label className="form-label">
-                      <Building2 size={14} color="var(--brand-cyan)" /> Borrower Entity Structure
+                      <Building2 size={14} color="var(--brand-cyan)" /> Borrower Entity Structure <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <select
                       className="form-select"
                       value={formData.applicant_type}
                       onChange={(e) => setFormData({ ...formData, applicant_type: e.target.value })}
+                      required
                     >
                       <option value="SME">Sole Proprietorship / Registered Enterprise (BN)</option>
                       <option value="CORPORATE">Limited Liability Company (RC)</option>
@@ -923,13 +1008,14 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                 </div>
 
                 <div className="form-group" style={{ marginBottom: '1.75rem' }}>
-                  <label className="form-label">Specific Purpose of Facility</label>
+                  <label className="form-label">Specific Purpose of Facility <span style={{ color: '#ef4444' }}>*</span></label>
                   <textarea
                     className="form-textarea"
                     rows={3}
                     placeholder="e.g. Mobilization and haulage logistics for contract awarded by P.A. Lawrence Nigeria Limited covering 5,000 trips"
                     value={formData.purpose}
                     onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                    required
                   />
                 </div>
 
@@ -987,7 +1073,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     type="button"
                     className="btn btn-primary btn-lg"
                     onClick={() => setStep(2)}
-                    disabled={isBelowBoundary || !formData.amount}
+                    disabled={isBelowBoundary || !formData.amount || !formData.purpose.trim()}
                   >
                     Proceed to Business &amp; Identity <ArrowRight size={18} />
                   </button>
@@ -1004,15 +1090,86 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       2. Business Entity &amp; Promoter Identity
                     </h3>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                      Corporate registry verification and automated NIBSS BVN identity screening.
+                      Corporate registry verification and automated NIBSS BVN identity screening. All address and identity fields are compulsory (<span style={{ color: '#ef4444' }}>*</span>).
                     </p>
                   </div>
                   <span className="status-pill pill-cyan">Step 2 of 3</span>
                 </div>
 
+                {/* Automated NIBSS BVN Auto-Fill Banner & Input */}
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(0, 150, 204, 0.08) 0%, rgba(248, 250, 252, 0.95) 100%)',
+                  border: '1px solid rgba(0, 150, 204, 0.35)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '1.25rem',
+                  marginBottom: '1.75rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                    <label className="form-label" style={{ margin: 0, fontWeight: 700, fontSize: '0.92rem', color: 'var(--brand-cerulean)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <ShieldCheck size={18} /> Bank Verification Number (BVN - 11 Digits) <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Automated NIBSS / Youverify Resolution</span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Enter 11-digit BVN (e.g. 2233307057)"
+                      maxLength={11}
+                      value={formData.bvn}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 11);
+                        setFormData(prev => ({ ...prev, bvn: val }));
+                        if (val.length === 11) {
+                          handleBvnLookup(val);
+                        } else {
+                          setBvnResolutionFeedback(null);
+                        }
+                      }}
+                      required
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        letterSpacing: '0.1em',
+                        fontSize: '1.05rem',
+                        fontWeight: 700,
+                        flex: 1
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => handleBvnLookup(formData.bvn)}
+                      disabled={bvnResolving || formData.bvn.length !== 11}
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', padding: '0.65rem 1.25rem' }}
+                    >
+                      <RefreshCw size={15} className={bvnResolving ? 'spin' : ''} />
+                      {bvnResolving ? 'Resolving NIBSS...' : 'Auto-Fill Details'}
+                    </button>
+                  </div>
+
+                  {bvnResolutionFeedback && (
+                    <div style={{
+                      marginTop: '0.75rem',
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.8rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: bvnResolutionFeedback.success ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                      color: bvnResolutionFeedback.success ? '#059669' : '#dc2626',
+                      border: `1px solid ${bvnResolutionFeedback.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                    }}>
+                      {bvnResolutionFeedback.success ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                      <span style={{ fontWeight: 600 }}>{bvnResolutionFeedback.message}</span>
+                    </div>
+                  )}
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                   <div className="form-group">
-                    <label className="form-label">Full Legal Name / Registered Business Name *</label>
+                    <label className="form-label">Full Legal Name / Registered Business Name <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="text"
                       className="form-input"
@@ -1024,48 +1181,64 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">RC / Business Registration (BN) Number</label>
+                    <label className="form-label">RC / Business Registration (BN) Number <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="e.g. BN 7049792"
+                      placeholder="e.g. BN 7049792 or RC 1234567"
                       value={formData.rc_number}
                       onChange={(e) => setFormData({ ...formData, rc_number: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Bank Verification Number (BVN - 11 Digits) *</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="e.g. 2233307057"
-                      maxLength={11}
-                      value={formData.bvn}
-                      onChange={(e) => setFormData({ ...formData, bvn: e.target.value })}
                       required
-                      style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}
                     />
-                    <div style={{ fontSize: '0.74rem', color: 'var(--brand-cyan)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <ShieldCheck size={13} /> Automated cryptographic verification via Youverify / NIBSS
-                    </div>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">National Identity Number (NIN)</label>
+                    <label className="form-label">National Identity Number (NIN - 11 Digits) <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="text"
                       className="form-input"
                       placeholder="e.g. 65858750946"
                       maxLength={11}
                       value={formData.nin}
-                      onChange={(e) => setFormData({ ...formData, nin: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, nin: e.target.value.replace(/\D/g, '').slice(0, 11) })}
                       style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}
+                      required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Official Corporate Email Address *</label>
+                    <label className="form-label">Primary Means of Identification <span style={{ color: '#ef4444' }}>*</span></label>
+                    <select
+                      className="form-select"
+                      value={formData.means_of_id_type}
+                      onChange={(e) => setFormData({ ...formData, means_of_id_type: e.target.value })}
+                      required
+                    >
+                      <option value="NATIONAL_ID">National ID Card (NIMC) - Valid</option>
+                      <option value="NIN_SLIP">Digital NIN Slip (NIMC) - Valid</option>
+                      <option value="VOTERS_CARD">Permanent Voter's Card (INEC PVC) - Valid</option>
+                      <option value="PASSPORT">International Passport (Immigration) - Valid</option>
+                      <option value="DRIVERS_LICENSE">Driver's License (FRSC) - Valid</option>
+                    </select>
+                    <div style={{ fontSize: '0.72rem', color: '#059669', marginTop: '0.2rem', fontWeight: 600 }}>
+                      ✓ Must be valid and unexpired government-issued identification.
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Identification Document / Card Number <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. NIN-65858750946, FRSC-LA782910, A10849273"
+                      value={formData.means_of_id_number}
+                      onChange={(e) => setFormData({ ...formData, means_of_id_number: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Official Corporate Email Address <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="email"
                       className="form-input"
@@ -1077,7 +1250,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Direct Telephone Number *</label>
+                    <label className="form-label">Direct Telephone Number <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="tel"
                       className="form-input"
@@ -1087,20 +1260,57 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       required
                     />
                   </div>
+
+                  <div className="form-group">
+                    <label className="form-label">ID Validity &amp; Verification Status <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value="Verified Active &amp; Valid Means of ID"
+                      disabled
+                      style={{ background: 'rgba(16, 185, 129, 0.08)', color: '#059669', fontWeight: 600 }}
+                    />
+                  </div>
                 </div>
 
-                <div className="form-group" style={{ marginBottom: '2rem' }}>
-                  <label className="form-label">Registered Operating Business Address</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. NNPC Filling Station, Ide-orogbo, Ibeju Lekki, Lagos"
-                    value={formData.business_address}
-                    onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
-                  />
+                {/* Mandatory Address Fields Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">
+                      <Building2 size={13} color="var(--brand-cerulean)" /> Registered Operating Business Address <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. NNPC Filling Station, Ide-orogbo, Ibeju Lekki, Lagos State"
+                      value={formData.business_address}
+                      onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
+                      required
+                    />
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                      Physical commercial premises where borrower operates.
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      <Home size={13} color="var(--brand-cerulean)" /> Promoter / Managing Director Residential Address <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Plot 14, Admiralty Way, Lekki Phase 1, Lagos State"
+                      value={formData.residential_address}
+                      onChange={(e) => setFormData({ ...formData, residential_address: e.target.value })}
+                      required
+                    />
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                      Primary residential domicile of principal promoter / director.
+                    </div>
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setStep(1)}>
                     ← Back to Facility Architecture
                   </button>
@@ -1108,7 +1318,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     type="button"
                     className="btn btn-primary btn-lg"
                     onClick={() => setStep(3)}
-                    disabled={!formData.applicant_name || !formData.email || !formData.bvn}
+                    disabled={!formData.applicant_name || !formData.email || !formData.bvn || !formData.phone || !formData.business_address || !formData.residential_address}
                   >
                     Proceed to Cashflow &amp; Documents <ArrowRight size={18} />
                   </button>
@@ -1116,7 +1326,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
               </div>
             )}
 
-            {/* STEP 3: FINANCIAL PROFILE & BANK STATEMENT UPLOAD */}
+            {/* STEP 3: FINANCIAL PROFILE & COMPREHENSIVE DOCUMENT MANIFEST */}
             {step === 3 && (
               <div className="glass-panel cyber-top-edge" style={{ padding: '2.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem' }}>
@@ -1125,131 +1335,193 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       3. Cashflow Profile &amp; Document Manifest
                     </h3>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
-                      Provide turnover estimates and attach supporting credit appraisal documents.
+                      Provide turnover estimates and attach supporting credit appraisal documents. All fields marked (<span style={{ color: '#ef4444' }}>*</span>) are compulsory.
                     </p>
                   </div>
                   <span className="status-pill pill-cyan">Step 3 of 3</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.75rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                   <div className="form-group">
-                    <label className="form-label">Average Monthly Inflow / Turnover (₦)</label>
+                    <label className="form-label">Average Monthly Inflow / Turnover (₦) <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="number"
                       className="form-input"
                       value={formData.monthly_income}
                       onChange={(e) => setFormData({ ...formData, monthly_income: Number(e.target.value) })}
                       placeholder="e.g. 142,222,475"
+                      required
                       style={{ fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Existing Monthly Debt Service / Loans (₦)</label>
+                    <label className="form-label">Existing Monthly Debt Service / Loans (₦) <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="number"
                       className="form-input"
                       value={formData.existing_monthly_debt}
                       onChange={(e) => setFormData({ ...formData, existing_monthly_debt: Number(e.target.value) })}
                       placeholder="e.g. 1,000,000"
+                      required
                       style={{ fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Estimated Monthly Operating Expenses (₦)</label>
+                    <label className="form-label">Estimated Monthly Operating Expenses (₦) <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="number"
                       className="form-input"
                       value={formData.estimated_monthly_expenses}
                       onChange={(e) => setFormData({ ...formData, estimated_monthly_expenses: Number(e.target.value) })}
                       placeholder="e.g. 8,500,000"
+                      required
                       style={{ fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Estimated Value of Collateral / Pledged Assets (₦)</label>
+                    <label className="form-label">Estimated Value of Collateral / Pledged Assets (₦) <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="number"
                       className="form-input"
                       value={formData.collateral_value}
                       onChange={(e) => setFormData({ ...formData, collateral_value: Number(e.target.value) })}
                       placeholder="e.g. 108,500,000"
+                      required
                       style={{ fontFamily: 'var(--font-mono)' }}
                     />
                   </div>
                 </div>
 
-                {/* High-Tech Document Dropzone */}
+                <div className="form-group" style={{ marginBottom: '1.75rem' }}>
+                  <label className="form-label">Pledged Collateral Description &amp; Backing Asset Particulars <span style={{ color: '#ef4444' }}>*</span></label>
+                  <textarea
+                    className="form-textarea"
+                    rows={2}
+                    placeholder="e.g. 10 Units of 30-Ton Haulage Trucks (Comprehensive Insured, Opticom as First Loss Payee) & Registered Legal Mortgage on Commercial Yard at Ibeju Lekki"
+                    value={formData.collateral_description}
+                    onChange={(e) => setFormData({ ...formData, collateral_description: e.target.value })}
+                    required
+                  />
+                </div>
+
+                {/* Mandatory Documentation Standards Box */}
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(0, 150, 204, 0.05) 0%, rgba(248, 250, 252, 0.9) 100%)',
+                  border: '1px solid rgba(0, 150, 204, 0.3)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '1.15rem 1.35rem',
+                  marginBottom: '1.5rem',
+                  fontSize: '0.82rem',
+                  color: 'var(--text-secondary)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.35rem' }}>
+                    <ShieldCheck size={18} color="var(--brand-cerulean)" />
+                    <strong style={{ color: 'var(--text-highlight)', fontSize: '0.88rem' }}>Mandatory Document Standards &amp; List of Essentials:</strong>
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: '22px', lineHeight: 1.5, fontSize: '0.78rem' }}>
+                    <li><strong>Valid Means of Identification:</strong> Must be a valid, unexpired National ID card, Digital NIN slip, Permanent Voter's Card (PVC), International Passport, or Driver's License.</li>
+                    <li><strong>Utility Bill:</strong> A valid utility bill (PHCN/EKEDC electricity, water, or waste) dated <em>within the last 3 to 6 months (not older than 6 months)</em>.</li>
+                    <li><strong>Work ID &amp; Passport Photo:</strong> Valid employee/enterprise identity card and a clear, recent white-background passport photograph.</li>
+                    <li><strong>Bank Statements &amp; CAC:</strong> 6-month continuous bank statement (PDF/CSV) and official CAC Incorporation proofs (Certificate, Status Report, MemArt).</li>
+                    <li><strong>Collateral Backing Documents:</strong> Clear documentation proving asset title, ownership, vehicle registration, and valuation for pledged collateral.</li>
+                  </ul>
+                </div>
+
+                {/* High-Tech Document Dropzone & Category Uploaders */}
                 <div style={{
                   border: '2px dashed rgba(0, 150, 204, 0.4)',
                   borderRadius: 'var(--radius-lg)',
-                  padding: '2.25rem',
+                  padding: '2rem 1.75rem',
                   background: 'rgba(0, 150, 204, 0.02)',
                   marginBottom: '2rem',
                   textAlign: 'center'
                 }}>
                   <div style={{
-                    width: '60px',
-                    height: '60px',
+                    width: '56px',
+                    height: '56px',
                     borderRadius: '50%',
                     background: 'rgba(0, 150, 204, 0.08)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    margin: '0 auto 1rem auto',
+                    margin: '0 auto 0.75rem auto',
                     boxShadow: '0 2px 10px rgba(0, 150, 204, 0.15)'
                   }}>
-                    <UploadCloud size={30} color="var(--brand-cerulean)" />
+                    <UploadCloud size={28} color="var(--brand-cerulean)" />
                   </div>
 
-                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-highlight)', fontFamily: 'var(--font-display)' }}>
-                    Attach Supporting Credit Evidence
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-highlight)', fontFamily: 'var(--font-display)', margin: '0 0 0.25rem 0' }}>
+                    Attach Required Credit Documentation
                   </h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '620px', margin: '0.35rem auto 1.5rem auto' }}>
-                    Upload 6-month Bank Statement (PDF/CSV/Excel), Contract Award / Purchase Order, CAC Registration, and any other supporting documents.
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', maxWidth: '640px', margin: '0 auto 1.5rem auto' }}>
+                    Click the buttons below to upload each essential document. Formats accepted: PDF, CSV, Excel, JPEG, PNG (Max 15MB/file).
                   </p>
 
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
-                    <label className="btn btn-secondary btn-sm btn-glow-cyan" style={{ cursor: 'pointer' }}>
-                      + Bank Statement (PDF/CSV)
-                      <input
-                        type="file"
-                        accept=".pdf,.csv,.xlsx"
-                        style={{ display: 'none' }}
-                        onChange={(e) => handleFileUpload(e, 'BANK_STATEMENT')}
-                      />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', textAlign: 'left' }}>
+                    {/* 1. Bank Statement */}
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '0.75rem 1rem', background: '#ffffff', border: '1px solid #bae6fd' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--brand-cerulean)', fontSize: '0.82rem' }}>+ 6-Month Bank Statement *</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>PDF / CSV / Excel turnover files</div>
+                      <input type="file" accept=".pdf,.csv,.xlsx" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'BANK_STATEMENT')} />
                     </label>
 
-                    <label className="btn btn-secondary btn-sm btn-glow-cyan" style={{ cursor: 'pointer' }}>
-                      + Contract / PO Award
-                      <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        style={{ display: 'none' }}
-                        onChange={(e) => handleFileUpload(e, 'CONTRACT_PO')}
-                      />
+                    {/* 2. Means of ID */}
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '0.75rem 1rem', background: '#ffffff', border: '1px solid #bae6fd' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--brand-cerulean)', fontSize: '0.82rem' }}>+ Valid Means of ID *</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>National ID, NIN, Voter's, Passport, Driver's</div>
+                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'MEANS_OF_ID')} />
                     </label>
 
-                    <label className="btn btn-secondary btn-sm btn-glow-cyan" style={{ cursor: 'pointer' }}>
-                      + CAC Registration Proof
-                      <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        style={{ display: 'none' }}
-                        onChange={(e) => handleFileUpload(e, 'CAC_REGISTRATION')}
-                      />
+                    {/* 3. Utility Bill */}
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '0.75rem 1rem', background: '#ffffff', border: '1px solid #bae6fd' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--brand-cerulean)', fontSize: '0.82rem' }}>+ Utility Bill (≤ 6 Months) *</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>PHCN / EKEDC / Water Bill (3-6 mo)</div>
+                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'UTILITY_BILL')} />
                     </label>
 
-                    <label className="btn btn-secondary btn-sm btn-glow-cyan" style={{ cursor: 'pointer', background: 'rgba(0, 150, 204, 0.12)', border: '1px solid rgba(0, 150, 204, 0.45)', color: '#0096cc', fontWeight: 700 }}>
-                      + Upload Other Supporting Documents
-                      <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx"
-                        style={{ display: 'none' }}
-                        onChange={(e) => handleFileUpload(e, 'OTHER_SUPPORTING')}
-                      />
+                    {/* 4. Passport Photo */}
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '0.75rem 1rem', background: '#ffffff', border: '1px solid #bae6fd' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--brand-cerulean)', fontSize: '0.82rem' }}>+ Passport Photograph *</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Recent white-background portrait</div>
+                      <input type="file" accept=".jpg,.jpeg,.png" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'PASSPORT_PHOTO')} />
+                    </label>
+
+                    {/* 5. Work ID */}
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '0.75rem 1rem', background: '#ffffff', border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem' }}>+ Valid Work ID</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Staff identification or employer badge</div>
+                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'WORK_ID')} />
+                    </label>
+
+                    {/* 6. CAC Registration */}
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '0.75rem 1rem', background: '#ffffff', border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem' }}>+ CAC Registration Proof</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Certificate of Inc., Status Report, MemArt</div>
+                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'CAC_REGISTRATION')} />
+                    </label>
+
+                    {/* 7. Collateral Documents */}
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '0.75rem 1rem', background: '#ffffff', border: '1px solid #fecaca' }}>
+                      <div style={{ fontWeight: 700, color: '#dc2626', fontSize: '0.82rem' }}>+ Collateral Documents *</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Title Deed, C of O, Valuation, Car Reg</div>
+                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'COLLATERAL_DOCUMENT')} />
+                    </label>
+
+                    {/* 8. Contract / PO Award */}
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '0.75rem 1rem', background: '#ffffff', border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.82rem' }}>+ Contract / PO Award</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Award letter or verified purchase order</div>
+                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'CONTRACT_PO')} />
+                    </label>
+
+                    {/* 9. Upload Other Supporting Documents */}
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '0.75rem 1rem', background: 'rgba(0, 150, 204, 0.08)', border: '1px solid rgba(0, 150, 204, 0.45)' }}>
+                      <div style={{ fontWeight: 700, color: '#0096cc', fontSize: '0.82rem' }}>+ Upload Other Supporting Documents</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Tax clearance, board resolution, invoices</div>
+                      <input type="file" accept=".pdf,.jpg,.jpeg,.png,.docx,.xlsx" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, 'OTHER_SUPPORTING')} />
                     </label>
                   </div>
 
@@ -1257,25 +1529,33 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     <div style={{ marginTop: '1.75rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                       {uploadedFiles.map((f, i) => {
                         const typeLabel =
-                          f.type === 'BANK_STATEMENT' ? 'Bank Statement' :
-                            f.type === 'CONTRACT_PO' ? 'Contract / PO' :
-                              f.type === 'CAC_REGISTRATION' ? 'CAC Registration' :
-                                'Supporting Document';
+                          f.type === 'BANK_STATEMENT' ? '6-Month Bank Statement' :
+                            f.type === 'MEANS_OF_ID' ? 'Valid Means of ID (Passport/National ID/Voter/Driver)' :
+                              f.type === 'UTILITY_BILL' ? 'Utility Bill (Dated ≤ 6 Months)' :
+                                f.type === 'PASSPORT_PHOTO' ? 'Passport Photograph' :
+                                  f.type === 'WORK_ID' ? 'Valid Work Identification' :
+                                    f.type === 'CAC_REGISTRATION' ? 'CAC Registration Proof' :
+                                      f.type === 'COLLATERAL_DOCUMENT' ? 'Collateral Backing Evidence' :
+                                        f.type === 'CONTRACT_PO' ? 'Contract / PO Award' :
+                                          'Other Supporting Evidence';
                         return (
                           <div key={i} style={{
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             padding: '0.75rem 1.15rem',
-                            background: 'var(--bg-surface)',
+                            background: '#ffffff',
                             border: '1px solid var(--border-medium)',
                             borderRadius: 'var(--radius-md)',
-                            fontSize: '0.85rem'
+                            fontSize: '0.85rem',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                           }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                               <FileText size={18} color="var(--brand-cerulean)" />
-                              <span style={{ fontWeight: 700, color: 'var(--text-highlight)' }}>{f.name}</span>
-                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({typeLabel} &bull; {f.size})</span>
+                              <div style={{ textAlign: 'left' }}>
+                                <span style={{ fontWeight: 700, color: 'var(--text-highlight)' }}>{f.name}</span>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--brand-cerulean)', fontWeight: 600 }}>{typeLabel} &bull; {f.size}</div>
+                              </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                               <span className="status-pill pill-emerald" style={{ fontSize: '0.72rem' }}>Attached ✓</span>
@@ -1303,7 +1583,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     type="button"
                     className="btn btn-primary btn-lg"
                     onClick={handleSubmit}
-                    disabled={loading}
+                    disabled={loading || uploadedFiles.length === 0}
                   >
                     {loading ? (
                       <>

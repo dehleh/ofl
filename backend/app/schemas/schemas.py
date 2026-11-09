@@ -5,6 +5,9 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
+class BVNResolveRequest(BaseModel):
+    bvn: str = Field(..., min_length=10, max_length=11)
+
 class DirectApplicationCreate(BaseModel):
     applicant_name: str = Field(..., min_length=2)
     applicant_type: str = Field(default="INDIVIDUAL")  # INDIVIDUAL, SME, CORPORATE
@@ -13,6 +16,12 @@ class DirectApplicationCreate(BaseModel):
     bvn: Optional[str] = None
     nin: Optional[str] = None
     rc_number: Optional[str] = None
+    business_address: Optional[str] = None
+    residential_address: Optional[str] = None
+    means_of_id_type: Optional[str] = None  # NATIONAL_ID, NIN_SLIP, VOTERS_CARD, PASSPORT, DRIVERS_LICENSE
+    means_of_id_number: Optional[str] = None
+    collateral_description: Optional[str] = None
+    facility_type: Optional[str] = None
     amount: float = Field(..., gt=0)
     tenor_months: int = Field(..., ge=1, le=84)
     purpose: str = Field(..., min_length=5)

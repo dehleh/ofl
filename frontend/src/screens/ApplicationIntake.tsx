@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Send, AlertTriangle, CheckCircle, Calculator, FileText, ArrowRight } from 'lucide-react';
-import { submitDirectApplication, fetchPricingPolicy, PricingPolicy } from '../services/api';
+import { Send, AlertTriangle, CheckCircle, CheckCircle2, Calculator, FileText, ArrowRight, ShieldCheck, RefreshCw, Building2, Home } from 'lucide-react';
+import { submitDirectApplication, fetchPricingPolicy, resolveBVNIdentity, PricingPolicy } from '../services/api';
 
 interface ApplicationIntakeProps {
   onSuccess: (caseNumber: string) => void;
@@ -16,6 +16,10 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
     bvn: '',
     nin: '',
     rc_number: '',
+    business_address: '',
+    residential_address: '',
+    means_of_id_type: 'NATIONAL_ID',
+    means_of_id_number: '',
     amount: 5000000,
     tenor_months: 18,
     purpose: '',
@@ -25,9 +29,61 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
     collateral_value: 8000000
   });
 
+  const [bvnResolving, setBvnResolving] = useState<boolean>(false);
+  const [bvnResolutionFeedback, setBvnResolutionFeedback] = useState<{
+    success: boolean;
+    message: string;
+    full_name?: string;
+  } | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successInfo, setSuccessInfo] = useState<any>(null);
+
+  const handleBvnLookup = async (bvnToResolve: string) => {
+    const cleaned = bvnToResolve.trim();
+    if (cleaned.length !== 11 || !/^\d+$/.test(cleaned)) {
+      setBvnResolutionFeedback({
+        success: false,
+        message: 'BVN must be exactly 11 numeric digits.'
+      });
+      return;
+    }
+
+    setBvnResolving(true);
+    setBvnResolutionFeedback(null);
+
+    try {
+      const res = await resolveBVNIdentity(cleaned);
+      if (res && res.success) {
+        setFormData(prev => ({
+          ...prev,
+          bvn: cleaned,
+          applicant_name: res.applicant_name || res.full_name || prev.applicant_name,
+          phone: res.phone || prev.phone,
+          email: res.email || prev.email,
+          nin: res.nin || prev.nin,
+          rc_number: res.rc_number || prev.rc_number,
+          business_address: res.business_address || prev.business_address,
+          residential_address: res.residential_address || prev.residential_address,
+          means_of_id_type: res.means_of_id_type || prev.means_of_id_type,
+          means_of_id_number: res.means_of_id_number || prev.means_of_id_number,
+        }));
+        setBvnResolutionFeedback({
+          success: true,
+          message: res.message || `BVN Verified: ${res.full_name || res.applicant_name}`,
+          full_name: res.full_name || res.applicant_name
+        });
+      }
+    } catch (err: any) {
+      setBvnResolutionFeedback({
+        success: false,
+        message: err.message || err.detail || 'BVN verification query failed.'
+      });
+    } finally {
+      setBvnResolving(false);
+    }
+  };
 
   // Dynamic Pricing Policy from Admin Settings
   const [pricingPolicy, setPricingPolicy] = useState<PricingPolicy>({
@@ -44,7 +100,7 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
           setPricingPolicy(res);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Live deterministic calculations in form
@@ -199,42 +255,139 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
               </div>
 
               <div className="form-group">
-                <label className="form-label">Bank Verification Number (BVN) *</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label className="form-label">Bank Verification Number (BVN) *</label>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--brand-teal-light)' }}>11 Digits</span>
+                </div>
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    maxLength={11}
+                    value={formData.bvn}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 11);
+                      setFormData(prev => ({ ...prev, bvn: val }));
+                      if (val.length === 11) {
+                        handleBvnLookup(val);
+                      } else {
+                        setBvnResolutionFeedback(null);
+                      }
+                    }}
+                    placeholder="22XXXXXXXXX"
+                    style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleBvnLookup(formData.bvn)}
+                    disabled={bvnResolving || formData.bvn.length !== 11}
+                    style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <RefreshCw size={12} className={bvnResolving ? 'spin' : ''} />
+                    {bvnResolving ? 'Resolving...' : 'Auto-Fill'}
+                  </button>
+                </div>
+                {bvnResolutionFeedback && (
+                  <div style={{
+                    marginTop: '0.4rem',
+                    fontSize: '0.75rem',
+                    padding: '0.35rem 0.6rem',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: bvnResolutionFeedback.success ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                    color: bvnResolutionFeedback.success ? '#10b981' : '#ef4444'
+                  }}>
+                    {bvnResolutionFeedback.success ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
+                    <span>{bvnResolutionFeedback.message}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="split-view" style={{ gap: '0.75rem' }}>
+              <div className="form-group">
+                <label className="form-label">CAC RC / BN Number *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  required
+                  value={formData.rc_number}
+                  onChange={(e) => setFormData({ ...formData, rc_number: e.target.value })}
+                  placeholder="RC-123456 or BN-765432"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">National ID Number (NIN) *</label>
                 <input
                   type="text"
                   className="form-input"
                   required
                   maxLength={11}
-                  value={formData.bvn}
-                  onChange={(e) => setFormData({ ...formData, bvn: e.target.value })}
-                  placeholder="22XXXXXXXXX"
+                  value={formData.nin}
+                  onChange={(e) => setFormData({ ...formData, nin: e.target.value.replace(/\D/g, '').slice(0, 11) })}
+                  placeholder="11XXXXXXXXX"
+                  style={{ fontFamily: 'var(--font-mono)' }}
                 />
               </div>
             </div>
 
             <div className="split-view" style={{ gap: '0.75rem' }}>
               <div className="form-group">
-                <label className="form-label">CAC RC Number (If Corporate/SME)</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={formData.rc_number}
-                  onChange={(e) => setFormData({ ...formData, rc_number: e.target.value })}
-                  placeholder="RC-123456"
-                />
+                <label className="form-label">Primary Means of Identification *</label>
+                <select
+                  className="form-select"
+                  value={formData.means_of_id_type}
+                  onChange={(e) => setFormData({ ...formData, means_of_id_type: e.target.value })}
+                  required
+                >
+                  <option value="NATIONAL_ID">National ID Card (NIMC) - Valid</option>
+                  <option value="NIN_SLIP">Digital NIN Slip (NIMC) - Valid</option>
+                  <option value="VOTERS_CARD">Permanent Voter's Card (INEC PVC) - Valid</option>
+                  <option value="PASSPORT">International Passport (Immigration) - Valid</option>
+                  <option value="DRIVERS_LICENSE">Driver's License (FRSC) - Valid</option>
+                </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label">National ID Number (NIN)</label>
+                <label className="form-label">ID Document / Card Number *</label>
                 <input
                   type="text"
                   className="form-input"
-                  maxLength={11}
-                  value={formData.nin}
-                  onChange={(e) => setFormData({ ...formData, nin: e.target.value })}
-                  placeholder="11XXXXXXXXX"
+                  required
+                  value={formData.means_of_id_number}
+                  onChange={(e) => setFormData({ ...formData, means_of_id_number: e.target.value })}
+                  placeholder="e.g. NIN-65858750946 or FRSC-LA782910"
                 />
               </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Registered Operating Business Address *</label>
+              <input
+                type="text"
+                className="form-input"
+                required
+                value={formData.business_address}
+                onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
+                placeholder="Physical commercial premises where business operates"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Promoter / Director Residential Address *</label>
+              <input
+                type="text"
+                className="form-input"
+                required
+                value={formData.residential_address}
+                onChange={(e) => setFormData({ ...formData, residential_address: e.target.value })}
+                placeholder="Residential domicile address of managing director"
+              />
             </div>
 
             <div className="form-group">

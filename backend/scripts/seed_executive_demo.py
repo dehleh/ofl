@@ -653,6 +653,17 @@ def seed_demo(db_session=None):
         # 4. Populate each case
         for spec in demo_cases_spec:
             c_data = spec["customer"]
+            ext_refs = c_data.get("external_references", {})
+            bus_addr = ext_refs.get("registered_address", "Plot 10, Commercial District, Victoria Island, Lagos State")
+            res_addr = ext_refs.get("residential_address", "15, Admiralty Way, Lekki Phase 1, Lagos State")
+            
+            verified_attrs = dict(c_data.get("verified_attributes", {}))
+            verified_attrs.setdefault("business_address", bus_addr)
+            verified_attrs.setdefault("residential_address", res_addr)
+            verified_attrs.setdefault("means_of_id_type", "NATIONAL_ID")
+            verified_attrs.setdefault("means_of_id_number", f"NIN-{c_data.get('nin', '65858750946')}")
+            verified_attrs.setdefault("id_validity_status", "VALID_ACTIVE")
+
             customer = Customer(
                 customer_type=c_data["customer_type"],
                 name=c_data["name"],
@@ -661,14 +672,21 @@ def seed_demo(db_session=None):
                 bvn=c_data["bvn"],
                 nin=c_data["nin"],
                 rc_number=c_data["rc_number"],
-                external_references=c_data["external_references"],
-                verified_attributes=c_data["verified_attributes"],
+                external_references=ext_refs,
+                verified_attributes=verified_attrs,
                 created_at=spec["created_at"]
             )
             db.add(customer)
             db.flush()
 
             a_data = spec["application"]
+            raw_payload = {
+                "business_address": bus_addr,
+                "residential_address": res_addr,
+                "means_of_id_type": verified_attrs["means_of_id_type"],
+                "means_of_id_number": verified_attrs["means_of_id_number"],
+                "collateral_description": spec.get("collateral_desc")
+            }
             application = Application(
                 customer_id=customer.id,
                 amount=a_data["amount"],
@@ -678,6 +696,7 @@ def seed_demo(db_session=None):
                 intake_channel=a_data["intake_channel"],
                 status="SUBMITTED",
                 applicant_type=a_data["applicant_type"],
+                raw_payload=raw_payload,
                 created_at=spec["created_at"]
             )
             db.add(application)
@@ -708,19 +727,27 @@ def seed_demo(db_session=None):
                     "cac_status": "ACTIVE",
                     "pep_sanction_check": "CLEAN",
                     "watchlist_hit": False,
-                    "risk_rating": "LOW" if not spec.get("active_exception") else "MEDIUM"
+                    "risk_rating": "LOW" if not spec.get("active_exception") else "MEDIUM",
+                    "means_of_id_verified": True,
+                    "utility_bill_verified": True
                 },
                 reviewed_by="Automated Youverify Verification Gateway",
                 reviewed_at=spec["created_at"]
             )
             db.add(kyc)
 
-            # Create Standard Documents
+            # Create Comprehensive List of Essential Documents
+            safe_name = c_data['name'].replace(' ', '_').replace('&', 'and')
             doc_specs = [
-                ("BANK_STATEMENT", f"Bank_Statement_6M_{c_data['name'].replace(' ', '_')}.pdf", "Verified 6-Month Corporate Bank Statement with NIBSS e-stamp"),
-                ("CAC_INCORPORATION", f"CAC_Registration_{c_data['rc_number']}.pdf", "Corporate Affairs Commission Certificate of Incorporation and Status Report"),
-                ("CONTRACT_OR_INVOICE", f"Contract_Evidence_{credit_case.case_number}.pdf", "Supporting Supply Contract, Purchase Order and Invoices"),
-                ("DIRECTOR_ID", f"Director_National_ID_{c_data['nin']}.pdf", "NIN Card and Signature Card of Managing Director")
+                ("BANK_STATEMENT", f"Bank_Statement_6M_{safe_name}.pdf", "Verified 6-Month Corporate Bank Statement with NIBSS e-stamp"),
+                ("MEANS_OF_ID", f"Valid_National_ID_Card_{c_data.get('nin', '11223344')}.pdf", "Government Issued Valid National ID / NIN Slip (Unexpired)"),
+                ("UTILITY_BILL", f"EKEDC_Electricity_Utility_Bill_{c_data.get('rc_number', 'UTL')}.pdf", "Valid Electricity Utility Bill (Dated within last 3 months - <= 6 months)"),
+                ("PASSPORT_PHOTO", f"Director_Passport_Photo_{safe_name}.jpg", "Recent White-Background Portrait Photograph of Managing Director"),
+                ("WORK_ID", f"Corporate_Staff_ID_{safe_name}.pdf", "Verified Workplace Staff Means of Identification"),
+                ("CAC_REGISTRATION", f"CAC_Registration_{c_data['rc_number']}.pdf", "CAC Certificate of Incorporation, Status Report & MemArt"),
+                ("COLLATERAL_DOCUMENT", f"Collateral_Deed_Valuation_{credit_case.case_number}.pdf", f"Evidence of Collateral Backing: {spec.get('collateral_desc')}"),
+                ("CONTRACT_PO", f"Contract_Award_PO_{credit_case.case_number}.pdf", "Executing Commercial Contract / Verified Purchase Order"),
+                ("OTHER_SUPPORTING", f"Tax_Clearance_and_Board_Resolution_{credit_case.case_number}.pdf", "Audited Financials, Tax Clearance & Corporate Resolution")
             ]
             for doc_type, filename, summary in doc_specs:
                 doc = Document(

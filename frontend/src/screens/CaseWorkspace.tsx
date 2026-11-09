@@ -535,6 +535,10 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
               <div><span style={{ color: 'var(--text-muted)' }}>NIN:</span> <span style={{ fontFamily: 'var(--font-mono)' }}>{customer.nin || 'N/A'}</span></div>
               <div><span style={{ color: 'var(--text-muted)' }}>RC / Reg Number:</span> <span style={{ fontFamily: 'var(--font-mono)' }}>{customer.rc_number || 'N/A'}</span></div>
               <div><span style={{ color: 'var(--text-muted)' }}>Phone:</span> {customer.phone || 'N/A'}</div>
+              <div><span style={{ color: 'var(--text-muted)' }}>Means of ID:</span> <span>{customer.verified_attributes?.means_of_id_type || application.raw_payload?.means_of_id_type || 'National ID'} ({customer.verified_attributes?.means_of_id_number || application.raw_payload?.means_of_id_number || 'Confirmed'})</span></div>
+              <div><span style={{ color: 'var(--text-muted)' }}>Email:</span> <span>{customer.email || 'N/A'}</span></div>
+              <div style={{ gridColumn: '1 / -1' }}><span style={{ color: 'var(--text-muted)' }}>Operating Business Address:</span> <strong style={{ color: 'var(--text-highlight)' }}>{customer.verified_attributes?.business_address || application.raw_payload?.business_address || 'Registered Office Address on File'}</strong></div>
+              <div style={{ gridColumn: '1 / -1' }}><span style={{ color: 'var(--text-muted)' }}>Director Residential Address:</span> <span>{customer.verified_attributes?.residential_address || application.raw_payload?.residential_address || 'Director Residential Address on File'}</span></div>
             </div>
 
             <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>

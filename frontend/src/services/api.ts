@@ -87,6 +87,15 @@ async function safeJson(res: Response) {
   return data;
 }
 
+export async function resolveBVNIdentity(bvn: string) {
+  const res = await fetch(`${API_BASE}/intake/resolve-bvn`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bvn })
+  });
+  return safeJson(res);
+}
+
 export async function submitDirectApplication(data: any) {
   const res = await fetch(`${API_BASE}/intake/direct`, {
     method: 'POST',
