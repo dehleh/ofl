@@ -165,6 +165,11 @@ export const AdminConfigPortal: React.FC = () => {
   const [emailForm, setEmailForm] = useState<any>({});
   const [smsForm, setSmsForm] = useState<any>({});
   const [policyForm, setPolicyForm] = useState<any>({});
+  const [webhookForm, setWebhookForm] = useState<any>({
+    besto_webhook_secret: 'OPTICOM_DEFAULT_WEBHOOK_SECRET_2026',
+    youverify_webhook_secret: 'tKQglemsJkFw4Ci6HoVMQstDsm13ZwfuYXNG',
+    require_hmac_in_dev: false
+  });
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
@@ -193,6 +198,14 @@ export const AdminConfigPortal: React.FC = () => {
       if (configData.MFA_CONFIG?.value) setMfaForm({ ...configData.MFA_CONFIG.value });
       if (configData.EMAIL_CLIENT?.value) setEmailForm({ ...configData.EMAIL_CLIENT.value });
       if (configData.SMS_GATEWAY?.value) setSmsForm({ ...configData.SMS_GATEWAY.value });
+      if (configData.WEBHOOK_INTEGRATIONS?.value) {
+        setWebhookForm({
+          besto_webhook_secret: 'OPTICOM_DEFAULT_WEBHOOK_SECRET_2026',
+          youverify_webhook_secret: 'tKQglemsJkFw4Ci6HoVMQstDsm13ZwfuYXNG',
+          require_hmac_in_dev: false,
+          ...configData.WEBHOOK_INTEGRATIONS.value
+        });
+      }
       if (configData.CREDIT_THRESHOLDS?.value) {
         setPolicyForm({
           besto_max: 2000000,
@@ -1111,179 +1124,48 @@ export const AdminConfigPortal: React.FC = () => {
 
       {/* TAB 5: POLICY THRESHOLDS & WEBHOOKS */}
       {activeTab === 'POLICY' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '880px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '1050px' }}>
 
-          {/* SECTION 1: CBN BENCHMARK & COMMERCIAL APR PRICING */}
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '8px',
-                background: 'rgba(0, 150, 204, 0.12)',
-                color: '#0096cc',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
+          {/* Pricing Hub Reference Notice */}
+          <div style={{
+            background: 'rgba(0, 150, 204, 0.06)',
+            border: '1px solid rgba(0, 150, 204, 0.22)',
+            borderRadius: '8px',
+            padding: '0.85rem 1.15rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '0.84rem',
+            flexWrap: 'wrap',
+            gap: '0.75rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <span style={{
+                background: '#0096cc',
+                color: '#ffffff',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                padding: '3px 8px',
+                borderRadius: '4px',
+                letterSpacing: '0.04em'
               }}>
-                <Zap size={22} />
-              </div>
-              <div>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
-                  Central Bank of Nigeria (CBN) Benchmark & Commercial Pricing Policy
-                </h2>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
-                  Manage the regulatory Monetary Policy Rate (MPR), commercial risk spread, and effective APR driving borrower calculators and facility term sheets.
-                </p>
-              </div>
+                INTEREST PRICING
+              </span>
+              <span style={{ color: 'var(--text-highlight)' }}>
+                Monetary Policy Rate (<strong>23% MPR</strong>), Risk Margin (<strong>5%</strong>), and Effective Lending Rate (<strong>28% APR</strong>) are configured in the <strong>Fee Schedule &amp; Bespoke</strong> hub.
+              </span>
             </div>
-
-            {/* Live Pricing Formula Banner */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(0, 150, 204, 0.08) 0%, rgba(4, 19, 38, 0.04) 100%)',
-              border: '1px solid rgba(0, 150, 204, 0.25)',
-              borderRadius: '8px',
-              padding: '0.85rem 1rem',
-              marginBottom: '1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '0.75rem'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                <span style={{
-                  background: '#0096cc',
-                  color: '#ffffff',
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  padding: '3px 8px',
-                  borderRadius: '4px',
-                  letterSpacing: '0.04em'
-                }}>
-                  ACTIVE PRICING FORMULA
-                </span>
-                <span style={{ fontSize: '0.84rem', color: 'var(--text-highlight)' }}>
-                  CBN MPR (<strong>{policyForm.cbn_mpr ?? 23.0}%</strong>) + Risk Spread (<strong>{policyForm.commercial_margin ?? 5.0}%</strong>) =
-                  <strong style={{ color: '#0096cc', marginLeft: '0.4rem', fontSize: '1.05rem', fontFamily: 'var(--font-mono)' }}>
-                    {policyForm.effective_apr ?? 28.0}% APR
-                  </strong>
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
-                  onClick={() => {
-                    const mpr = policyForm.cbn_mpr ?? 23.0;
-                    const margin = policyForm.commercial_margin ?? 5.0;
-                    const autoApr = Math.round((mpr + margin) * 100) / 100;
-                    setPolicyForm({ ...policyForm, effective_apr: autoApr });
-                    showToast(`Calculated APR: ${mpr}% + ${margin}% = ${autoApr}% APR`);
-                  }}
-                >
-                  Sync APR = MPR + Spread
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', fontWeight: 600 }}
-                  onClick={() => setActiveTab('FEES')}
-                >
-                  Open Fee Schedule &amp; Bespoke Hub →
-                </button>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '0.5rem' }}>
-              <div className="form-group">
-                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <span>CBN MPR Benchmark (%)</span>
-                </label>
-                <input
-                  type="number"
-                  step="0.25"
-                  className="form-input"
-                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}
-                  value={policyForm.cbn_mpr ?? 23.0}
-                  onChange={(e) => {
-                    const mpr = parseFloat(e.target.value) || 0;
-                    const margin = policyForm.commercial_margin ?? 5.0;
-                    setPolicyForm({
-                      ...policyForm,
-                      cbn_mpr: mpr,
-                      effective_apr: Math.round((mpr + margin) * 100) / 100
-                    });
-                  }}
-                />
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  CBN Monetary Policy Rate
-                </span>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">
-                  Commercial Risk Margin (%)
-                </label>
-                <input
-                  type="number"
-                  step="0.25"
-                  className="form-input"
-                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}
-                  value={policyForm.commercial_margin ?? 5.0}
-                  onChange={(e) => {
-                    const margin = parseFloat(e.target.value) || 0;
-                    const mpr = policyForm.cbn_mpr ?? 23.0;
-                    setPolicyForm({
-                      ...policyForm,
-                      commercial_margin: margin,
-                      effective_apr: Math.round((mpr + margin) * 100) / 100
-                    });
-                  }}
-                />
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Opticom commercial risk spread
-                </span>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" style={{ color: '#0096cc', fontWeight: 700 }}>
-                  Effective Lending Rate (APR %)
-                </label>
-                <input
-                  type="number"
-                  step="0.25"
-                  className="form-input"
-                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 800, borderColor: '#0096cc', color: '#0096cc' }}
-                  value={policyForm.effective_apr ?? 28.0}
-                  onChange={(e) => setPolicyForm({ ...policyForm, effective_apr: parseFloat(e.target.value) || 0 })}
-                />
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Applied across loan calculators
-                </span>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">
-                  Upfront Fee Rate (%)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  className="form-input"
-                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}
-                  value={policyForm.upfront_fee_pct ?? 4.5}
-                  onChange={(e) => setPolicyForm({ ...policyForm, upfront_fee_pct: parseFloat(e.target.value) || 0 })}
-                />
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                  Appraisal, facility &amp; legal fees
-                </span>
-              </div>
-            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', fontWeight: 600 }}
+              onClick={() => setActiveTab('FEES')}
+            >
+              Open Fee Schedule &amp; Pricing Hub →
+            </button>
           </div>
 
-          {/* SECTION 2: CREDIT ORIGINATION THRESHOLDS & APPROVAL LIMITS */}
+          {/* SECTION 1: CREDIT ORIGINATION THRESHOLDS & APPROVAL LIMITS */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
               <div style={{
@@ -1308,36 +1190,39 @@ export const AdminConfigPortal: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
               <div className="form-group">
-                <label className="form-label">BESTO Boundary Upper Limit (₦)</label>
+                <label className="form-label" style={{ fontWeight: 600 }}>BESTO Boundary Upper Limit (₦)</label>
                 <input
                   type="number"
                   className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: '0.92rem' }}
                   value={policyForm.besto_max || 2000000}
                   onChange={(e) => setPolicyForm({ ...policyForm, besto_max: parseFloat(e.target.value) || 2000000 })}
                 />
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Applications &le; ₦2M originate in BESTO</span>
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Applications &le; ₦2M originate in BESTO</span>
               </div>
 
               <div className="form-group">
-                <label className="form-label">OFL Direct Lower Threshold (₦)</label>
+                <label className="form-label" style={{ fontWeight: 600 }}>OFL Direct Lower Threshold (₦)</label>
                 <input
                   type="number"
                   className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: '0.92rem' }}
                   value={policyForm.direct_min || 2000000.01}
                   onChange={(e) => setPolicyForm({ ...policyForm, direct_min: parseFloat(e.target.value) || 2000000.01 })}
                 />
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Applications &gt; ₦2M originate via Direct Portal</span>
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>Applications &gt; ₦2M originate via Direct Portal</span>
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
               <div className="form-group">
-                <label className="form-label">Analyst Limit (₦)</label>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.8rem' }}>Analyst Limit (₦)</label>
                 <input
                   type="number"
                   className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}
                   value={policyForm.analyst_limit || 2000000}
                   onChange={(e) => setPolicyForm({ ...policyForm, analyst_limit: parseFloat(e.target.value) || 2000000 })}
                 />
@@ -1345,10 +1230,11 @@ export const AdminConfigPortal: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">HRM Mandate Limit (₦)</label>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '0.8rem' }}>HRM Mandate Limit (₦)</label>
                 <input
                   type="number"
                   className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}
                   value={policyForm.hrm_limit || 5000000}
                   onChange={(e) => setPolicyForm({ ...policyForm, hrm_limit: parseFloat(e.target.value) || 5000000 })}
                 />
@@ -1356,37 +1242,127 @@ export const AdminConfigPortal: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label" style={{ color: '#0096cc', fontWeight: 700 }}>MD Mandate Limit (₦)</label>
+                <label className="form-label" style={{ color: '#0096cc', fontWeight: 700, fontSize: '0.8rem' }}>MD Mandate Limit (₦)</label>
                 <input
                   type="number"
                   className="form-input"
-                  style={{ borderColor: '#0096cc', fontWeight: 700 }}
+                  style={{ borderColor: '#0096cc', fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}
                   value={policyForm.md_limit || 20000000}
                   onChange={(e) => setPolicyForm({ ...policyForm, md_limit: parseFloat(e.target.value) || 20000000 })}
                 />
-                <span style={{ fontSize: '0.72rem', color: '#0096cc' }}>Final sanction for facilities &le; ₦20M</span>
+                <span style={{ fontSize: '0.72rem', color: '#0096cc', fontWeight: 600 }}>Final sanction for facilities &le; ₦20M</span>
               </div>
 
               <div className="form-group">
-                <label className="form-label" style={{ color: '#ef4444', fontWeight: 700 }}>BCC Sanction Threshold (₦)</label>
+                <label className="form-label" style={{ color: '#ef4444', fontWeight: 700, fontSize: '0.8rem' }}>BCC Sanction Limit (₦)</label>
                 <input
                   type="number"
                   className="form-input"
-                  style={{ borderColor: '#ef4444', fontWeight: 700 }}
+                  style={{ borderColor: '#ef4444', fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}
                   value={policyForm.bcc_limit || 20000000}
                   onChange={(e) => setPolicyForm({ ...policyForm, bcc_limit: parseFloat(e.target.value) || 20000000 })}
                 />
-                <span style={{ fontSize: '0.72rem', color: '#ef4444' }}>Board Credit Committee required &gt; ₦20M</span>
+                <span style={{ fontSize: '0.72rem', color: '#ef4444', fontWeight: 600 }}>Board Credit Committee required &gt; ₦20M</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
               <button
                 className="btn btn-primary"
                 onClick={() => handleSaveConfig('CREDIT_THRESHOLDS', policyForm)}
                 disabled={savingKey === 'CREDIT_THRESHOLDS'}
               >
-                {savingKey === 'CREDIT_THRESHOLDS' ? 'Saving Policy...' : 'Save Credit Policy & Pricing Parameters'}
+                {savingKey === 'CREDIT_THRESHOLDS' ? 'Saving Thresholds...' : 'Save Credit Origination Thresholds'}
+              </button>
+            </div>
+          </div>
+
+          {/* SECTION 2: INBOUND PARTNER WEBHOOKS & SECURITY GATEWAYS */}
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '8px',
+                background: 'rgba(0, 150, 204, 0.12)',
+                color: '#0096cc',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Globe size={22} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
+                  Inbound Partner Webhooks &amp; Cryptographic Gateway
+                </h2>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
+                  Cryptographic HMAC-SHA256 signature keys for BESTO retail ingestion and Youverify KYC callback verification.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600 }}>BESTO Retail Inbound Webhook Secret</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                  value={webhookForm.besto_webhook_secret || ''}
+                  onChange={(e) => setWebhookForm({ ...webhookForm, besto_webhook_secret: e.target.value })}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Shared secret for authenticating automated loan intake from BESTO
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600 }}>Youverify KYC Callback Secret</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                  value={webhookForm.youverify_webhook_secret || ''}
+                  onChange={(e) => setWebhookForm({ ...webhookForm, youverify_webhook_secret: e.target.value })}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Cryptographic signature used to verify asynchronous identity status webhooks
+                </span>
+              </div>
+            </div>
+
+            <div style={{
+              background: 'var(--bg-dark)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '6px',
+              padding: '0.85rem 1rem',
+              marginBottom: '1.25rem'
+            }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-highlight)', marginBottom: '0.5rem' }}>
+                Registered Webhook Receiver Endpoints:
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span style={{ background: 'rgba(5, 150, 105, 0.15)', color: '#10b981', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>POST</span>
+                  <span>/api/v1/intake/webhook/besto</span>
+                  <span style={{ color: 'var(--text-muted)', marginLeft: 'auto' }}>BESTO Ingestion Listener</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span style={{ background: 'rgba(5, 150, 105, 0.15)', color: '#10b981', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>POST</span>
+                  <span>/api/v1/exceptions/youverify/webhook</span>
+                  <span style={{ color: 'var(--text-muted)', marginLeft: 'auto' }}>Youverify Identity Callback</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => handleSaveConfig('WEBHOOK_INTEGRATIONS', webhookForm)}
+                disabled={savingKey === 'WEBHOOK_INTEGRATIONS'}
+              >
+                {savingKey === 'WEBHOOK_INTEGRATIONS' ? 'Saving Webhooks...' : 'Save Webhook Security Parameters'}
               </button>
             </div>
           </div>
