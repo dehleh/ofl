@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { 
-  ShieldCheck, 
-  Lock, 
-  ArrowRight, 
-  UserCheck, 
-  AlertCircle, 
-  KeyRound, 
-  Building2, 
+import {
+  ShieldCheck,
+  Lock,
+  ArrowRight,
+  UserCheck,
+  AlertCircle,
+  KeyRound,
+  Building2,
   CheckCircle2,
   ExternalLink,
   ChevronRight,
@@ -22,6 +22,9 @@ interface StaffLoginScreenProps {
 }
 
 export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSuccess }) => {
+  const isProduction = import.meta.env.PROD || import.meta.env.VITE_APP_ENV === 'production';
+  const showDevLoginProfiles = !isProduction || import.meta.env.VITE_ENABLE_DEMO_LOGIN === 'true';
+
   const [username, setUsername] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -207,16 +210,16 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
         boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <img 
-            src="/opticom_logo.jpg" 
-            alt="Opticom Finance Limited" 
-            style={{ height: '36px', borderRadius: '6px' }} 
+          <img
+            src="/opticom_logo.jpg"
+            alt="Opticom Finance Limited"
+            style={{ height: '36px', borderRadius: '6px' }}
           />
           <div>
-            <div style={{ 
-              fontFamily: 'var(--font-display)', 
-              fontWeight: 800, 
-              fontSize: '1.05rem', 
+            <div style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: '1.05rem',
               color: '#0f172a',
               letterSpacing: '-0.02em',
               display: 'flex',
@@ -235,7 +238,7 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <a 
+          <a
             href="/"
             style={{
               display: 'inline-flex',
@@ -437,23 +440,25 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
                     <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155' }}>
                       Enter 6-Digit Security Code
                     </label>
-                    <button
-                      type="button"
-                      onClick={handleAutoFillMfa}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#0096cc',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.25rem'
-                      }}
-                    >
-                      <Sparkles size={12} /> Auto-fill Code (849203)
-                    </button>
+                    {showDevLoginProfiles && (
+                      <button
+                        type="button"
+                        onClick={handleAutoFillMfa}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#0096cc',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem'
+                        }}
+                      >
+                        <Sparkles size={12} /> Auto-fill Code (849203)
+                      </button>
+                    )}
                   </div>
                   <input
                     type="text"
@@ -524,289 +529,305 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
             </div>
           ) : (
             <>
-              {/* Mode Switch Tabs */}
-              <div style={{
-                display: 'flex',
-                borderBottom: '1px solid #e2e8f0',
-                background: '#f8fafc'
-              }}>
-                <button
-                  onClick={() => setActiveTab('LOGIN')}
-                  style={{
-                    flex: 1,
+              {/* Mode Switch Tabs (Evaluation Switcher Hidden in Production) */}
+              {showDevLoginProfiles ? (
+                <div style={{
+                  display: 'flex',
+                  borderBottom: '1px solid #e2e8f0',
+                  background: '#f8fafc'
+                }}>
+                  <button
+                    onClick={() => setActiveTab('LOGIN')}
+                    style={{
+                      flex: 1,
+                      padding: '0.85rem 1rem',
+                      background: activeTab === 'LOGIN' ? '#ffffff' : 'transparent',
+                      border: 'none',
+                      borderBottom: activeTab === 'LOGIN' ? '2px solid #0096cc' : 'none',
+                      fontWeight: activeTab === 'LOGIN' ? 700 : 500,
+                      color: activeTab === 'LOGIN' ? '#0096cc' : '#64748b',
+                      cursor: 'pointer',
+                      fontSize: '0.86rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <KeyRound size={15} /> Credentials Sign-In
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('FAST_SWITCH')}
+                    style={{
+                      flex: 1,
+                      padding: '0.85rem 1rem',
+                      background: activeTab === 'FAST_SWITCH' ? '#ffffff' : 'transparent',
+                      border: 'none',
+                      borderBottom: activeTab === 'FAST_SWITCH' ? '2px solid #0096cc' : 'none',
+                      fontWeight: activeTab === 'FAST_SWITCH' ? 700 : 500,
+                      color: activeTab === 'FAST_SWITCH' ? '#0096cc' : '#64748b',
+                      cursor: 'pointer',
+                      fontSize: '0.86rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <UserCheck size={15} /> Evaluator / RBAC Switcher
+                  </button>
+                </div>
+              ) : (
+                <div style={{
+                  padding: '1rem 1.5rem',
+                  borderBottom: '1px solid #e2e8f0',
+                  background: '#f8fafc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <Lock size={15} color="#0096cc" />
+                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>
+                    Enterprise Credentials Authentication
+                  </span>
+                </div>
+              )}
+
+              <div style={{ padding: '2rem 2.25rem' }}>
+                {error && (
+                  <div style={{
                     padding: '0.85rem 1rem',
-                    background: activeTab === 'LOGIN' ? '#ffffff' : 'transparent',
-                    border: 'none',
-                    borderBottom: activeTab === 'LOGIN' ? '2px solid #0096cc' : 'none',
-                    fontWeight: activeTab === 'LOGIN' ? 700 : 500,
-                    color: activeTab === 'LOGIN' ? '#0096cc' : '#64748b',
-                    cursor: 'pointer',
-                    fontSize: '0.86rem',
+                    borderRadius: '8px',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    color: '#b91c1c',
+                    fontSize: '0.85rem',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <KeyRound size={15} /> Credentials Sign-In
-                </button>
-                <button
-                  onClick={() => setActiveTab('FAST_SWITCH')}
-                  style={{
-                    flex: 1,
-                    padding: '0.85rem 1rem',
-                    background: activeTab === 'FAST_SWITCH' ? '#ffffff' : 'transparent',
-                    border: 'none',
-                    borderBottom: activeTab === 'FAST_SWITCH' ? '2px solid #0096cc' : 'none',
-                    fontWeight: activeTab === 'FAST_SWITCH' ? 700 : 500,
-                    color: activeTab === 'FAST_SWITCH' ? '#0096cc' : '#64748b',
-                    cursor: 'pointer',
-                    fontSize: '0.86rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <UserCheck size={15} /> Evaluator / RBAC Switcher
-                </button>
-              </div>
-
-          <div style={{ padding: '2rem 2.25rem' }}>
-            {error && (
-              <div style={{
-                padding: '0.85rem 1rem',
-                borderRadius: '8px',
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
-                color: '#b91c1c',
-                fontSize: '0.85rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.65rem',
-                marginBottom: '1.5rem'
-              }}>
-                <AlertCircle size={18} />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {activeTab === 'LOGIN' ? (
-              <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: '1.35rem' }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    color: '#334155',
-                    marginBottom: '0.45rem'
+                    gap: '0.65rem',
+                    marginBottom: '1.5rem'
                   }}>
-                    Staff Corporate Email or Username
-                  </label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. tunde.adebayo@opticomfinance.com or analyst"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 1rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.9rem',
-                      fontFamily: 'var(--font-sans)'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '1.75rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
-                    <label style={{
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      color: '#334155'
-                    }}>
-                      Security PIN or Password
-                    </label>
-                    <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                      Default UAT: <code>1988</code>
-                    </span>
+                    <AlertCircle size={18} />
+                    <span>{error}</span>
                   </div>
-                  <input
-                    type="password"
-                    className="form-input"
-                    placeholder="Enter 4-digit PIN or password"
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 1rem',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.9rem',
-                      fontFamily: 'var(--font-sans)',
-                      letterSpacing: '0.15em'
-                    }}
-                  />
-                </div>
+                )}
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn btn-primary"
-                  style={{
-                    width: '100%',
-                    padding: '0.85rem',
-                    fontSize: '0.95rem',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  {loading ? 'Authenticating Personnel...' : (
-                    <>
-                      Sign In to Underwriting Cockpit <ArrowRight size={16} />
-                    </>
-                  )}
-                </button>
-
-                <div style={{
-                  marginTop: '1.75rem',
-                  paddingTop: '1.25rem',
-                  borderTop: '1px solid #f1f5f9',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '0.75rem' }}>
-                    Enterprise Federated Identity
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleFastSwitch('analyst')}
-                      style={{
-                        flex: 1,
-                        padding: '0.6rem 0.75rem',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        fontSize: '0.78rem',
+                {activeTab === 'LOGIN' ? (
+                  <form onSubmit={handleSubmit}>
+                    <div style={{ marginBottom: '1.35rem' }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '0.82rem',
                         fontWeight: 600,
                         color: '#334155',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.4rem'
-                      }}
-                    >
-                      Google Workspace SSO
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleFastSwitch('bcc')}
-                      style={{
-                        flex: 1,
-                        padding: '0.6rem 0.75rem',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
-                        fontSize: '0.78rem',
-                        fontWeight: 600,
-                        color: '#334155',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.4rem'
-                      }}
-                    >
-                      Microsoft Entra ID
-                    </button>
-                  </div>
-                </div>
-              </form>
-            ) : (
-              <div>
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>
-                    Select Staff Underwriting Role for Instant UAT Verification
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.2rem' }}>
-                    Each role enforces genuine Role-Based Access Control (RBAC) and approval authorization limits.
-                  </div>
-                </div>
-
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                  gap: '0.85rem'
-                }}>
-                  {staffProfiles.map((p) => (
-                    <div
-                      key={p.roleKey}
-                      onClick={() => handleFastSwitch(p.roleKey)}
-                      style={{
-                        padding: '1rem',
-                        borderRadius: '10px',
-                        border: '1px solid #e2e8f0',
-                        background: '#f8fafc',
-                        cursor: 'pointer',
-                        transition: 'all 0.18s ease',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#0096cc';
-                        e.currentTarget.style.background = '#ffffff';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 150, 204, 0.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                        e.currentTarget.style.background = '#f8fafc';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}
-                    >
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.35rem' }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>
-                            {p.name}
-                          </span>
-                          <span className={`status-pill ${p.badgeClass}`} style={{ fontSize: '0.65rem' }}>
-                            {p.badge}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: '#0096cc', fontWeight: 600 }}>
-                          {p.title}
-                        </div>
-                        <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.15rem' }}>
-                          {p.department}
-                        </div>
-                      </div>
-
-                      <div style={{
-                        marginTop: '0.85rem',
-                        paddingTop: '0.65rem',
-                        borderTop: '1px solid #e2e8f0',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
+                        marginBottom: '0.45rem'
                       }}>
-                        <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>
-                          {p.authority}
+                        Staff Corporate Email or Username
+                      </label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. tunde.adebayo@opticomfinance.com or analyst"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '0.9rem',
+                          fontFamily: 'var(--font-sans)'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '1.75rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                        <label style={{
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          color: '#334155'
+                        }}>
+                          Security PIN or Password
+                        </label>
+                        <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                          Default UAT: <code>1988</code>
                         </span>
-                        <ChevronRight size={15} color="#0096cc" />
+                      </div>
+                      <input
+                        type="password"
+                        className="form-input"
+                        placeholder="Enter 4-digit PIN or password"
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '0.9rem',
+                          fontFamily: 'var(--font-sans)',
+                          letterSpacing: '0.15em'
+                        }}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="btn btn-primary"
+                      style={{
+                        width: '100%',
+                        padding: '0.85rem',
+                        fontSize: '0.95rem',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      {loading ? 'Authenticating Personnel...' : (
+                        <>
+                          Sign In to Underwriting Cockpit <ArrowRight size={16} />
+                        </>
+                      )}
+                    </button>
+
+                    <div style={{
+                      marginTop: '1.75rem',
+                      paddingTop: '1.25rem',
+                      borderTop: '1px solid #f1f5f9',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '0.75rem' }}>
+                        Enterprise Federated Identity
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleFastSwitch('analyst')}
+                          style={{
+                            flex: 1,
+                            padding: '0.6rem 0.75rem',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            background: '#ffffff',
+                            fontSize: '0.78rem',
+                            fontWeight: 600,
+                            color: '#334155',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.4rem'
+                          }}
+                        >
+                          Google Workspace SSO
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleFastSwitch('bcc')}
+                          style={{
+                            flex: 1,
+                            padding: '0.6rem 0.75rem',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            background: '#ffffff',
+                            fontSize: '0.78rem',
+                            fontWeight: 600,
+                            color: '#334155',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.4rem'
+                          }}
+                        >
+                          Microsoft Entra ID
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </form>
+                ) : (
+                  <div>
+                    <div style={{ marginBottom: '1.25rem' }}>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>
+                        Select Staff Underwriting Role for Instant UAT Verification
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.2rem' }}>
+                        Each role enforces genuine Role-Based Access Control (RBAC) and approval authorization limits.
+                      </div>
+                    </div>
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                      gap: '0.85rem'
+                    }}>
+                      {staffProfiles.map((p) => (
+                        <div
+                          key={p.roleKey}
+                          onClick={() => handleFastSwitch(p.roleKey)}
+                          style={{
+                            padding: '1rem',
+                            borderRadius: '10px',
+                            border: '1px solid #e2e8f0',
+                            background: '#f8fafc',
+                            cursor: 'pointer',
+                            transition: 'all 0.18s ease',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = '#0096cc';
+                            e.currentTarget.style.background = '#ffffff';
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 150, 204, 0.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = '#e2e8f0';
+                            e.currentTarget.style.background = '#f8fafc';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.35rem' }}>
+                              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>
+                                {p.name}
+                              </span>
+                              <span className={`status-pill ${p.badgeClass}`} style={{ fontSize: '0.65rem' }}>
+                                {p.badge}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: '#0096cc', fontWeight: 600 }}>
+                              {p.title}
+                            </div>
+                            <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.15rem' }}>
+                              {p.department}
+                            </div>
+                          </div>
+
+                          <div style={{
+                            marginTop: '0.85rem',
+                            paddingTop: '0.65rem',
+                            borderTop: '1px solid #e2e8f0',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>
+                              {p.authority}
+                            </span>
+                            <ChevronRight size={15} color="#0096cc" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-            </div>
             </>
           )}
 

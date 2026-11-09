@@ -127,9 +127,16 @@ def decode_access_token(token: str) -> TokenPayload:
 def get_current_user(token: Optional[str] = Depends(oauth2_scheme)) -> TokenPayload:
     """
     Dependency that extracts authenticated caller.
-    If no token is supplied in development/UAT demo mode, defaults to fallback ANALYST context.
+    In production, strictly enforces authentication with 401 Unauthorized.
+    In development/testing, falls back to mock analyst if no token is provided.
     """
     if not token:
+        if settings.ENVIRONMENT.lower() == "production" or not settings.DEBUG:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required. Bearer token missing.",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
         # Development fallback allows seamless testing without locking out automated tests
         return TokenPayload(
             sub="USR-OFL-001",

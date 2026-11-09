@@ -19,12 +19,12 @@ class Settings(BaseSettings):
         "sqlite:///./ofl.db"
     )
     
-    # CORS
+    # CORS (Configurable via environment variable for production Cloud Run deployment)
     CORS_ORIGINS: List[str] = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000"
+        origin.strip() for origin in os.getenv(
+            "CORS_ORIGINS", 
+            "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000,https://credit.opticomfinance.com,https://opticomfinance.com"
+        ).split(",") if origin.strip()
     ]
     
     # Boundary thresholds (PRD v1.1 Section 17.1)

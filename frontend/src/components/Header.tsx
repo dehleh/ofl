@@ -24,6 +24,19 @@ interface HeaderProps {
   onExitToPublicClient?: () => void;
 }
 
+const PERSONA_LABELS: Record<string, string> = {
+  MD: 'Managing Director (MD • Highest Executive & Admin Authority)',
+  ADMIN: 'System Administrator (Full Enterprise Admin & Config)',
+  ANALYST: 'Credit Analyst (Recommend & Review)',
+  HRM: 'Head of Risk Management (Risk Review & Concurrence)',
+  HEAD_OF_BD: 'Head of Business Development (Commercial Sanction)',
+  BCC: 'Board Credit Committee (Board Sanction > ₦20m)',
+  OPERATIONS: 'Credit Operations (Offer & Conditions)',
+  TREASURY: 'Treasury & Loan Operations (LOAN-DISC)',
+  BDO: 'Business Dev Officer (BDO Assisted)',
+  AUDITOR: 'Compliance Auditor (Read-Only Audit)'
+};
+
 export const Header: React.FC<HeaderProps> = ({
   currentPersona,
   onPersonaChange,
@@ -32,6 +45,11 @@ export const Header: React.FC<HeaderProps> = ({
   onSignOut,
   onExitToPublicClient
 }) => {
+  const isProduction = import.meta.env.PROD || import.meta.env.VITE_APP_ENV === 'production';
+  // Dev tools can be explicitly enabled for local development/demo if desired
+  const showDevSwitcher = !isProduction || import.meta.env.VITE_ENABLE_DEV_SWITCHER === 'true';
+  const showApiStatusBadge = !isProduction || import.meta.env.VITE_ENABLE_API_BADGE === 'true';
+
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Array<{
     id: string;
@@ -164,43 +182,81 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          padding: '0.35rem 0.75rem',
-          borderRadius: 'var(--radius-full)',
-          background: backendOnline ? 'rgba(5, 150, 105, 0.08)' : 'rgba(220, 38, 38, 0.08)',
-          border: `1px solid ${backendOnline ? 'rgba(5, 150, 105, 0.25)' : 'rgba(220, 38, 38, 0.25)'}`,
-          fontSize: '0.75rem',
-          fontFamily: 'var(--font-mono)',
-          fontWeight: 600,
-          color: backendOnline ? '#047857' : '#b91c1c'
-        }}>
-          <Radio size={13} style={{ animation: backendOnline ? 'pulseGlow 2s infinite' : 'none' }} />
-          <span>{backendOnline ? 'LIVE API ONLINE' : 'DISCONNECTED'}</span>
-        </div>
+        {/* Diagnostic API Connection Badge (Hidden in Production) */}
+        {showApiStatusBadge ? (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.35rem 0.75rem',
+            borderRadius: 'var(--radius-full)',
+            background: backendOnline ? 'rgba(5, 150, 105, 0.08)' : 'rgba(220, 38, 38, 0.08)',
+            border: `1px solid ${backendOnline ? 'rgba(5, 150, 105, 0.25)' : 'rgba(220, 38, 38, 0.25)'}`,
+            fontSize: '0.75rem',
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 600,
+            color: backendOnline ? '#047857' : '#b91c1c'
+          }}>
+            <Radio size={13} style={{ animation: backendOnline ? 'pulseGlow 2s infinite' : 'none' }} />
+            <span>{backendOnline ? 'LIVE API ONLINE' : 'DISCONNECTED'}</span>
+          </div>
+        ) : !backendOnline ? (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            padding: '0.35rem 0.75rem',
+            borderRadius: 'var(--radius-full)',
+            background: 'rgba(220, 38, 38, 0.08)',
+            border: '1px solid rgba(220, 38, 38, 0.25)',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: '#b91c1c'
+          }}>
+            <AlertTriangle size={13} />
+            <span>DISCONNECTED</span>
+          </div>
+        ) : null}
 
-        <div className="persona-switcher">
-          <UserCheck size={16} color="var(--brand-cerulean)" />
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Persona:</span>
-          <select
-            className="persona-select"
-            value={currentPersona}
-            onChange={(e) => onPersonaChange(e.target.value)}
-          >
-            <option value="MD">Managing Director (MD &bull; Highest Executive &amp; Admin Authority)</option>
-            <option value="ADMIN">System Administrator (Full Enterprise Admin &amp; Config)</option>
-            <option value="ANALYST">Credit Analyst (Recommend &amp; Review)</option>
-            <option value="HRM">Head of Risk Management (Risk Review &amp; Concurrence)</option>
-            <option value="HEAD_OF_BD">Head of Business Development (Commercial Sanction)</option>
-            <option value="BCC">Board Credit Committee (Board Sanction &gt; ₦20m)</option>
-            <option value="OPERATIONS">Credit Operations (Offer &amp; Conditions)</option>
-            <option value="TREASURY">Treasury &amp; Loan Operations (LOAN-DISC)</option>
-            <option value="BDO">Business Dev Officer (BDO Assisted)</option>
-            <option value="AUDITOR">Compliance Auditor (Read-Only Audit)</option>
-          </select>
-        </div>
+        {/* Persona Switcher (Development/Demo Mode) OR Institutional Verified Identity Badge (Production) */}
+        {showDevSwitcher ? (
+          <div className="persona-switcher">
+            <UserCheck size={16} color="var(--brand-cerulean)" />
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Persona:</span>
+            <select
+              className="persona-select"
+              value={currentPersona}
+              onChange={(e) => onPersonaChange(e.target.value)}
+            >
+              <option value="MD">Managing Director (MD &bull; Highest Executive &amp; Admin Authority)</option>
+              <option value="ADMIN">System Administrator (Full Enterprise Admin &amp; Config)</option>
+              <option value="ANALYST">Credit Analyst (Recommend &amp; Review)</option>
+              <option value="HRM">Head of Risk Management (Risk Review &amp; Concurrence)</option>
+              <option value="HEAD_OF_BD">Head of Business Development (Commercial Sanction)</option>
+              <option value="BCC">Board Credit Committee (Board Sanction &gt; ₦20m)</option>
+              <option value="OPERATIONS">Credit Operations (Offer &amp; Conditions)</option>
+              <option value="TREASURY">Treasury &amp; Loan Operations (LOAN-DISC)</option>
+              <option value="BDO">Business Dev Officer (BDO Assisted)</option>
+              <option value="AUDITOR">Compliance Auditor (Read-Only Audit)</option>
+            </select>
+          </div>
+        ) : (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.4rem 0.85rem',
+            borderRadius: '8px',
+            background: 'rgba(0, 150, 204, 0.07)',
+            border: '1px solid rgba(0, 150, 204, 0.25)'
+          }}>
+            <ShieldCheck size={15} color="#0096cc" />
+            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Role:</span>
+            <span style={{ fontSize: '0.78rem', color: '#0f172a', fontWeight: 700 }}>
+              {PERSONA_LABELS[currentPersona] || currentPersona}
+            </span>
+          </div>
+        )}
 
         {/* In-App Notifications Bell & Tray */}
         <div style={{ position: 'relative' }}>

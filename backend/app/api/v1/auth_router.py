@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
+from ...config import settings
 from ...core.security import (
     STAFF_DIRECTORY, 
     create_access_token, 
@@ -32,17 +33,24 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     """
     Standard staff login exchanging credentials or quick staff role for signed JWT.
     Checks database StaffUser directory and pre-provisioned directory.
+    In production: strictly enforces database user credentials and disables demo bypass.
     """
+    is_prod = settings.ENVIRONMENT.lower() == "production"
     key = payload.username_or_role.lower().strip()
     user = None
 
     # 1. Check database StaffUser directory
     try:
-        db_user = db.query(StaffUser).filter(
-            (StaffUser.username == key) | (StaffUser.email == key) | (StaffUser.role == key.upper())
-        ).first()
+        query_filter = (StaffUser.username == key) | (StaffUser.email == key)
+        if not is_prod:
+            query_filter = query_filter | (StaffUser.role == key.upper())
+            
+        db_user = db.query(StaffUser).filter(query_filter).first()
         if db_user:
-            if db_user.is_active and (payload.pin_or_password == db_user.pin_hash or payload.pin_or_password == "1988"):
+            valid_pin = (payload.pin_or_password == db_user.pin_hash) if is_prod else (
+                payload.pin_or_password == db_user.pin_hash or payload.pin_or_password == "1988"
+            )
+            if db_user.is_active and valid_pin:
                 user = {
                     "id": db_user.id,
                     "email": db_user.email,
@@ -61,8 +69,14 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     except Exception:
         pass
 
-    # 2. Check pre-provisioned directory
+    # 2. Check pre-provisioned directory (Only active in non-production environments)
     if not user:
+        if is_prod:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid username or security PIN."
+            )
+
         user = STAFF_DIRECTORY.get(key)
         if not user:
             for k, v in STAFF_DIRECTORY.items():
