@@ -107,15 +107,59 @@ def submit_approval_decision(
 
     # Route based on decision type
     next_state = credit_case.state
-    if payload.decision == "RETURN_FOR_REWORK":
-        # FR-08, FR-11: Open Exception and return to Analyst Review
+    current_level = payload.role.upper().replace(" ", "_")
+
+    if payload.decision in ["RETURN_FOR_REWORK", "RETURN_TO_BDO"]:
+        # Evaluate return originator and route to appropriate prior stage with stakeholder alerts
+        if current_level in ["ANALYST", "CREDIT_ANALYST"] or payload.decision == "RETURN_TO_BDO":
+            target_stage = CaseState.BDO_REWORK.value
+            owner = "Business Development Officer"
+            reason = f"Analyst requested missing details/clarification from BDO: {payload.comments}"
+        elif current_level in ["HEAD_OF_BD", "BDO_HEAD", "BD"]:
+            target_stage = CaseState.ANALYST_REVIEW.value
+            owner = "Credit Analyst"
+            reason = f"MCC (Head of BD) returned application to Credit Analyst: {payload.comments}"
+        elif current_level in ["HRM", "HEAD_OF_RISK_MANAGEMENT"]:
+            target_stage = CaseState.ANALYST_REVIEW.value
+            owner = "Credit Analyst"
+            reason = f"HRM Risk Exception returned to Credit Analyst: {payload.comments}"
+            # Notify Credit Analyst and Head of BD simultaneously
+            NotificationService.notify_hrm_exception_to_analyst_and_bd(
+                case_number=credit_case.case_number,
+                obligor_name=credit_case.application.customer.name,
+                hrm_actor=payload.actor,
+                exception_query=payload.comments
+            )
+        elif current_level in ["MD", "MANAGING_DIRECTOR", "CEO", "ADMIN", "SYSADMIN"]:
+            # MD can return to either HRM (default) or Head of BD
+            target_pref = (payload.target_role or "HRM").upper().replace(" ", "_")
+            if target_pref in ["HEAD_OF_BD", "BD", "BDO_HEAD"]:
+                target_stage = CaseState.HEAD_OF_BD_REVIEW.value
+                owner = "Head of Business Development"
+            else:
+                target_stage = CaseState.HRM_REVIEW.value
+                owner = "Head of Risk Management"
+            reason = f"MD Executive Query returned to {owner}: {payload.comments}"
+            # Notify Analyst, HRM, and Head of BD of MD's return
+            NotificationService.notify_md_return_to_stakeholders(
+                case_number=credit_case.case_number,
+                obligor_name=credit_case.application.customer.name,
+                md_actor=payload.actor,
+                md_reservation=payload.comments,
+                target_role=owner
+            )
+        else:
+            target_stage = CaseState.ANALYST_REVIEW.value
+            owner = "Credit Analyst"
+            reason = f"Returned for rework by {payload.role}: {payload.comments}"
+
         exception_item = ExceptionItem(
             case_id=credit_case.id,
             category="INTERNAL_CAM_CORRECTION",
             origin_stage=credit_case.state,
-            owner="Credit Analyst",
-            return_stage=CaseState.ANALYST_REVIEW.value,
-            reason=f"Rework requested by {payload.role}: {payload.comments}",
+            owner=owner,
+            return_stage=target_stage,
+            reason=reason,
             sla_hours=24,
             status="OPEN"
         )
@@ -124,12 +168,14 @@ def submit_approval_decision(
         ok, msg = TransitionService.execute_transition(
             db=db,
             credit_case=credit_case,
-            to_state=CaseState.ANALYST_REVIEW.value,
+            to_state=target_stage,
             actor=payload.actor,
             role=payload.role,
-            reason=f"Returned for rework: {payload.comments}"
+            reason=reason
         )
-        next_state = CaseState.ANALYST_REVIEW.value
+        if not ok:
+            raise HTTPException(status_code=400, detail=msg)
+        next_state = target_stage
 
     elif payload.decision == "REJECT":
         # FR-10: Authorized Final Rejection
@@ -145,69 +191,81 @@ def submit_approval_decision(
             raise HTTPException(status_code=400, detail=msg)
         next_state = CaseState.REJECTED.value
 
-    elif payload.decision in ["APPROVE", "RECOMMEND_APPROVE"]:
+    elif payload.decision in ["APPROVE", "RECOMMEND_APPROVE", "RESUBMIT"]:
         chain = AuthorityMatrix.get_required_approval_chain(amount)
-        current_level = payload.role.upper().replace(" ", "_")
         
         # Check previous approvals for this case revision
         past_approvals = db.query(Approval).filter(
             Approval.case_id == credit_case.id,
             Approval.revision == credit_case.revision
         ).all()
-        has_bd_approval = any(a.authority_level in ["HEAD_OF_BD", "BDO_HEAD", "BD"] for a in past_approvals)
         has_bcc_approval = any(a.authority_level in ["BCC", "BOARD_CREDIT_COMMITTEE"] for a in past_approvals)
 
-        if current_level == "ANALYST":
-            # 1. Analyst -> HRM
+        if current_level in ["BDO", "BUSINESS_DEV_OFFICER", "BUSINESS_DEVELOPMENT_OFFICER"]:
+            # BDO re-submits application details to Credit Analyst
             ok, msg = TransitionService.execute_transition(
                 db=db,
                 credit_case=credit_case,
-                to_state=CaseState.HRM_REVIEW.value,
+                to_state=CaseState.ANALYST_REVIEW.value,
                 actor=payload.actor,
                 role=payload.role,
-                reason="Analyst completed CAM and recommendation; routed to Head of Risk Management."
+                reason=f"BDO updated customer application details; re-submitted to Credit Analyst: {payload.comments}"
             )
-            next_state = CaseState.HRM_REVIEW.value
+            if not ok:
+                raise HTTPException(status_code=400, detail=msg)
+            next_state = CaseState.ANALYST_REVIEW.value
 
-        elif current_level == "HRM":
-            # 2. HRM: If Head of BD has not reviewed yet, HRM endorses and routes to Head of BD!
-            if not has_bd_approval:
-                ok, msg = TransitionService.execute_transition(
-                    db=db,
-                    credit_case=credit_case,
-                    to_state=CaseState.HEAD_OF_BD_REVIEW.value,
-                    actor=payload.actor,
-                    role=payload.role,
-                    reason="HRM completed initial risk assessment; routed to Head of Business Development for commercial review."
-                )
-                next_state = CaseState.HEAD_OF_BD_REVIEW.value
-            else:
-                # 4. BD has already reviewed; now HRM gives final risk concurrence and routes to MD
-                target_stage = CaseState.MD_DECISION.value
-                ok, msg = TransitionService.execute_transition(
-                    db=db,
-                    credit_case=credit_case,
-                    to_state=target_stage,
-                    actor=payload.actor,
-                    role=payload.role,
-                    reason=f"HRM concurred with BD recommendation; routed to Managing Director for executive approval (Facility: ₦{amount:,.2f})."
-                )
-                next_state = target_stage
+        elif current_level in ["ANALYST", "CREDIT_ANALYST"]:
+            # 1. Analyst -> Head of Business Development (First reviewer in MCC)
+            ok, msg = TransitionService.execute_transition(
+                db=db,
+                credit_case=credit_case,
+                to_state=CaseState.HEAD_OF_BD_REVIEW.value,
+                actor=payload.actor,
+                role=payload.role,
+                reason="Credit Analyst completed CAM & recommendation; forwarded to Management Credit Committee (Head of BD)."
+            )
+            if not ok:
+                raise HTTPException(status_code=400, detail=msg)
+            next_state = CaseState.HEAD_OF_BD_REVIEW.value
+            NotificationService.notify_mcc_head_of_bd_assignment(
+                case_number=credit_case.case_number,
+                obligor_name=credit_case.application.customer.name,
+                amount=amount,
+                analyst_actor=payload.actor
+            )
 
         elif current_level in ["HEAD_OF_BD", "BDO_HEAD", "BD"]:
-            # 3. Head of BD provides commercial recommendation/approval -> returns to HRM!
+            # 2. Head of Business Development (MCC) -> HRM
             ok, msg = TransitionService.execute_transition(
                 db=db,
                 credit_case=credit_case,
                 to_state=CaseState.HRM_REVIEW.value,
                 actor=payload.actor,
                 role=payload.role,
-                reason="Head of Business Development completed commercial review; returned to HRM for final risk concurrence."
+                reason="Head of Business Development (MCC) satisfied and approved; forwarded to Head of Risk Management."
             )
+            if not ok:
+                raise HTTPException(status_code=400, detail=msg)
             next_state = CaseState.HRM_REVIEW.value
 
-        elif current_level in ["MD", "MANAGING_DIRECTOR", "CEO"]:
-            # 5. If amount <= ₦20m, MD provides final sanction! If > ₦20m, routes to BCC!
+        elif current_level in ["HRM", "HEAD_OF_RISK_MANAGEMENT"]:
+            # 3. HRM -> MD
+            target_stage = CaseState.MD_DECISION.value
+            ok, msg = TransitionService.execute_transition(
+                db=db,
+                credit_case=credit_case,
+                to_state=target_stage,
+                actor=payload.actor,
+                role=payload.role,
+                reason=f"HRM satisfied with credit risk appraisal; forwarded to Managing Director for executive approval (Facility: ₦{amount:,.2f})."
+            )
+            if not ok:
+                raise HTTPException(status_code=400, detail=msg)
+            next_state = target_stage
+
+        elif current_level in ["MD", "MANAGING_DIRECTOR", "CEO", "ADMIN", "SYSADMIN"]:
+            # 4. MD approves: If amount <= ₦20m, final approval & offer letter auto-generated; else routes to BCC
             if amount <= AuthorityMatrix.TIER_BCC_THRESHOLD or has_bcc_approval:
                 ok, msg = TransitionService.execute_transition(
                     db=db,
@@ -215,9 +273,14 @@ def submit_approval_decision(
                     to_state=CaseState.OFFER_PENDING.value,
                     actor=payload.actor,
                     role=payload.role,
-                    reason="Managing Director granted final facility approval; ready for Offer letter and disbursement initiation."
+                    reason="Managing Director granted executive facility approval; offer letter auto-generated and dispatched."
                 )
+                if not ok:
+                    raise HTTPException(status_code=400, detail=msg)
                 next_state = CaseState.OFFER_PENDING.value
+                
+                # Auto-generate offer letter and email applicant
+                NotificationService.auto_generate_and_email_offer_letter(credit_case=credit_case, db=db)
                 NotificationService.notify_finance_and_disbursement_initiated(
                     case_number=credit_case.case_number,
                     obligor_name=credit_case.application.customer.name,
@@ -235,19 +298,25 @@ def submit_approval_decision(
                     role=payload.role,
                     reason=f"MD endorsed commercial facility exceeding ₦20m (₦{amount:,.2f}); routed to Board Credit Committee for final sanction."
                 )
+                if not ok:
+                    raise HTTPException(status_code=400, detail=msg)
                 next_state = CaseState.BCC_REVIEW.value
 
         elif current_level in ["BCC", "BOARD_CREDIT_COMMITTEE"]:
-            # 6. BCC final sanction on facilities > ₦20m!
+            # 5. BCC final sanction on facilities > ₦20m
             ok, msg = TransitionService.execute_transition(
                 db=db,
                 credit_case=credit_case,
                 to_state=CaseState.OFFER_PENDING.value,
                 actor=payload.actor,
                 role=payload.role,
-                reason="Board Credit Committee granted final facility approval; ready for Offer letter and disbursement initiation."
+                reason="Board Credit Committee granted final facility approval; offer letter auto-generated and dispatched."
             )
+            if not ok:
+                raise HTTPException(status_code=400, detail=msg)
             next_state = CaseState.OFFER_PENDING.value
+            
+            NotificationService.auto_generate_and_email_offer_letter(credit_case=credit_case, db=db)
             NotificationService.notify_finance_and_disbursement_initiated(
                 case_number=credit_case.case_number,
                 obligor_name=credit_case.application.customer.name,

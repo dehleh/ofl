@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { 
-  UserCheck, 
-  Radio, 
-  LogOut, 
-  ExternalLink, 
-  ShieldCheck, 
-  Bell, 
-  CheckCheck, 
-  AlertTriangle, 
-  CheckCircle2, 
-  FileText, 
+import {
+  UserCheck,
+  Radio,
+  LogOut,
+  ExternalLink,
+  ShieldCheck,
+  Bell,
+  CheckCheck,
+  AlertTriangle,
+  CheckCircle2,
+  FileText,
   X,
   Zap,
   Clock
@@ -45,9 +45,9 @@ export const Header: React.FC<HeaderProps> = ({
   }>>([
     {
       id: 'NOTIF-001',
-      title: 'Policy Exception Flagged',
-      message: 'Single Obligor Limit (₦50M) flagged for review by HRM Chidinma Okafor.',
-      time: '2 mins ago',
+      title: 'HRM Risk Exception Alert',
+      message: 'HRM raised exception on OFL-2026-0881 and routed to Credit Analyst. Head of BD alerted.',
+      time: 'Just now',
       type: 'WARNING',
       category: 'RISK EXCEPTION',
       unread: true,
@@ -55,33 +55,43 @@ export const Header: React.FC<HeaderProps> = ({
     },
     {
       id: 'NOTIF-002',
-      title: 'Credit Committee Approval Pending',
-      message: 'Facility #OFL-2026-0881 (₦40,000,000) is awaiting MD sanction.',
-      time: '18 mins ago',
+      title: 'MD Return Notification',
+      message: 'Managing Director returned OFL-2026-0882 for clarification. Analyst, HRM, & BD prompted.',
+      time: '6 mins ago',
       type: 'URGENT',
-      category: 'SANCTION',
+      category: 'EXECUTIVE RETURN',
       unread: true,
-      caseNumber: 'OFL-2026-0881'
+      caseNumber: 'OFL-2026-0882'
     },
     {
       id: 'NOTIF-003',
-      title: 'LOAN-DISC Core Booking Ready',
-      message: 'Settlement pipeline ready for 1-click disbursement execution.',
-      time: '45 mins ago',
-      type: 'SUCCESS',
-      category: 'TREASURY',
+      title: '5% Default Penalty Levied',
+      message: '7-Day Grace Period expired on ACC-OFL-2026-003. 5% overdue penalty applied (₦28,819.44).',
+      time: '18 mins ago',
+      type: 'WARNING',
+      category: 'LOAN TELEMETRY',
       unread: true,
-      caseNumber: 'OFL-2026-0881'
+      caseNumber: 'OFL-2026-0883'
     },
     {
       id: 'NOTIF-004',
-      title: 'New Commercial Intake Ingested',
-      message: 'Applicant Leo-Akinboni Babatunde Global Enterprises submitted documents.',
-      time: '2 hours ago',
+      title: 'Offer Letter Auto-Generated & Dispatched',
+      message: 'MD approved facility OFL-2026-0880 (₦15,000,000). Offer letter dispatched to applicant.',
+      time: '42 mins ago',
+      type: 'SUCCESS',
+      category: 'OFFER DISPATCHED',
+      unread: true,
+      caseNumber: 'OFL-2026-0880'
+    },
+    {
+      id: 'NOTIF-005',
+      title: 'MCC Review Assigned to Head of BD',
+      message: 'Credit Analyst completed CAM for Dangote Flour Mills; assigned to Head of BD (MCC).',
+      time: '1 hour ago',
       type: 'INFO',
-      category: 'INTAKE',
+      category: 'MCC ASSIGNMENT',
       unread: false,
-      caseNumber: 'OFL-2026-0881'
+      caseNumber: 'OFL-2026-0884'
     }
   ]);
 

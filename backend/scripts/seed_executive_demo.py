@@ -19,18 +19,24 @@ from app.database import SessionLocal, utc_now
 from app.models import (
     Customer, Application, CreditCase, Document, KYCCheck,
     FinancialAssessment, CAMVersion, ExceptionItem, Approval,
-    Offer, ConditionItem, Disbursement, AuditEvent, StaffUser,
-    SystemConfiguration, CaseState, IntakeChannel
+    Offer, ConditionItem, Disbursement, IntegrationEvent, AuditEvent, StaffUser,
+    SystemConfiguration, CaseState, IntakeChannel, LoanPerformance
 )
 from app.core.financial_engine import FinancialEngine
 from app.core.config_manager import ConfigManager
 from app.core.state_machine import TransitionService
+from app.core.loan_performance_engine import LoanPerformanceEngine
 
 def sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
-def seed_demo():
-    db = SessionLocal()
+def seed_demo(db_session=None):
+    owns_session = False
+    if db_session is None:
+        db = SessionLocal()
+        owns_session = True
+    else:
+        db = db_session
     print("Beginning Opticom Executive Demo Data Population...")
 
     try:
@@ -40,7 +46,8 @@ def seed_demo():
         for c in existing_cases:
             db.delete(c)
         
-        # Clean applications and customers associated with credit cases
+        # Clean applications, loan performances, and customers associated with credit cases
+        db.query(LoanPerformance).delete()
         db.query(Application).delete()
         db.query(Customer).delete()
         db.commit()
@@ -268,10 +275,9 @@ def seed_demo():
                 "collateral_desc": "Equipment Lien on GE CT Scanner & Ultrasound Machine + All Assets Floating Charge (Value: ₦32,000,000)",
                 "created_at": yesterday,
                 "history_approvals": [
-                    {"actor": "Babatunde Adebayo", "role": "ANALYST", "decision": "RECOMMEND_APPROVE", "comments": "Healthcare cashflow covers repayment 2.10x. Verified 6-month Zenith Bank turnover of ₦228M."},
-                    {"actor": "Chidinma Okafor", "role": "HRM", "decision": "RECOMMEND_APPROVE", "comments": "CAM generated. Equipment vendor warranty & comprehensive insurance verified. Routed to Head of BD."},
-                    {"actor": "Dapo Adeleke", "role": "HEAD_OF_BD", "decision": "RECOMMEND_APPROVE", "comments": "Excellent commercial relationship. High-margin imaging center in Victoria Island. Returned to HRM."},
-                    {"actor": "Chidinma Okafor", "role": "HRM", "decision": "RECOMMEND_APPROVE", "comments": "Risk concurrence complete. Forwarded to MD for final facility approval (₦15M <= ₦20M mandate)."}
+                    {"actor": "Babatunde Adebayo", "role": "ANALYST", "decision": "RECOMMEND_APPROVE", "comments": "Healthcare cashflow covers repayment 2.10x. Verified 6-month Zenith Bank turnover of ₦228M. Submitted to MCC."},
+                    {"actor": "Dapo Adeleke", "role": "HEAD_OF_BD", "decision": "APPROVE", "comments": "Head of BD (MCC) confirmed commercial viability. High-margin imaging center in Victoria Island. Forwarded to HRM."},
+                    {"actor": "Chidinma Okafor", "role": "HRM", "decision": "APPROVE", "comments": "Risk concurrence verified with equipment vendor warranty and insurance. Forwarded to MD for executive sanction."}
                 ],
                 "active_exception": None,
                 "offer_status": None
@@ -315,8 +321,7 @@ def seed_demo():
                 "collateral_desc": "Marine Vessel Mortgage & Irrevocable Domiciliation of NLNG Contract Inflow (Value: ₦26,000,000)",
                 "created_at": yesterday,
                 "history_approvals": [
-                    {"actor": "Babatunde Adebayo", "role": "ANALYST", "decision": "RECOMMEND_APPROVE", "comments": "Marine contract verified with NLNG procurement desk. DSCR 1.95x."},
-                    {"actor": "Chidinma Okafor", "role": "HRM", "decision": "RECOMMEND_APPROVE", "comments": "Initial risk review completed. CAM generated. Routed to Head of BD for commercial review and pricing confirmation."}
+                    {"actor": "Babatunde Adebayo", "role": "ANALYST", "decision": "RECOMMEND_APPROVE", "comments": "Marine contract verified with NLNG procurement desk. DSCR 1.95x; submitted to Management Credit Committee (Head of BD)."}
                 ],
                 "active_exception": None,
                 "offer_status": None
@@ -360,7 +365,8 @@ def seed_demo():
                 "collateral_desc": "Commercial Property Title Document (Ogba, Ikeja) + Inventory Pledge (Value: ₦14,000,000)",
                 "created_at": yesterday,
                 "history_approvals": [
-                    {"actor": "Babatunde Adebayo", "role": "ANALYST", "decision": "RECOMMEND_APPROVE", "comments": "Completed bank statement analysis across GTBank statements. DSCR 1.74x. Ready for HRM CAM generation."}
+                    {"actor": "Babatunde Adebayo", "role": "ANALYST", "decision": "RECOMMEND_APPROVE", "comments": "Completed bank statement analysis across GTBank statements. DSCR 1.74x. Submitted to MCC."},
+                    {"actor": "Dapo Adeleke", "role": "HEAD_OF_BD", "decision": "APPROVE", "comments": "Head of BD (MCC) reviewed and satisfied with commercial terms; forwarded to Head of Risk Management."}
                 ],
                 "active_exception": None,
                 "offer_status": None
@@ -405,9 +411,8 @@ def seed_demo():
                 "created_at": one_week_ago,
                 "history_approvals": [
                     {"actor": "Babatunde Adebayo", "role": "ANALYST", "decision": "RECOMMEND_APPROVE", "comments": "Telecom infrastructure project vetted. DSCR 1.88x."},
-                    {"actor": "Chidinma Okafor", "role": "HRM", "decision": "RECOMMEND_APPROVE", "comments": "CAM completed. Recommended with tripartite escrow."},
-                    {"actor": "Dapo Adeleke", "role": "HEAD_OF_BD", "decision": "RECOMMEND_APPROVE", "comments": "Strategic telecom client. Commercial viability confirmed."},
-                    {"actor": "Chidinma Okafor", "role": "HRM", "decision": "RECOMMEND_APPROVE", "comments": "Forwarded to MD."},
+                    {"actor": "Dapo Adeleke", "role": "HEAD_OF_BD", "decision": "APPROVE", "comments": "Strategic telecom client. Commercial viability confirmed by MCC."},
+                    {"actor": "Chidinma Okafor", "role": "HRM", "decision": "APPROVE", "comments": "CAM completed. Recommended with tripartite escrow; forwarded to MD."},
                     {"actor": "Folashade Tinubu", "role": "MD", "decision": "RECOMMEND_APPROVE", "comments": "Endorsed for BCC approval (> ₦20M)."},
                     {"actor": "Emeka Nnamdi", "role": "BCC", "decision": "APPROVE", "comments": "Board Credit Committee unanimous approval granted."}
                 ],
@@ -418,22 +423,27 @@ def seed_demo():
                     "loandisc_id": "LD-202610-8912",
                     "amount": 28000000.0,
                     "evidence": "Access Bank NIP Transfer Reference NIP-20261028-091823. LOAN-DISC LMS Booking confirmed."
+                },
+                "loan_performance": {
+                    "scenario": "CURRENT",
+                    "installments_serviced": 2
                 }
             },
 
-            # CASE 8: Civil Works Equipment Lease (Exceptions & Rework Workflow Demo)
+            # CASE 8: Commercial Agro Merchant (BDO Assisted Intake & Rework Demo)
             {
                 "case_number": "OFL-2026-00008",
                 "customer": {
                     "customer_type": "SME",
-                    "name": "Crestview Engineering & Infrastructure Ltd",
+                    "name": "Crestview Agro & Grain Distribution Ltd",
                     "email": "director@crestvieweng.ng",
                     "phone": "0802 666 3399",
                     "bvn": "22448811995",
                     "nin": "99001122334",
                     "rc_number": "RC-1102934",
                     "external_references": {
-                        "channel": "OFL_DIRECT",
+                        "channel": "BDO_ASSISTED",
+                        "bdo_agent": "Segun Adeleke (BDO)",
                         "sector": "Civil Engineering & Heavy Construction",
                         "registered_address": "Kilometer 42, Lekki-Epe Expressway, Sangotedo, Lagos",
                         "promoter_name": "Engr. Olufemi Adeleke",
@@ -449,8 +459,8 @@ def seed_demo():
                     "intake_channel": IntakeChannel.OFL_DIRECT.value,
                     "applicant_type": "SME"
                 },
-                "state": CaseState.ANALYST_REVIEW.value,
-                "assigned_owner": "Credit Analyst Queue (Exception Pending)",
+                "state": CaseState.BDO_REWORK.value,
+                "assigned_owner": "Business Development Officer (Segun Adeleke)",
                 "assigned_analyst": "Babatunde Adebayo",
                 "turnover": 14000000.0,
                 "debt_service": 420000.0,
@@ -460,14 +470,14 @@ def seed_demo():
                 "created_at": yesterday,
                 "history_approvals": [],
                 "active_exception": {
-                    "category": "INTERNAL_CORRECTION",
-                    "originator_role": "HRM",
-                    "originator_name": "Chidinma Okafor",
-                    "origin_stage": "HRM Review",
-                    "owner": "Credit Analyst",
-                    "return_stage": "Analyst Review",
-                    "reason": "Director NIN name mismatch detected on Youverify identity callback ('Olufemi' vs 'Oluwafemi'). In addition, debt-to-income ratio (44.5%) slightly breaches 40.0% policy benchmark.",
-                    "comments": "Please contact promoter to obtain NIN regularization slip and clarify monthly debt service on FirstBank overdraft.",
+                    "category": "APPLICANT_CORRECTION",
+                    "originator_role": "Credit Analyst",
+                    "originator_name": "Babatunde Adebayo",
+                    "origin_stage": "Analyst Review",
+                    "owner": "Business Development Officer",
+                    "return_stage": "BDO Rework",
+                    "reason": "Missing Q3 turnover ledger & updated 6-month bank statement CSV.",
+                    "comments": "Credit Analyst requested BDO Segun Adeleke obtain updated bank statement and proof of store lease before presentation to MCC.",
                     "sla_hours": 24,
                     "status": "OPEN"
                 },
@@ -512,14 +522,129 @@ def seed_demo():
                 "collateral_desc": "Commercial Property Title Deed at Alaba International Market + All Assets Debenture (Value: ₦36,000,000)",
                 "created_at": yesterday,
                 "history_approvals": [
-                    {"actor": "Babatunde Adebayo", "role": "ANALYST", "decision": "RECOMMEND_APPROVE", "comments": "FMCG distributor turnover of ₦52M/mo strongly covers debt service."},
-                    {"actor": "Chidinma Okafor", "role": "HRM", "decision": "RECOMMEND_APPROVE", "comments": "CAM completed. Recommended with stock monitoring covenants."},
-                    {"actor": "Dapo Adeleke", "role": "HEAD_OF_BD", "decision": "RECOMMEND_APPROVE", "comments": "Top tier FMCG distributor in Alaba market. Pricing accepted at 28% APR."},
-                    {"actor": "Chidinma Okafor", "role": "HRM", "decision": "RECOMMEND_APPROVE", "comments": "Concurrence confirmed. Routed to MD."},
-                    {"actor": "Folashade Tinubu", "role": "MD", "decision": "APPROVE", "comments": "Approved within MD authority (₦18M <= ₦20M limit). Offer letter generated and dispatched."}
+                    {"actor": "Babatunde Adebayo", "role": "ANALYST", "decision": "RECOMMEND_APPROVE", "comments": "FMCG distributor turnover of ₦52M/mo strongly covers debt service; submitted to MCC."},
+                    {"actor": "Dapo Adeleke", "role": "HEAD_OF_BD", "decision": "APPROVE", "comments": "Top tier FMCG distributor in Alaba market. Pricing accepted at 28% APR; approved to HRM."},
+                    {"actor": "Chidinma Okafor", "role": "HRM", "decision": "APPROVE", "comments": "Risk concurrence confirmed with stock monitoring covenants; forwarded to MD."},
+                    {"actor": "Folashade Tinubu", "role": "MD", "decision": "APPROVE", "comments": "Approved within MD authority (₦18M <= ₦20M limit). Offer letter auto-generated and dispatched."}
                 ],
                 "active_exception": None,
                 "offer_status": "ISSUED"
+            },
+
+            # CASE 10: Konga Merchant Solutions (Disbursed & In 7-Day Grace Period Telemetry Demo)
+            {
+                "case_number": "OFL-2026-00010",
+                "customer": {
+                    "customer_type": "SME",
+                    "name": "Konga Merchant Hub & E-Commerce Solutions Ltd",
+                    "email": "payments@kongamerchanthub.ng",
+                    "phone": "0803 777 1234",
+                    "bvn": "22441188330",
+                    "nin": "11993355771",
+                    "rc_number": "RC-1849102",
+                    "external_references": {
+                        "channel": "OFL_DIRECT",
+                        "sector": "E-Commerce & Digital Merchant Distribution",
+                        "registered_address": "Plot 12, Commercial Block, Ikeja Computer Village, Lagos",
+                        "promoter_name": "Mr. Kelechi Nwosu",
+                        "guarantor_name": "Mrs. Amaka Nwosu",
+                        "guarantor_bvn": "22991144665"
+                    },
+                    "verified_attributes": {"cac_active": True, "bvn_verified": True}
+                },
+                "application": {
+                    "amount": 16000000.0,
+                    "tenor": 12,
+                    "purpose": "E-commerce seasonal inventory stocking and fulfillment center expansion",
+                    "intake_channel": IntakeChannel.OFL_DIRECT.value,
+                    "applicant_type": "SME"
+                },
+                "state": CaseState.DISBURSED_MONITORING.value,
+                "assigned_owner": "Portfolio Monitoring & Treasury",
+                "assigned_analyst": "Babatunde Adebayo",
+                "turnover": 42000000.0,
+                "debt_service": 580000.0,
+                "opex": 9200000.0,
+                "collateral_value": 30000000.0,
+                "collateral_desc": "Inventory Floating Charge + Commercial Warehouse Lease Assignment (Value: ₦30,000,000)",
+                "created_at": one_week_ago,
+                "history_approvals": [
+                    {"actor": "Babatunde Adebayo", "role": "ANALYST", "decision": "RECOMMEND_APPROVE", "comments": "Strong turnover across GTBank merchant accounts. Submitted to MCC."},
+                    {"actor": "Dapo Adeleke", "role": "HEAD_OF_BD", "decision": "APPROVE", "comments": "Fast turnover rate in electronics distribution. Approved to HRM."},
+                    {"actor": "Chidinma Okafor", "role": "HRM", "decision": "APPROVE", "comments": "Risk parameters satisfied. Approved to MD."},
+                    {"actor": "Folashade Tinubu", "role": "MD", "decision": "APPROVE", "comments": "Executive approval granted (₦16M <= ₦20M)."}
+                ],
+                "active_exception": None,
+                "offer_status": "ACCEPTED",
+                "disbursement": {
+                    "nav_reference": "NAV-DISB-20261025-081",
+                    "loandisc_id": "LD-202610-7719",
+                    "amount": 16000000.0,
+                    "evidence": "Zenith Bank NIP Confirmation Reference NIP-20261025-081234."
+                },
+                "loan_performance": {
+                    "scenario": "GRACE_PERIOD",
+                    "installments_serviced": 1,
+                    "days_overdue": 4
+                }
+            },
+
+            # CASE 11: Swift Logistics Express (Disbursed & Overdue with 5% Default Penalty Telemetry Demo)
+            {
+                "case_number": "OFL-2026-00011",
+                "customer": {
+                    "customer_type": "SME",
+                    "name": "Swift Logistics & Interstate Haulage Ltd",
+                    "email": "operations@swiftlogistics.ng",
+                    "phone": "0802 888 9911",
+                    "bvn": "22883399114",
+                    "nin": "55779911332",
+                    "rc_number": "RC-1309481",
+                    "external_references": {
+                        "channel": "OFL_DIRECT",
+                        "sector": "Freight Haulage & Cold Chain Transport",
+                        "registered_address": "Km 18, Ikorodu-Sagamu Expressway, Ikorodu, Lagos",
+                        "promoter_name": "Alhaji Haruna Danladi",
+                        "guarantor_name": "Dr. Kabir Danladi",
+                        "guarantor_bvn": "22338877119"
+                    },
+                    "verified_attributes": {"cac_active": True, "bvn_verified": True}
+                },
+                "application": {
+                    "amount": 12500000.0,
+                    "tenor": 12,
+                    "purpose": "Fleet acquisition of 2 refrigerated 15-ton trucks for pharmaceutical logistics",
+                    "intake_channel": IntakeChannel.OFL_DIRECT.value,
+                    "applicant_type": "SME"
+                },
+                "state": CaseState.DISBURSED_MONITORING.value,
+                "assigned_owner": "Portfolio Monitoring & Treasury (Default Recovery)",
+                "assigned_analyst": "Babatunde Adebayo",
+                "turnover": 31000000.0,
+                "debt_service": 480000.0,
+                "opex": 7500000.0,
+                "collateral_value": 24000000.0,
+                "collateral_desc": "Equipment Lien on 2 Refrigerated Trucks + Corporate Guarantee (Value: ₦24,000,000)",
+                "created_at": one_week_ago,
+                "history_approvals": [
+                    {"actor": "Babatunde Adebayo", "role": "ANALYST", "decision": "RECOMMEND_APPROVE", "comments": "Cold chain contract with pharmaceutical clients verified. Submitted to MCC."},
+                    {"actor": "Dapo Adeleke", "role": "HEAD_OF_BD", "decision": "APPROVE", "comments": "Approved and forwarded to HRM."},
+                    {"actor": "Chidinma Okafor", "role": "HRM", "decision": "APPROVE", "comments": "Approved and forwarded to MD."},
+                    {"actor": "Folashade Tinubu", "role": "MD", "decision": "APPROVE", "comments": "Executive approval granted."}
+                ],
+                "active_exception": None,
+                "offer_status": "ACCEPTED",
+                "disbursement": {
+                    "nav_reference": "NAV-DISB-20261020-044",
+                    "loandisc_id": "LD-202610-6642",
+                    "amount": 12500000.0,
+                    "evidence": "FirstBank NIP Settlement Confirmation NIP-20261020-044910."
+                },
+                "loan_performance": {
+                    "scenario": "OVERDUE_PENALTY",
+                    "installments_serviced": 0,
+                    "days_overdue": 11
+                }
             }
         ]
 
@@ -800,6 +925,22 @@ def seed_demo():
                     created_at=now - timedelta(days=2)
                 )
                 db.add(disb)
+                db.flush()
+
+            # Initialize Post-Disbursement Loan Performance Telemetry if specified
+            if credit_case.state == CaseState.DISBURSED_MONITORING.value or spec.get("loan_performance"):
+                perf_spec = spec.get("loan_performance") or {"scenario": "CURRENT"}
+                perf_record = LoanPerformanceEngine.initialize_loan_performance(credit_case, db)
+                db.flush()
+                if "installments_serviced" in perf_spec and perf_spec["installments_serviced"] > 0:
+                    for _ in range(perf_spec["installments_serviced"]):
+                        LoanPerformanceEngine.record_repayment(perf_record, perf_record.monthly_installment, db=db)
+                if "scenario" in perf_spec:
+                    LoanPerformanceEngine.simulate_status(perf_record, perf_spec["scenario"], db=db)
+                if "days_overdue" in perf_spec:
+                    perf_record.days_overdue = perf_spec["days_overdue"]
+                    LoanPerformanceEngine.evaluate_performance(perf_record)
+                db.flush()
 
             # Add Exception if specified
             if spec.get("active_exception"):
@@ -836,6 +977,8 @@ def seed_demo():
             )
             db.add(audit)
 
+        # Clean test integration events to guarantee test idempotency
+        db.query(IntegrationEvent).filter(IntegrationEvent.idempotency_key.like('%TEST%')).delete(synchronize_session=False)
         db.commit()
         print(f"SUCCESS: Successfully populated {len(demo_cases_spec)} comprehensive executive demo cases!")
         print("\nPipeline Stage Distribution for Today's Management Demo:")
@@ -849,7 +992,8 @@ def seed_demo():
         traceback.print_exc()
         raise
     finally:
-        db.close()
+        if owns_session:
+            db.close()
 
 if __name__ == "__main__":
     seed_demo()

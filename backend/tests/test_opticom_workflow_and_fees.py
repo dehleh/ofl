@@ -102,20 +102,20 @@ def test_governance_approval_chain_thresholds():
     # Case 1: ₦15,000,000 (MD final approval)
     chain_15m = AuthorityMatrix.get_required_approval_chain(15_000_000.0)
     levels_15m = [c["level"] for c in chain_15m]
-    assert levels_15m == ["ANALYST", "HRM", "HEAD_OF_BD", "HRM", "MD"]
+    assert levels_15m == ["ANALYST", "HEAD_OF_BD", "HRM", "MD"]
     assert chain_15m[-1]["action"] == "FINAL_APPROVAL"
 
     # Case 2: ₦25,000,000 (BCC final approval)
     chain_25m = AuthorityMatrix.get_required_approval_chain(25_000_000.0)
     levels_25m = [c["level"] for c in chain_25m]
-    assert levels_25m == ["ANALYST", "HRM", "HEAD_OF_BD", "HRM", "MD", "BCC"]
+    assert levels_25m == ["ANALYST", "HEAD_OF_BD", "HRM", "MD", "BCC"]
     assert chain_25m[-1]["action"] == "FINAL_APPROVAL"
     assert chain_25m[-2]["action"] == "EXECUTIVE_ENDORSEMENT"
 
 def test_full_governance_workflow_execution(test_db: Session):
     """
-    Executes a complete end-to-end 5-tier approval progression:
-    Analyst -> HRM -> Head of BD -> HRM -> MD -> Offer Pending
+    Executes a complete end-to-end approval progression:
+    Analyst -> Head of BD (MCC) -> HRM -> MD -> Offer Pending
     Verifies state transitions and finance alert dispatch.
     """
     # Create customer & case for ₦12,000,000
@@ -147,58 +147,47 @@ def test_full_governance_workflow_execution(test_db: Session):
     test_db.add(case)
     test_db.commit()
 
-    # Step 1: Analyst recommends approval -> transitions to HRM Review
+    # Step 1: Analyst recommends approval -> transitions to Head of BD Review (MCC)
     res1 = client.post(f"/api/v1/cases/{case.id}/approval", json={
         "actor": "Babatunde Adebayo",
         "role": "ANALYST",
         "decision": "RECOMMEND_APPROVE",
-        "comments": "Strong cash flows from freight routes; recommend endorsement."
+        "comments": "Strong cash flows from freight routes; recommend endorsement to MCC."
     })
     assert res1.status_code == 200
     test_db.refresh(case)
-    assert case.state == CaseState.HRM_REVIEW.value
-
-    # Step 2: HRM completes initial risk review -> transitions to Head of BD Review
-    res2 = client.post(f"/api/v1/cases/{case.id}/approval", json={
-        "actor": "Chidinma Okafor",
-        "role": "HRM",
-        "decision": "RECOMMEND_APPROVE",
-        "comments": "Risk metrics sound; routing to Head of BD for commercial review."
-    })
-    assert res2.status_code == 200
-    test_db.refresh(case)
     assert case.state == CaseState.HEAD_OF_BD_REVIEW.value
 
-    # Step 3: Head of BD gives commercial sanction -> returns to HRM Review
-    res3 = client.post(f"/api/v1/cases/{case.id}/approval", json={
+    # Step 2: Head of BD (MCC) approves -> transitions to HRM Review
+    res2 = client.post(f"/api/v1/cases/{case.id}/approval", json={
         "actor": "Dapo Adeleke",
         "role": "HEAD_OF_BD",
         "decision": "APPROVE",
-        "comments": "Commercial relationship viable and profitable. Concurred."
+        "comments": "Commercial relationship viable and profitable. Forwarded to HRM."
     })
-    assert res3.status_code == 200
+    assert res2.status_code == 200
     test_db.refresh(case)
     assert case.state == CaseState.HRM_REVIEW.value
 
-    # Step 4: HRM gives final risk concurrence -> routes to MD Decision
-    res4 = client.post(f"/api/v1/cases/{case.id}/approval", json={
+    # Step 3: HRM gives risk concurrence -> routes to MD Decision
+    res3 = client.post(f"/api/v1/cases/{case.id}/approval", json={
         "actor": "Chidinma Okafor",
         "role": "HRM",
         "decision": "RECOMMEND_APPROVE",
-        "comments": "Final risk concurrence granted; forward to MD for final sanction."
+        "comments": "Final risk concurrence granted; forward to MD for executive sanction."
     })
-    assert res4.status_code == 200
+    assert res3.status_code == 200
     test_db.refresh(case)
     assert case.state == CaseState.MD_DECISION.value
 
-    # Step 5: MD gives final sanction (<= ₦20m) -> advances to OFFER_PENDING
-    res5 = client.post(f"/api/v1/cases/{case.id}/approval", json={
+    # Step 4: MD gives final sanction (<= ₦20m) -> advances to OFFER_PENDING
+    res4 = client.post(f"/api/v1/cases/{case.id}/approval", json={
         "actor": "Folashade Tinubu",
         "role": "MD",
         "decision": "APPROVE",
         "comments": "Facility fully sanctioned. Issue binding offer letter."
     })
-    assert res5.status_code == 200
+    assert res4.status_code == 200
     test_db.refresh(case)
     assert case.state == CaseState.OFFER_PENDING.value
 

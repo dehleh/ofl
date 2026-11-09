@@ -43,11 +43,12 @@ class WorkflowTransitionRequest(BaseModel):
     details: Optional[Dict[str, Any]] = None
 
 class ApprovalDecisionRequest(BaseModel):
-    decision: str  # RECOMMEND_APPROVE, APPROVE, RETURN_FOR_REWORK, REJECT
+    decision: str  # RECOMMEND_APPROVE, APPROVE, RETURN_FOR_REWORK, RETURN_TO_BDO, REJECT
     actor: str
-    role: str  # ANALYST, HRM, BCC, MD
+    role: str  # ANALYST, HEAD_OF_BD, HRM, BCC, MD
     comments: str
     conditions_mandated: Optional[List[str]] = None
+    target_role: Optional[str] = None  # Optional target when returning (e.g., HRM, HEAD_OF_BD, BDO)
 
 class CAMUpdateRequest(BaseModel):
     executive_summary: Optional[str] = None

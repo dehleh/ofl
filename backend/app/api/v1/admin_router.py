@@ -356,3 +356,17 @@ def deactivate_staff_user(
     )
 
     return {"message": f"Staff user {user.name} has been deactivated."}
+
+@router.post("/seed-demo")
+def seed_demo_data_endpoint(
+    db: Session = Depends(get_db)
+):
+    """
+    Seeds / resets the full 9-case demonstration pipeline and RBAC tasks directly on GCP or local environments.
+    """
+    from ...scripts.seed_executive_demo import seed_demo
+    seed_demo(db_session=db)
+    return {
+        "message": "Successfully seeded/refreshed 9 executive demonstration cases on environment.",
+        "status": "SUCCESS"
+    }

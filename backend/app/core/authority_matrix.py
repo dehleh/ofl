@@ -3,12 +3,11 @@ Authority Matrix and Mandate Routing (Opticom Credit Policy Manual)
 Determines required approval authority chain and validates reviewer mandates based on loan amount.
 
 Opticom Governance Sequence:
-1. Credit Analyst (CAM generation & underwriting recommendation)
-2. Head of Risk Management (HRM initial risk review & endorsement)
-3. Head of Business Development (Commercial viability & relationship recommendation/approval)
-4. Head of Risk Management (HRM final risk concurrence & recommendation)
-5. Managing Director (MD final approval for amounts <= ₦20,000,000; endorsement for > ₦20m)
-6. Board Credit Committee (BCC final approval for amounts > ₦20,000,000)
+1. Credit Analyst (CAM generation & underwriting recommendation to MCC)
+2. Head of Business Development (First reviewer in Management Credit Committee - MCC)
+3. Head of Risk Management (HRM risk assessment & concurrence)
+4. Managing Director (MD final sanction, offer letter auto-generation & dispatch)
+5. Board Credit Committee (BCC final approval for amounts > ₦20,000,000)
 """
 from typing import List, Dict, Any, Tuple
 
@@ -25,9 +24,8 @@ class AuthorityMatrix:
         """
         chain = [
             {"level": "ANALYST", "role": "Credit Analyst", "action": "RECOMMENDATION", "mandatory": True},
-            {"level": "HRM", "role": "Head of Risk Management", "action": "RISK_REVIEW", "mandatory": True},
-            {"level": "HEAD_OF_BD", "role": "Head of Business Development", "action": "COMMERCIAL_ENDORSEMENT", "mandatory": True},
-            {"level": "HRM", "role": "Head of Risk Management", "action": "FINAL_RISK_CONCURRENCE", "mandatory": True},
+            {"level": "HEAD_OF_BD", "role": "Head of Business Development (MCC)", "action": "MCC_FIRST_REVIEW", "mandatory": True},
+            {"level": "HRM", "role": "Head of Risk Management", "action": "RISK_CONCURRENCE", "mandatory": True},
             {"level": "MD", "role": "Managing Director", "action": "FINAL_APPROVAL" if amount <= cls.TIER_BCC_THRESHOLD else "EXECUTIVE_ENDORSEMENT", "mandatory": True}
         ]
         
@@ -48,13 +46,13 @@ class AuthorityMatrix:
         Validates if a specific user role has delegated authority to approve a loan amount.
         """
         role = role.upper().replace(" ", "_")
-        if role == "ANALYST":
+        if role in ["ANALYST", "CREDIT_ANALYST"]:
             return False, "Credit Analysts only have recommendation authority, not final approval."
             
         if role in ["HEAD_OF_BD", "BDO_HEAD", "BD"]:
             return True, "Authorized for Business Development commercial recommendation/endorsement."
         
-        if role == "HRM":
+        if role in ["HRM", "HEAD_OF_RISK_MANAGEMENT"]:
             if amount <= cls.TIER_1_LIMIT:
                 return True, f"Authorized for risk management approval up to ₦{cls.TIER_1_LIMIT:,.2f}."
             return False, f"Facility quantum (₦{amount:,.2f}) exceeds HRM standalone mandate limit of ₦{cls.TIER_1_LIMIT:,.2f}; escalation required."

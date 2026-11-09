@@ -6,29 +6,30 @@ import { ApplicationIntake } from './screens/ApplicationIntake';
 import { BestoIngestionLab } from './screens/BestoIngestionLab';
 import { ExceptionManager } from './screens/ExceptionManager';
 import { AuditTelemetry } from './screens/AuditTelemetry';
+import { LoanPerformanceTelemetry } from './screens/LoanPerformanceTelemetry';
 import { PublicCustomerPortal } from './screens/PublicCustomerPortal';
 import { AdminConfigPortal } from './screens/AdminConfigPortal';
 import { StaffLoginScreen } from './screens/StaffLoginScreen';
 import { CreditCopilotDrawer } from './components/CreditCopilotDrawer';
 import { fetchExceptions } from './services/api';
-import { Inbox, FilePlus, Database, AlertCircle, BarChart3, Settings } from 'lucide-react';
+import { Inbox, FilePlus, Database, AlertCircle, BarChart3, Settings, Activity } from 'lucide-react';
 
-export type ScreenId = 'QUEUE' | 'WORKSPACE' | 'INTAKE' | 'BESTO_LAB' | 'EXCEPTIONS' | 'AUDIT' | 'ADMIN';
+export type ScreenId = 'QUEUE' | 'WORKSPACE' | 'INTAKE' | 'BESTO_LAB' | 'EXCEPTIONS' | 'AUDIT' | 'ADMIN' | 'TELEMETRY';
 
 // Role-Based Access Control (RBAC) screen authorization matrix
 // MD (Managing Director) and ADMIN (System Administrator) hold highest executive admin authority across all platform modules
 export const ROLE_PERMITTED_SCREENS: Record<string, ScreenId[]> = {
-  ADMIN: ['ADMIN', 'QUEUE', 'AUDIT', 'BESTO_LAB', 'EXCEPTIONS', 'INTAKE'],
-  MD: ['ADMIN', 'QUEUE', 'AUDIT', 'BESTO_LAB', 'EXCEPTIONS', 'INTAKE'],
-  IT_OWNER: ['ADMIN', 'AUDIT', 'BESTO_LAB', 'QUEUE', 'EXCEPTIONS'],
-  ANALYST: ['QUEUE', 'EXCEPTIONS'],
-  HRM: ['QUEUE', 'EXCEPTIONS', 'AUDIT'],
-  HEAD_OF_BD: ['QUEUE', 'INTAKE', 'EXCEPTIONS'],
-  BDO: ['INTAKE', 'QUEUE'],
-  BCC: ['QUEUE', 'AUDIT'],
-  OPERATIONS: ['QUEUE', 'EXCEPTIONS', 'AUDIT'],
-  TREASURY: ['QUEUE', 'AUDIT'],
-  AUDITOR: ['AUDIT', 'QUEUE']
+  ADMIN: ['ADMIN', 'QUEUE', 'TELEMETRY', 'AUDIT', 'BESTO_LAB', 'EXCEPTIONS', 'INTAKE'],
+  MD: ['ADMIN', 'QUEUE', 'TELEMETRY', 'AUDIT', 'BESTO_LAB', 'EXCEPTIONS', 'INTAKE'],
+  IT_OWNER: ['ADMIN', 'AUDIT', 'TELEMETRY', 'BESTO_LAB', 'QUEUE', 'EXCEPTIONS'],
+  ANALYST: ['QUEUE', 'TELEMETRY', 'EXCEPTIONS'],
+  HRM: ['QUEUE', 'TELEMETRY', 'EXCEPTIONS', 'AUDIT'],
+  HEAD_OF_BD: ['QUEUE', 'TELEMETRY', 'INTAKE', 'EXCEPTIONS'],
+  BDO: ['INTAKE', 'QUEUE', 'TELEMETRY'],
+  BCC: ['QUEUE', 'TELEMETRY', 'AUDIT'],
+  OPERATIONS: ['QUEUE', 'TELEMETRY', 'EXCEPTIONS', 'AUDIT'],
+  TREASURY: ['QUEUE', 'TELEMETRY', 'AUDIT'],
+  AUDITOR: ['AUDIT', 'TELEMETRY', 'QUEUE']
 };
 
 export const ROLE_DEFAULT_SCREEN: Record<string, ScreenId> = {
@@ -78,7 +79,7 @@ export const App: React.FC = () => {
   };
 
   const [isStaffPlatform, setIsStaffPlatform] = useState<boolean>(checkIsStaffRoute);
-  
+
   // Internal Staff Authentication State
   const [staffToken, setStaffToken] = useState<string | null>(() => {
     return localStorage.getItem('ofl_jwt_token');
@@ -96,7 +97,7 @@ export const App: React.FC = () => {
     return currentUser?.role || 'ANALYST';
   });
 
-  const [currentScreen, setCurrentScreen] = useState<'QUEUE' | 'WORKSPACE' | 'INTAKE' | 'BESTO_LAB' | 'EXCEPTIONS' | 'AUDIT' | 'ADMIN'>('QUEUE');
+  const [currentScreen, setCurrentScreen] = useState<ScreenId>('QUEUE');
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [backendOnline, setBackendOnline] = useState<boolean>(true);
   const [openExceptionsCount, setOpenExceptionsCount] = useState<number>(0);
@@ -262,6 +263,15 @@ export const App: React.FC = () => {
           </button>
         )}
 
+        {isScreenPermitted('TELEMETRY') && (
+          <button
+            className={`nav-item ${currentScreen === 'TELEMETRY' ? 'active' : ''}`}
+            onClick={() => setCurrentScreen('TELEMETRY')}
+          >
+            <Activity size={16} /> Loan Telemetry &amp; Servicing
+          </button>
+        )}
+
         {isScreenPermitted('AUDIT') && (
           <button
             className={`nav-item ${currentScreen === 'AUDIT' ? 'active' : ''}`}
@@ -336,6 +346,13 @@ export const App: React.FC = () => {
 
         {currentScreen === 'AUDIT' && (
           <AuditTelemetry />
+        )}
+
+        {currentScreen === 'TELEMETRY' && (
+          <LoanPerformanceTelemetry
+            currentPersona={currentPersona}
+            onSelectCase={handleOpenCase}
+          />
         )}
 
         {currentScreen === 'ADMIN' && (

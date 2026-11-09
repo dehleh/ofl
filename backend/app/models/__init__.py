@@ -18,7 +18,8 @@ from .entities import (
     ExceptionCategory,
     ExceptionOriginator,
     SystemConfiguration,
-    StaffUser
+    StaffUser,
+    LoanPerformance
 )
 
 __all__ = [
@@ -41,5 +42,6 @@ __all__ = [
     "ExceptionCategory",
     "ExceptionOriginator",
     "SystemConfiguration",
-    "StaffUser"
+    "StaffUser",
+    "LoanPerformance"
 ]

@@ -17,6 +17,7 @@ class CaseState(str, enum.Enum):
     DRAFT = "Draft"
     SUBMITTED = "Submitted"
     KYC_PENDING = "KYC Pending"
+    BDO_REWORK = "BDO Rework"
     ANALYST_REVIEW = "Analyst Review"
     HRM_REVIEW = "HRM Review"
     HEAD_OF_BD_REVIEW = "Head of BD Review"
@@ -89,6 +90,7 @@ class CreditCase(Base):
     offers = relationship("Offer", back_populates="credit_case", cascade="all, delete-orphan")
     conditions = relationship("ConditionItem", back_populates="credit_case", cascade="all, delete-orphan")
     disbursements = relationship("Disbursement", back_populates="credit_case", cascade="all, delete-orphan")
+    loan_performance = relationship("LoanPerformance", back_populates="credit_case", uselist=False, cascade="all, delete-orphan")
 
 class Document(Base):
     __tablename__ = "documents"
@@ -339,4 +341,42 @@ class StaffUser(Base):
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
     last_login_at = Column(DateTime, nullable=True)
+
+class LoanPerformance(Base):
+    """
+    Loan Servicing & Portfolio Telemetry (Post-Disbursement Performance Tracking).
+    Tracks repayment timeliness, servicing progress, remaining balance,
+    and applies a 5% penalty when repayment is overdue beyond 7 days grace.
+    """
+    __tablename__ = "loan_performances"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    case_id = Column(String(36), ForeignKey("credit_cases.id"), nullable=False, unique=True, index=True)
+    facility_number = Column(String(50), nullable=False, index=True)
+    borrower_name = Column(String(255), nullable=False)
+    disbursed_principal = Column(Float, nullable=False)
+    interest_rate_apr = Column(Float, default=28.0)
+    tenor_months = Column(Integer, nullable=False)
+    monthly_installment = Column(Float, nullable=False)
+    total_installments_count = Column(Integer, nullable=False)
+    installments_serviced = Column(Integer, default=0)
+    installments_remaining = Column(Integer, nullable=False)
+    principal_serviced = Column(Float, default=0.0)
+    interest_serviced = Column(Float, default=0.0)
+    total_amount_serviced = Column(Float, default=0.0)
+    outstanding_principal = Column(Float, nullable=False)
+    outstanding_total = Column(Float, nullable=False)
+    next_due_date = Column(DateTime, nullable=True)
+    days_overdue = Column(Integer, default=0)
+    grace_period_days = Column(Integer, default=7)
+    penalty_rate_pct = Column(Float, default=5.0)
+    penalty_accrued = Column(Float, default=0.0)
+    performance_status = Column(String(50), default="PERFORMING_CURRENT") # PERFORMING_CURRENT, GRACE_PERIOD_ACTIVE, OVERDUE_PENALTY_APPLIED, CRITICAL_DELINQUENT, CLOSED_FULLY_SETTLED
+    repayment_schedule = Column(JSON, default=list)
+    repayment_history = Column(JSON, default=list)
+    disbursed_at = Column(DateTime, default=utc_now)
+    last_payment_date = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    credit_case = relationship("CreditCase", back_populates="loan_performance")
 

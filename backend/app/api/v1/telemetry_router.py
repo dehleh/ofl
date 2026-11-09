@@ -4,7 +4,7 @@ Telemetry, Operational Reporting and Azure AI Cost Dashboard (PRD FR-18, FR-28, 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
 
 from ...database import get_db
 from ...models import CreditCase, Application, CAMVersion, ExceptionItem, Disbursement, CaseState
@@ -137,5 +137,215 @@ def get_notification_telemetry(limit: int = 50):
     return {
         "total_dispatched": len(NotificationService.get_delivery_logs()),
         "delivery_logs": NotificationService.get_delivery_logs(limit=limit)
+    }
+
+# ==============================================================================
+# LOAN PORTFOLIO TELEMETRY & PERFORMANCE MONITORING (POST-DISBURSEMENT)
+# ==============================================================================
+from pydantic import BaseModel
+from ...models.entities import LoanPerformance
+from ...core.loan_performance_engine import LoanPerformanceEngine
+from ...database import utc_now
+from fastapi import HTTPException
+
+class RecordRepaymentPayload(BaseModel):
+    amount: float
+    payment_date: Optional[str] = None
+
+class SimulateStatusPayload(BaseModel):
+    scenario: str # CURRENT, GRACE_PERIOD, OVERDUE_PENALTY, CRITICAL
+
+@router.get("/loan-performance")
+def get_loan_portfolio_performance(db: Session = Depends(get_db)):
+    """
+    Returns portfolio-wide loan servicing telemetry:
+    - How each funded obligor is performing
+    - Total serviced vs remaining exposure
+    - Delinquency breakdown (Current, 1-7 days Grace, >7 days 5% Penalty)
+    """
+    records = db.query(LoanPerformance).all()
+
+    # Re-evaluate all performance statuses
+    for r in records:
+        LoanPerformanceEngine.evaluate_performance(r)
+    db.commit()
+
+    total_disbursed = sum(r.disbursed_principal for r in records)
+    total_serviced = sum(r.total_amount_serviced for r in records)
+    total_principal_serviced = sum(r.principal_serviced for r in records)
+    total_interest_serviced = sum(r.interest_serviced for r in records)
+    total_outstanding = sum(r.outstanding_principal for r in records)
+    total_outstanding_balance = sum(r.outstanding_total for r in records)
+    total_penalties = sum(r.penalty_accrued for r in records)
+
+    performing_count = sum(1 for r in records if r.performance_status == "PERFORMING_CURRENT")
+    grace_count = sum(1 for r in records if r.performance_status == "GRACE_PERIOD_ACTIVE")
+    overdue_count = sum(1 for r in records if r.performance_status in ["OVERDUE_PENALTY_APPLIED", "CRITICAL_DELINQUENT"])
+    closed_count = sum(1 for r in records if r.performance_status == "CLOSED_FULLY_SETTLED")
+
+    accounts = []
+    for r in records:
+        accounts.append({
+            "id": r.id,
+            "case_id": r.case_id,
+            "facility_number": r.facility_number,
+            "borrower_name": r.borrower_name,
+            "disbursed_principal": r.disbursed_principal,
+            "interest_rate_apr": r.interest_rate_apr,
+            "tenor_months": r.tenor_months,
+            "monthly_installment": r.monthly_installment,
+            "total_installments_count": r.total_installments_count,
+            "installments_serviced": r.installments_serviced,
+            "installments_remaining": r.installments_remaining,
+            "principal_serviced": r.principal_serviced,
+            "interest_serviced": r.interest_serviced,
+            "total_amount_serviced": r.total_amount_serviced,
+            "outstanding_principal": r.outstanding_principal,
+            "outstanding_total": r.outstanding_total,
+            "next_due_date": r.next_due_date.isoformat() if r.next_due_date else None,
+            "days_overdue": r.days_overdue,
+            "grace_period_days": r.grace_period_days,
+            "penalty_rate_pct": r.penalty_rate_pct,
+            "penalty_accrued": r.penalty_accrued,
+            "performance_status": r.performance_status,
+            "disbursed_at": r.disbursed_at.isoformat() if r.disbursed_at else None,
+            "last_payment_date": r.last_payment_date.isoformat() if r.last_payment_date else None,
+            "updated_at": r.updated_at.isoformat() if r.updated_at else None
+        })
+
+    portfolio_metrics = {
+        "total_active_loans": len(records),
+        "total_active_facilities": len(records),
+        "total_disbursed_principal": total_disbursed,
+        "total_amount_serviced": total_serviced,
+        "total_principal_serviced": total_principal_serviced,
+        "total_interest_serviced": total_interest_serviced,
+        "total_outstanding_balance": total_outstanding_balance,
+        "total_outstanding_exposure": total_outstanding,
+        "total_outstanding_principal": total_outstanding,
+        "total_penalties_accrued": total_penalties,
+        "total_penalties_levied": total_penalties,
+        "repayment_collection_rate": round((total_serviced / (total_serviced + total_outstanding) * 100), 2) if (total_serviced + total_outstanding) > 0 else 0.0,
+        "status_breakdown": {
+            "PERFORMING_CURRENT": performing_count,
+            "GRACE_PERIOD_ACTIVE": grace_count,
+            "OVERDUE_PENALTY_APPLIED": overdue_count,
+            "CLOSED_FULLY_SETTLED": closed_count
+        },
+        "policy_rules": {
+            "grace_period_days": 7,
+            "default_penalty_rate_pct": 5.0,
+            "penalty_rule_description": "A 5% default penalty is levied on the overdue installment when payment is delayed beyond the statutory 7-day grace period."
+        }
+    }
+
+    return {
+        "portfolio_summary": portfolio_metrics,
+        "portfolio_metrics": portfolio_metrics,
+        "accounts": accounts
+    }
+
+@router.get("/loan-performance/{case_id}")
+def get_single_loan_performance(case_id: str, db: Session = Depends(get_db)):
+    """
+    Returns full servicing dossier, amortization status, and payment schedule for a specific loan.
+    """
+    record = db.query(LoanPerformance).filter(
+        (LoanPerformance.case_id == case_id) | 
+        (LoanPerformance.facility_number == case_id)
+    ).first()
+
+    if not record:
+        # Check if case exists and is in DISBURSED state, initialize if needed
+        case = db.query(CreditCase).filter(
+            (CreditCase.id == case_id) | (CreditCase.case_number == case_id)
+        ).first()
+        if case and case.state in ["Disbursed/Monitoring", "Ready for Disbursement"]:
+            record = LoanPerformanceEngine.initialize_loan_performance(case, db)
+            db.commit()
+            db.refresh(record)
+        else:
+            raise HTTPException(status_code=404, detail="Loan performance record not found.")
+
+    LoanPerformanceEngine.evaluate_performance(record)
+    db.commit()
+
+    return {
+        "id": record.id,
+        "case_id": record.case_id,
+        "facility_number": record.facility_number,
+        "borrower_name": record.borrower_name,
+        "disbursed_principal": record.disbursed_principal,
+        "interest_rate_apr": record.interest_rate_apr,
+        "tenor_months": record.tenor_months,
+        "monthly_installment": record.monthly_installment,
+        "total_installments_count": record.total_installments_count,
+        "installments_serviced": record.installments_serviced,
+        "installments_remaining": record.installments_remaining,
+        "principal_serviced": record.principal_serviced,
+        "interest_serviced": record.interest_serviced,
+        "total_amount_serviced": record.total_amount_serviced,
+        "outstanding_principal": record.outstanding_principal,
+        "outstanding_total": record.outstanding_total,
+        "next_due_date": record.next_due_date.isoformat() if record.next_due_date else None,
+        "days_overdue": record.days_overdue,
+        "grace_period_days": record.grace_period_days,
+        "penalty_rate_pct": record.penalty_rate_pct,
+        "penalty_accrued": record.penalty_accrued,
+        "performance_status": record.performance_status,
+        "repayment_schedule": record.repayment_schedule or [],
+        "repayment_history": record.repayment_history or [],
+        "disbursed_at": record.disbursed_at.isoformat() if record.disbursed_at else None,
+        "last_payment_date": record.last_payment_date.isoformat() if record.last_payment_date else None
+    }
+
+@router.post("/loan-performance/{case_id}/record-repayment")
+def record_repayment_endpoint(
+    case_id: str,
+    payload: RecordRepaymentPayload,
+    db: Session = Depends(get_db)
+):
+    """
+    Records an official loan repayment, reconciles schedules, and advances installment pointers.
+    """
+    record = db.query(LoanPerformance).filter(
+        (LoanPerformance.case_id == case_id) | 
+        (LoanPerformance.facility_number == case_id)
+    ).first()
+
+    if not record:
+        raise HTTPException(status_code=404, detail="Loan performance record not found.")
+
+    res = LoanPerformanceEngine.record_repayment(record, payload.amount, db=db)
+    return res
+
+@router.post("/loan-performance/{case_id}/simulate-status")
+def simulate_status_endpoint(
+    case_id: str,
+    payload: SimulateStatusPayload,
+    db: Session = Depends(get_db)
+):
+    """
+    Simulates repayment timeliness scenarios for executive demonstration:
+    - CURRENT: 0 days overdue
+    - GRACE_PERIOD: 4 days overdue (within 7-day grace period, no penalty)
+    - OVERDUE_PENALTY: 10 days overdue (> 7 days grace, triggers 5% default penalty!)
+    - CRITICAL: 35 days overdue
+    """
+    record = db.query(LoanPerformance).filter(
+        (LoanPerformance.case_id == case_id) | 
+        (LoanPerformance.facility_number == case_id)
+    ).first()
+
+    if not record:
+        raise HTTPException(status_code=404, detail="Loan performance record not found.")
+
+    res = LoanPerformanceEngine.simulate_status(record, payload.scenario, db=db)
+    return {
+        "message": f"Simulated status '{payload.scenario}' applied successfully.",
+        "performance_status": res.performance_status,
+        "days_overdue": res.days_overdue,
+        "penalty_accrued": res.penalty_accrued,
+        "outstanding_total": res.outstanding_total
     }
 

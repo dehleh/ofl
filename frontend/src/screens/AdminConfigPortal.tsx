@@ -611,9 +611,9 @@ export const AdminConfigPortal: React.FC = () => {
                     </td>
                     <td>
                       <span className={`badge ${u.role === 'MD' ? 'badge-primary' :
-                          u.role === 'BCC' ? 'badge-warning' :
-                            u.role === 'HRM' ? 'badge-teal' :
-                              u.role === 'ADMIN' ? 'badge-danger' : 'badge-neutral'
+                        u.role === 'BCC' ? 'badge-warning' :
+                          u.role === 'HRM' ? 'badge-teal' :
+                            u.role === 'ADMIN' ? 'badge-danger' : 'badge-neutral'
                         }`}>
                         {u.role}
                       </span>

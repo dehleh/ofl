@@ -146,7 +146,7 @@ export async function triggerYouverifyKyc(caseId: string, actor: string = 'Credi
   return res.json();
 }
 
-export async function submitApprovalDecision(caseId: string, data: { decision: string; actor: string; role: string; comments: string; conditions_mandated?: string[] }) {
+export async function submitApprovalDecision(caseId: string, data: { decision: string; actor: string; role: string; comments: string; conditions_mandated?: string[]; target_role?: string }) {
   const res = await fetch(`${API_BASE}/cases/${caseId}/approval`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -516,4 +516,50 @@ export async function calculateCaseFeesPreview(caseId: string, fees: any[], prin
   if (!res.ok) throw json;
   return json;
 }
+
+export async function fetchLoanPortfolioPerformance() {
+  const res = await fetch(`${API_BASE}/telemetry/loan-performance`, {
+    headers: getAuthHeaders()
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function fetchSingleLoanPerformance(caseId: string) {
+  const res = await fetch(`${API_BASE}/telemetry/loan-performance/${encodeURIComponent(caseId)}`, {
+    headers: getAuthHeaders()
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function recordLoanRepayment(caseId: string, amount: number, paymentMethod: string = 'DIRECT_DEBIT', reference?: string, note?: string) {
+  const res = await fetch(`${API_BASE}/telemetry/loan-performance/${encodeURIComponent(caseId)}/record-repayment`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({
+      amount,
+      payment_method: paymentMethod,
+      reference,
+      note
+    })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function simulateLoanPerformanceStatus(caseId: string, scenario: 'CURRENT' | 'GRACE_PERIOD' | 'OVERDUE_PENALTY' | 'CRITICAL') {
+  const res = await fetch(`${API_BASE}/telemetry/loan-performance/${encodeURIComponent(caseId)}/simulate-status`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ scenario })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
 

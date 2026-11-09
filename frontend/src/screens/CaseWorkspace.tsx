@@ -8,7 +8,8 @@ import {
   fetchCaseWorkspace, generateAICam, updateCam, submitApprovalDecision,
   generateOffer, takeOfferAction, updateCondition, confirmNavDisbursement,
   executeOneClickLoandiscDisbursement, syncLoanDisc, raiseException, triggerYouverifyKyc,
-  fetchCaseFees, updateCaseFees, calculateCaseFeesPreview
+  fetchCaseFees, updateCaseFees, calculateCaseFeesPreview,
+  fetchSingleLoanPerformance, recordLoanRepayment, simulateLoanPerformanceStatus
 } from '../services/api';
 import { OpticomCamDocument } from '../components/OpticomCamDocument';
 import { BankStatementAnalyzerCard } from '../components/BankStatementAnalyzerCard';
@@ -53,7 +54,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
 
   const [workspace, setWorkspace] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'DOSSIER' | 'FINANCIALS' | 'CAM' | 'APPROVALS' | 'OFFER_CONDITIONS' | 'TREASURY' | 'EXCEPTIONS'>(() => getDefaultWorkspaceTab(currentPersona));
+  const [activeTab, setActiveTab] = useState<'DOSSIER' | 'FINANCIALS' | 'CAM' | 'APPROVALS' | 'OFFER_CONDITIONS' | 'TREASURY' | 'EXCEPTIONS' | 'TELEMETRY'>(() => getDefaultWorkspaceTab(currentPersona));
 
   // State for actions
   const [actionLoading, setActionLoading] = useState(false);
@@ -65,6 +66,8 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
   });
   const [approvalComments, setApprovalComments] = useState('');
   const [mandatedCondition, setMandatedCondition] = useState('');
+  const [returnTargetRole, setReturnTargetRole] = useState<'HRM' | 'HEAD_OF_BD'>('HRM');
+  const [loanPerformance, setLoanPerformance] = useState<any>(null);
 
   // Treasury Form State
   const [navReference, setNavReference] = useState('');
@@ -198,6 +201,15 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
     }
   };
 
+  const loadLoanPerformance = async (cid: string) => {
+    try {
+      const perf = await fetchSingleLoanPerformance(cid);
+      setLoanPerformance(perf);
+    } catch (e) {
+      setLoanPerformance(null);
+    }
+  };
+
   const loadWorkspace = async () => {
     setLoading(true);
     try {
@@ -207,6 +219,9 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
         setSelectedCamIndex(data.cam_versions.length - 1);
       }
       loadCaseFees();
+      if (data.case && (data.case.state === 'Disbursed/Monitoring' || data.case.state === 'Ready for Disbursement' || (data.disbursements && data.disbursements.length > 0))) {
+        loadLoanPerformance(data.case.id || caseId);
+      }
     } catch (e: any) {
       setMessageBanner({ type: 'error', text: e.message || 'Failed to load case workspace' });
     } finally {
@@ -286,7 +301,8 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
         actor: `${currentPersona} Officer`,
         role: currentPersona,
         comments: approvalComments || `${approvalDecision} decision recorded by ${currentPersona}`,
-        conditions_mandated: conditionsList
+        conditions_mandated: conditionsList,
+        target_role: returnTargetRole
       });
       setMessageBanner({ type: 'success', text: res.message });
       setApprovalComments('');
@@ -302,7 +318,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
   const handleGenerateOfferClick = async () => {
     setActionLoading(true);
     try {
-      const res = await generateOffer(caseData.id, { 
+      const res = await generateOffer(caseData.id, {
         actor: currentPersona,
         fee_schedule: caseFees
       });
@@ -489,6 +505,17 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
         {isWorkspaceTabPermitted('EXCEPTIONS') && (
           <button className={`nav-item ${activeTab === 'EXCEPTIONS' ? 'active' : ''}`} onClick={() => setActiveTab('EXCEPTIONS')}>
             7. Exceptions ({exceptions.length})
+          </button>
+        )}
+        {(caseData.state === 'Disbursed/Monitoring' || loanPerformance) && (
+          <button className={`nav-item ${activeTab === 'TELEMETRY' ? 'active' : ''}`} onClick={() => setActiveTab('TELEMETRY')}>
+            8. Telemetry &amp; Servicing
+            {loanPerformance && loanPerformance.penalty_accrued > 0 && (
+              <span className="nav-badge alert" style={{ background: '#dc2626' }}>5% Pen</span>
+            )}
+            {loanPerformance && loanPerformance.performance_status === 'GRACE_PERIOD_ACTIVE' && (
+              <span className="nav-badge alert" style={{ background: '#d97706' }}>Grace</span>
+            )}
           </button>
         )}
       </div>
@@ -770,7 +797,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
       {/* TAB 4: APPROVALS & AUTHORITY MATRIX */}
       {activeTab === 'APPROVALS' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          
+
           {/* Governance Sequence Pipeline Banner */}
           <div className="glass-panel" style={{ padding: '1.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -786,7 +813,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
             </div>
 
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-              Facility Quantum: <strong>₦{application.amount.toLocaleString()}</strong> &bull; 
+              Facility Quantum: <strong>₦{application.amount.toLocaleString()}</strong> &bull;
               {application.amount > 20000000 ? (
                 <span style={{ color: '#ef4444', fontWeight: 700, marginLeft: '0.35rem' }}>
                   Mandatory Board Credit Committee (BCC) Sanction (&gt; ₦20,000,000)
@@ -799,27 +826,16 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
             </p>
 
             {/* Visual Step-by-Step Sequence */}
-            <div style={{ display: 'grid', gridTemplateColumns: application.amount > 20000000 ? 'repeat(6, 1fr)' : 'repeat(5, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: application.amount > 20000000 ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
               <div style={{
                 padding: '0.65rem 0.4rem',
                 borderRadius: '6px',
-                background: caseData.state === 'Analyst Review' ? 'rgba(0, 150, 204, 0.2)' : 'var(--bg-surface)',
-                border: `1px solid ${caseData.state === 'Analyst Review' ? '#0096cc' : 'var(--border-subtle)'}`
+                background: caseData.state === 'Analyst Review' || caseData.state === 'BDO Rework' ? 'rgba(0, 150, 204, 0.2)' : 'var(--bg-surface)',
+                border: `1px solid ${caseData.state === 'Analyst Review' || caseData.state === 'BDO Rework' ? '#0096cc' : 'var(--border-subtle)'}`
               }}>
                 <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>STEP 1</div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-highlight)' }}>Analyst</div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>CAM Recommendation</div>
-              </div>
-
-              <div style={{
-                padding: '0.65rem 0.4rem',
-                borderRadius: '6px',
-                background: caseData.state === 'HRM Review' ? 'rgba(0, 150, 204, 0.2)' : 'var(--bg-surface)',
-                border: `1px solid ${caseData.state === 'HRM Review' ? '#0096cc' : 'var(--border-subtle)'}`
-              }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>STEP 2</div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-highlight)' }}>HRM</div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Initial Risk Review</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-highlight)' }}>Credit Analyst</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>CAM &amp; BDO Rework Loop</div>
               </div>
 
               <div style={{
@@ -828,33 +844,33 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                 background: caseData.state === 'Head of BD Review' ? 'rgba(234, 179, 8, 0.2)' : 'var(--bg-surface)',
                 border: `1px solid ${caseData.state === 'Head of BD Review' ? '#eab308' : 'var(--border-subtle)'}`
               }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>STEP 3</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>STEP 2 (MCC)</div>
                 <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#eab308' }}>Head of BD</div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Commercial Sanction</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>1st MCC Reviewer</div>
               </div>
 
               <div style={{
                 padding: '0.65rem 0.4rem',
                 borderRadius: '6px',
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-subtle)'
+                background: caseData.state === 'HRM Review' ? 'rgba(0, 150, 204, 0.2)' : 'var(--bg-surface)',
+                border: `1px solid ${caseData.state === 'HRM Review' ? '#0096cc' : 'var(--border-subtle)'}`
+              }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>STEP 3</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-highlight)' }}>HRM</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Risk Concurrence</div>
+              </div>
+
+              <div style={{
+                padding: '0.65rem 0.4rem',
+                borderRadius: '6px',
+                background: caseData.state === 'MD Decision' ? 'rgba(16, 185, 129, 0.2)' : 'var(--bg-surface)',
+                border: `1px solid ${caseData.state === 'MD Decision' ? '#10b981' : 'var(--border-subtle)'}`
               }}>
                 <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>STEP 4</div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-highlight)' }}>HRM</div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Final Concurrence</div>
-              </div>
-
-              <div style={{
-                padding: '0.65rem 0.4rem',
-                borderRadius: '6px',
-                background: caseData.state === 'MD Decision' ? 'rgba(0, 150, 204, 0.2)' : 'var(--bg-surface)',
-                border: `1px solid ${caseData.state === 'MD Decision' ? '#0096cc' : 'var(--border-subtle)'}`
-              }}>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>STEP 5</div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: application.amount > 20000000 ? 'var(--text-highlight)' : '#10b981' }}>
-                  MD {application.amount <= 20000000 ? '(Final Sanction)' : '(Review)'}
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#10b981' }}>
+                  MD Sanction
                 </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Executive Endorsement</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Auto Offer Generation</div>
               </div>
 
               {application.amount > 20000000 && (
@@ -908,27 +924,31 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                     >
                       {currentPersona === 'ANALYST' ? (
                         <>
-                          <option value="RECOMMEND_APPROVE">Recommend Approval &amp; Forward to HRM</option>
-                          <option value="RETURN_FOR_REWORK">Return for Internal Rework (Opens Exception)</option>
+                          <option value="RECOMMEND_APPROVE">Forward to MCC (Head of Business Development)</option>
+                          <option value="RETURN_FOR_REWORK">Request Missing Details from BDO (BDO Rework)</option>
                           <option value="REJECT">Recommend Application Decline</option>
                         </>
                       ) : currentPersona === 'HEAD_OF_BD' ? (
                         <>
-                          <option value="APPROVE">Endorse Commercial Viability &amp; Sanction</option>
-                          <option value="RETURN_FOR_REWORK">Return for Commercial Rework</option>
+                          <option value="APPROVE">Approve &amp; Forward to Head of Risk Management (HRM)</option>
+                          <option value="RETURN_FOR_REWORK">Circle Back to Credit Analyst with Missing Details</option>
                           <option value="REJECT">Commercial Decline</option>
                         </>
                       ) : currentPersona === 'HRM' ? (
                         <>
-                          <option value="APPROVE">Grant Risk Concurrence &amp; Forward to Next Tier</option>
-                          <option value="RETURN_FOR_REWORK">Return for Risk Mitigation Rework</option>
+                          <option value="APPROVE">Approve &amp; Forward to Managing Director (MD)</option>
+                          <option value="RETURN_FOR_REWORK">Raise Risk Exception to Analyst (Alerts Head of BD)</option>
                           <option value="REJECT">Decline Application on Risk Grounds</option>
                         </>
                       ) : currentPersona === 'MD' ? (
                         <>
-                          <option value="APPROVE">MD Final Sanction (or Endorsement if &gt; ₦20M)</option>
-                          <option value="RETURN_FOR_REWORK">Return for Executive Review Rework</option>
+                          <option value="APPROVE">Approve Facility &amp; Auto-Generate/Email Offer Letter</option>
+                          <option value="RETURN_FOR_REWORK">Return Facility with Query (Prompts Analyst, HRM, &amp; BD)</option>
                           <option value="REJECT">Executive Decline</option>
+                        </>
+                      ) : currentPersona === 'BDO' ? (
+                        <>
+                          <option value="APPROVE">Update Customer Details &amp; Re-Submit to Credit Analyst</option>
                         </>
                       ) : currentPersona === 'BCC' ? (
                         <>
@@ -946,6 +966,45 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                       )}
                     </select>
                   </div>
+
+                  {currentPersona === 'MD' && approvalDecision === 'RETURN_FOR_REWORK' && (
+                    <div className="form-group" style={{ background: 'rgba(239, 68, 68, 0.08)', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.25)', marginBottom: '1rem' }}>
+                      <label className="form-label" style={{ color: '#ef4444', fontWeight: 700, marginBottom: '0.35rem' }}>
+                        MD Return Destination (Choose Reviewer to Resolve Query)
+                      </label>
+                      <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.25rem' }}>
+                        <label style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="returnTarget"
+                            value="HRM"
+                            checked={returnTargetRole === 'HRM'}
+                            onChange={() => setReturnTargetRole('HRM')}
+                          />
+                          Head of Risk Management (HRM) - Default
+                        </label>
+                        <label style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="returnTarget"
+                            value="HEAD_OF_BD"
+                            checked={returnTargetRole === 'HEAD_OF_BD'}
+                            onChange={() => setReturnTargetRole('HEAD_OF_BD')}
+                          />
+                          Head of Business Development
+                        </label>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '5px' }}>
+                        * Note: When MD returns this case, Credit Analyst, Head of BD, and HRM will all receive immediate notification prompts automatically.
+                      </div>
+                    </div>
+                  )}
+
+                  {currentPersona === 'HRM' && approvalDecision === 'RETURN_FOR_REWORK' && (
+                    <div style={{ fontSize: '0.75rem', color: '#d97706', marginBottom: '1rem', background: 'rgba(245, 158, 11, 0.1)', padding: '6px 10px', borderRadius: '4px', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
+                      ⚠ Risk Exception will be routed to Credit Analyst. Head of Business Development will receive an alert prompt automatically.
+                    </div>
+                  )}
 
                   <div className="form-group">
                     <label className="form-label">Mandated Conditions Precedent (Optional)</label>
@@ -1022,7 +1081,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
       {/* TAB 5: OFFER & CONDITIONS PRECEDENT */}
       {activeTab === 'OFFER_CONDITIONS' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          
+
           <div className="split-view">
             {/* Offer Summary Panel */}
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
@@ -1201,8 +1260,8 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '0.75rem' }}>
                   <div>
                     <label className="form-label" style={{ fontSize: '0.75rem' }}>Fee Name</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className="form-input"
                       placeholder="e.g. Valuation / Search Fee"
                       value={newCaseFee.name}
@@ -1225,7 +1284,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
 
                   <div>
                     <label className="form-label" style={{ fontSize: '0.75rem' }}>Rate / Amount ({newCaseFee.fee_type === 'FLAT' ? '₦' : '%'})</label>
-                    <input 
+                    <input
                       type="number"
                       step={newCaseFee.fee_type === 'FLAT' ? '1000' : '0.1'}
                       className="form-input"
@@ -1237,8 +1296,8 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsAddCaseFeeOpen(false)}>Cancel</button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn btn-primary btn-sm"
                     onClick={async () => {
                       if (!newCaseFee.name.trim()) return;
@@ -1276,7 +1335,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                     const isChecked = fee.is_selected !== false && fee.selected !== false;
                     const deduction = feeCalc?.itemized_fees?.find((i: any) => i.id === fee.id)?.calculated_amount ?? 0;
                     return (
-                      <tr 
+                      <tr
                         key={fee.id || idx}
                         style={{
                           borderBottom: '1px solid var(--border-subtle)',
@@ -1285,7 +1344,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                         }}
                       >
                         <td style={{ padding: '0.65rem 0.85rem' }}>
-                          <input 
+                          <input
                             type="checkbox"
                             checked={isChecked}
                             onChange={() => handleFeeToggle(idx)}
@@ -1308,7 +1367,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                         </td>
                         <td style={{ padding: '0.65rem 0.85rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                            <input 
+                            <input
                               type="number"
                               step={fee.fee_type === 'FLAT' ? '1000' : '0.005'}
                               className="form-input"
@@ -1656,6 +1715,183 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                 </div>
               ))}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 8: LOAN PERFORMANCE & SERVICING TELEMETRY */}
+      {activeTab === 'TELEMETRY' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Header Policy Banner */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(0, 150, 204, 0.08) 0%, rgba(30, 41, 59, 0.6) 100%)',
+            border: '1px solid rgba(0, 150, 204, 0.25)',
+            borderRadius: '10px',
+            padding: '1rem 1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-highlight)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Zap size={16} color="#0096cc" /> Opticom Post-Disbursement Servicing &amp; Telemetry
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                Policy: <strong>7-Day Grace Period</strong> post installment due date. If unserviced on Day 8+, an automated <strong>5% Default Penalty</strong> is levied.
+              </div>
+            </div>
+
+            {/* Quick Demo Scenario Controls */}
+            {loanPerformance && (
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Simulate Status:</span>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ fontSize: '0.72rem', padding: '3px 8px' }}
+                  onClick={async () => {
+                    await simulateLoanPerformanceStatus(caseData.id, 'CURRENT');
+                    await loadLoanPerformance(caseData.id);
+                  }}
+                >
+                  Current (0d)
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ fontSize: '0.72rem', padding: '3px 8px', color: '#d97706', borderColor: 'rgba(245, 158, 11, 0.3)' }}
+                  onClick={async () => {
+                    await simulateLoanPerformanceStatus(caseData.id, 'GRACE_PERIOD');
+                    await loadLoanPerformance(caseData.id);
+                  }}
+                >
+                  Grace (4d)
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ fontSize: '0.72rem', padding: '3px 8px', color: '#dc2626', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                  onClick={async () => {
+                    await simulateLoanPerformanceStatus(caseData.id, 'OVERDUE_PENALTY');
+                    await loadLoanPerformance(caseData.id);
+                  }}
+                >
+                  5% Penalty (10d)
+                </button>
+              </div>
+            )}
+          </div>
+
+          {!loanPerformance ? (
+            <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <Clock size={32} style={{ margin: '0 auto 0.75rem', opacity: 0.5 }} />
+              <div>No active loan performance telemetry initialized yet.</div>
+              <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
+                Telemetry automatically activates when this facility completes Treasury disbursement and LOAN-DISC booking.
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Financial Performance KPI Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div className="glass-panel" style={{ padding: '1rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Disbursed Principal</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-highlight)' }}>
+                    ₦{loanPerformance.disbursed_principal?.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    {loanPerformance.tenor_months}M Tenor @ {loanPerformance.interest_rate_apr}% APR
+                  </div>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '1rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Monthly Installment</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0096cc' }}>
+                    ₦{loanPerformance.monthly_installment?.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Serviced: {loanPerformance.installments_serviced} / {loanPerformance.total_installments_count}
+                  </div>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '1rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Serviced (Paid)</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#10b981' }}>
+                    ₦{loanPerformance.total_amount_serviced?.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Principal: ₦{loanPerformance.principal_serviced?.toLocaleString()}
+                  </div>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '1rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Remaining Debt Balance</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f59e0b' }}>
+                    ₦{loanPerformance.outstanding_total?.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Outstanding Principal: ₦{loanPerformance.outstanding_principal?.toLocaleString()}
+                  </div>
+                </div>
+
+                <div className="glass-panel" style={{ padding: '1rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Penalty Accrual (5%)</div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: loanPerformance.penalty_accrued > 0 ? '#dc2626' : 'var(--text-muted)' }}>
+                    ₦{loanPerformance.penalty_accrued?.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Overdue: {loanPerformance.days_overdue} days (Grace: {loanPerformance.grace_period_days}d)
+                  </div>
+                </div>
+              </div>
+
+              {/* Amortization Schedule Table */}
+              <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 0.75rem', color: 'var(--text-highlight)' }}>
+                  Amortization &amp; Servicing Schedule
+                </h4>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+                        <th style={{ padding: '8px 12px' }}>Inst. #</th>
+                        <th style={{ padding: '8px 12px' }}>Due Date</th>
+                        <th style={{ padding: '8px 12px' }}>Principal Due</th>
+                        <th style={{ padding: '8px 12px' }}>Interest Due</th>
+                        <th style={{ padding: '8px 12px' }}>Total Installment</th>
+                        <th style={{ padding: '8px 12px' }}>Status</th>
+                        <th style={{ padding: '8px 12px' }}>Serviced At</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(loanPerformance.repayment_schedule || []).map((item: any, idx: number) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)', background: item.status === 'SERVICED' ? 'rgba(16, 185, 129, 0.04)' : 'transparent' }}>
+                          <td style={{ padding: '8px 12px', fontWeight: 600 }}>Period {item.installment_no}</td>
+                          <td style={{ padding: '8px 12px' }}>{item.due_date}</td>
+                          <td style={{ padding: '8px 12px' }}>₦{Number(item.principal_due).toLocaleString()}</td>
+                          <td style={{ padding: '8px 12px' }}>₦{Number(item.interest_due).toLocaleString()}</td>
+                          <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-highlight)' }}>₦{Number(item.total_installment).toLocaleString()}</td>
+                          <td style={{ padding: '8px 12px' }}>
+                            {item.status === 'SERVICED' ? (
+                              <span style={{ color: '#10b981', fontWeight: 700 }}>✓ Serviced</span>
+                            ) : item.status === 'OVERDUE' ? (
+                              <span style={{ color: '#dc2626', fontWeight: 700 }}>⚠ Overdue</span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)' }}>Pending</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>
+                            {item.serviced_at ? new Date(item.serviced_at).toLocaleDateString() : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
           )}
         </div>
       )}

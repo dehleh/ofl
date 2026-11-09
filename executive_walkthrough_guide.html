@@ -6,7 +6,7 @@
 <style>
   @page {
     size: A4;
-    margin: 10mm 12mm 10mm 12mm;
+    margin: 9mm 11mm 9mm 11mm;
     @bottom-right {
       content: "Page " counter(page) " of " counter(pages);
       font-size: 7.5pt;
@@ -28,8 +28,8 @@
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: #0f172a;
-    line-height: 1.35;
-    font-size: 8.5pt;
+    line-height: 1.32;
+    font-size: 8.3pt;
     background: #ffffff;
     margin: 0;
     padding: 0;
@@ -37,8 +37,8 @@
 
   .page {
     page-break-after: always;
-    height: 275mm;
-    max-height: 275mm;
+    height: 279mm;
+    max-height: 279mm;
     position: relative;
     overflow: hidden;
     display: flex;
@@ -73,8 +73,8 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 2px solid #0096cc;
-    padding-bottom: 8px;
-    margin-bottom: 11px;
+    padding-bottom: 7px;
+    margin-bottom: 10px;
   }
 
   .logo-box {
@@ -84,12 +84,12 @@
   }
 
   .logo-img {
-    height: 38px;
+    height: 36px;
     border-radius: 4px;
   }
 
   .company-title {
-    font-size: 13.5pt;
+    font-size: 13pt;
     font-weight: 800;
     color: #041326;
     letter-spacing: -0.02em;
@@ -98,7 +98,7 @@
   }
 
   .company-sub {
-    font-size: 7.2pt;
+    font-size: 7pt;
     font-weight: 700;
     color: #0096cc;
     text-transform: uppercase;
@@ -108,9 +108,9 @@
 
   .header-meta {
     text-align: right;
-    font-size: 7.5pt;
+    font-size: 7.3pt;
     color: #64748b;
-    line-height: 1.3;
+    line-height: 1.28;
   }
 
   .badge-confidential {
@@ -123,21 +123,21 @@
     font-size: 6.8pt;
     font-weight: 800;
     letter-spacing: 0.04em;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
   }
 
   /* Hero Title */
   .hero-box {
     background: linear-gradient(135deg, #041326 0%, #0a2540 100%);
     color: #ffffff;
-    padding: 11px 14px;
+    padding: 10px 13px;
     border-radius: 6px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     border-left: 4px solid #0096cc;
   }
 
   .hero-title {
-    font-size: 13.5pt;
+    font-size: 13pt;
     font-weight: 800;
     margin: 0;
     letter-spacing: -0.01em;
@@ -145,17 +145,17 @@
   }
 
   .hero-desc {
-    font-size: 7.8pt;
+    font-size: 7.7pt;
     color: #94a3b8;
     margin-top: 3px;
     margin-bottom: 0;
   }
 
   h2 {
-    font-size: 9.8pt;
+    font-size: 9.5pt;
     font-weight: 800;
     color: #041326;
-    margin: 10px 0 6px 0;
+    margin: 9px 0 5px 0;
     border-bottom: 1px solid #e2e8f0;
     padding-bottom: 3px;
     display: flex;
@@ -166,26 +166,26 @@
   }
 
   h3 {
-    font-size: 8.8pt;
+    font-size: 8.5pt;
     font-weight: 700;
     color: #0096cc;
-    margin: 8px 0 4px 0;
+    margin: 7px 0 4px 0;
   }
 
   p {
-    margin: 0 0 6px 0;
+    margin: 0 0 5px 0;
     color: #334155;
-    font-size: 8.2pt;
-    line-height: 1.35;
+    font-size: 8pt;
+    line-height: 1.32;
   }
 
   /* Callout Card */
   .card {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 9px 12px;
-    margin-bottom: 9px;
+    border-radius: 5px;
+    padding: 8px 11px;
+    margin-bottom: 8px;
   }
 
   .card-highlight {
@@ -206,12 +206,18 @@
     border-left: 3px solid #d97706;
   }
 
+  .card-danger {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-left: 3px solid #dc2626;
+  }
+
   /* Tables */
   table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 7.6pt;
-    margin-bottom: 8px;
+    font-size: 7.4pt;
+    margin-bottom: 7px;
   }
 
   th {
@@ -219,15 +225,15 @@
     color: #0f172a;
     font-weight: 700;
     text-align: left;
-    padding: 5px 7px;
+    padding: 4.5px 6.5px;
     border: 1px solid #cbd5e1;
-    font-size: 7.2pt;
+    font-size: 7pt;
     text-transform: uppercase;
     letter-spacing: 0.02em;
   }
 
   td {
-    padding: 4.5px 7px;
+    padding: 4px 6.5px;
     border: 1px solid #cbd5e1;
     color: #334155;
     vertical-align: middle;
@@ -240,9 +246,9 @@
   /* Pills */
   .pill {
     display: inline-block;
-    padding: 1.5px 6px;
+    padding: 1.5px 5.5px;
     border-radius: 4px;
-    font-size: 6.8pt;
+    font-size: 6.6pt;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
@@ -259,41 +265,41 @@
   .grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 9px;
-    margin-bottom: 8px;
+    gap: 8px;
+    margin-bottom: 7px;
   }
 
   .grid-3 {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 7px;
+    margin-bottom: 7px;
   }
 
   .grid-4 {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr;
-    gap: 7px;
-    margin-bottom: 8px;
+    gap: 6px;
+    margin-bottom: 7px;
   }
 
   .stat-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 5px;
-    padding: 7px 9px;
+    padding: 6px 8px;
     text-align: center;
   }
 
   .stat-val {
-    font-size: 13.5pt;
+    font-size: 13pt;
     font-weight: 800;
     color: #0096cc;
     line-height: 1.1;
   }
 
   .stat-lbl {
-    font-size: 6.8pt;
+    font-size: 6.6pt;
     font-weight: 700;
     color: #64748b;
     text-transform: uppercase;
@@ -304,23 +310,23 @@
   /* Step box */
   .step-box {
     display: flex;
-    gap: 9px;
-    margin-bottom: 7px;
+    gap: 8px;
+    margin-bottom: 6px;
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 5px;
-    padding: 7px 10px;
+    padding: 6px 9px;
     align-items: flex-start;
   }
 
   .step-num {
     background: #0096cc;
     color: #ffffff;
-    font-size: 8pt;
+    font-size: 7.8pt;
     font-weight: 800;
     border-radius: 50%;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -332,17 +338,17 @@
   }
 
   .step-title {
-    font-size: 8.5pt;
+    font-size: 8.3pt;
     font-weight: 700;
     color: #041326;
     margin-bottom: 2px;
   }
 
   .step-text {
-    font-size: 7.7pt;
+    font-size: 7.5pt;
     color: #475569;
     margin: 0;
-    line-height: 1.3;
+    line-height: 1.28;
   }
 
   .talking-point {
@@ -350,7 +356,7 @@
     border-left: 2px solid #0096cc;
     padding: 3px 6px;
     margin-top: 3px;
-    font-size: 7.2pt;
+    font-size: 7.1pt;
     color: #0f172a;
     border-radius: 2px;
   }
@@ -359,41 +365,41 @@
   .sign-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-top: 10px;
+    gap: 10px;
+    margin-top: 8px;
   }
 
   .sign-box {
     border: 1px solid #cbd5e1;
     border-radius: 5px;
-    padding: 8px 10px;
+    padding: 7px 9px;
     background: #f8fafc;
   }
 
   .sign-line {
     border-bottom: 1px dashed #94a3b8;
-    height: 24px;
-    margin-bottom: 5px;
+    height: 22px;
+    margin-bottom: 4px;
   }
 
   .sign-name {
-    font-size: 7.8pt;
+    font-size: 7.6pt;
     font-weight: 700;
     color: #0f172a;
   }
 
   .sign-title {
-    font-size: 7pt;
+    font-size: 6.8pt;
     color: #64748b;
   }
 
   .footer-note {
-    font-size: 7pt;
+    font-size: 6.8pt;
     color: #94a3b8;
     text-align: center;
     border-top: 1px solid #e2e8f0;
-    padding-top: 6px;
-    margin-top: 6px;
+    padding-top: 5px;
+    margin-top: 5px;
   }
 </style>
 </head>
@@ -423,9 +429,9 @@
 
       <!-- Hero Box -->
       <div class="hero-box">
-        <div class="hero-title">Commercial Credit Automation Platform — Executive Walkthrough Guide</div>
+        <div class="hero-title">Commercial Credit Automation &amp; Servicing Platform — Executive Guide</div>
         <div class="hero-desc">
-          Official comprehensive demonstration roadmap for the Managing Director, Head of Credit &amp; Risk (HRM), Head of Business Development, Board Credit Committee (BCC), and Treasury.
+          Official comprehensive demonstration roadmap for the Managing Director, Head of Risk Management (HRM), Head of Business Development, Management Credit Committee (MCC), Board Credit Committee (BCC), and Treasury.
         </div>
       </div>
 
@@ -440,65 +446,65 @@
           <div class="stat-lbl">MD Final Approval Mandate</div>
         </div>
         <div class="stat-card">
-          <div class="stat-val">&gt; ₦20.0M</div>
-          <div class="stat-lbl">BCC Board Sanction Mandate</div>
+          <div class="stat-val">7 Days</div>
+          <div class="stat-lbl">Statutory Grace Window</div>
         </div>
         <div class="stat-card">
-          <div class="stat-val">1-Click</div>
-          <div class="stat-lbl">LOAN-DISC / Xloandisk Booking</div>
+          <div class="stat-val">5.0%</div>
+          <div class="stat-lbl">Automated Default Penalty</div>
         </div>
       </div>
 
       <h2>1. Executive Summary &amp; Management Context</h2>
       <p>
-        Opticom Finance Limited (RC: 347832) has implemented an end-to-end autonomous underwriting and credit lifecycle engine. This platform automates the transformation of commercial loan origination from manual, fragmented spreadsheets and paper memos into a deterministic, secure, and auditable digital pipeline running strictly within Opticom's enterprise boundaries.
+        Opticom Finance Limited (RC: 347832) has operationalized an end-to-end autonomous underwriting, credit approval, and post-disbursement telemetry servicing platform. This platform automates the entire lifecycle of commercial credit from multi-channel intake through sequential governance to real-time repayment surveillance and penalty enforcement.
       </p>
 
       <div class="card card-highlight">
         <div style="font-weight: 700; color: #006b99; margin-bottom: 3px; font-size: 8.2pt;">
-          Key Executive Value Propositions:
+          Key Platform Innovations:
         </div>
-        <ul style="margin: 0; padding-left: 16px; font-size: 7.8pt; color: #334155; line-height: 1.35;">
-          <li><strong>Zero Hallucination Guarantee:</strong> All financial metrics (DSCR, DTI, PMT, Amortization, Fees, Stress Tests) are calculated strictly by a deterministic Python engine outside the AI layer.</li>
-          <li><strong>Official 12-Page Opticom CAM:</strong> Google Cloud Vertex AI Gemini automates narrative synthesis into the official corporate Credit Appraisal Memorandum format, citing verified bank statements and CAC incorporation documents.</li>
-          <li><strong>Canonical Governance &amp; Multi-Tier Segregation:</strong> Strict Role-Based Access Control (RBAC) ensuring Credit Analyst recommends, HRM synthesizes, Head of BD commercial reviews, and final sanction routes deterministically to MD (&le; ₦20M) or BCC (&gt; ₦20M).</li>
-          <li><strong>Integrated Master Fee Schedule &amp; Bespoke Inclusions:</strong> Full transparency of statutory fees (Stamp Duty 0.125%, FIRS VAT 7.5% on service fees) and customizable bespoke fees with live net disbursement simulation.</li>
-          <li><strong>Core LMS Synchronization:</strong> Native 1-click booking into Opticom's core LMS (LOAN-DISC / Xloandisk) with NAV settlement ledger voucher generation and replay prevention.</li>
+        <ul style="margin: 0; padding-left: 16px; font-size: 7.7pt; color: #334155; line-height: 1.32;">
+          <li><strong>Zero Hallucination Deterministic Engine:</strong> Financial ratios (DSCR, DTI, PMT, Amortization, Bespoke Fees, Net Disbursement) are strictly computed in Python outside LLMs.</li>
+          <li><strong>New Sequential Multi-Tier Approval Chain:</strong> Intake (Public or BDO Assisted) &rarr; Credit Analyst &rarr; MCC First Reviewer (Head of Business Development) &rarr; Head of Risk Management (HRM) &rarr; Managing Director (MD) with automated offer dispatch.</li>
+          <li><strong>Closed-Loop Exception &amp; Rework Routing:</strong> Analyst returns incomplete files to BDO Rework; HRM queries return to Analyst with instant prompt alerts to Head of BD; MD returns to HRM or BD with multi-stakeholder alerts across all three offices.</li>
+          <li><strong>Post-Disbursement Telemetry Platform:</strong> Continuous portfolio performance surveillance tracking amortized collections, overdue installments, statutory 7-day grace period, and deterministic 5% default penalty enforcement.</li>
+          <li><strong>Core LMS &amp; LOAN-DISC Synchronization:</strong> Direct 1-click booking into Opticom's core LMS (LOAN-DISC / Xloandisk) with NAV accounting vouchers (<code>NAV-DISB-XXXX</code>).</li>
         </ul>
       </div>
 
-      <h2>2. Enterprise System Architecture &amp; Intake Gateways</h2>
+      <h2>2. Multi-Channel Origination Gateways</h2>
       <div class="grid-2">
         <div class="card">
-          <div style="font-weight: 700; color: #0f172a; margin-bottom: 3px; font-size: 8.2pt;">
-            Gate 1: BESTO Retail Partner Ingestion (&le; ₦2,000,000)
+          <div style="font-weight: 700; color: #0f172a; margin-bottom: 3px; font-size: 8.1pt;">
+            Gate 1: Client-Facing Direct Portal (&gt; ₦2,000,000)
           </div>
-          <p style="font-size: 7.6pt; margin-bottom: 3px;">
-            High-volume consumer &amp; micro-commercial facilities up to ₦2.0M ingested via secure HMAC-SHA256 authenticated REST webhooks. Includes reuse of BESTO KYC and automated quarantine for suspicious payloads.
+          <p style="font-size: 7.5pt; margin-bottom: 3px;">
+            Self-service digital front-door for SME and corporate clients. Allows multi-document upload (bank statements, CAC proofs, contract PO awards, collateral briefs) and real-time loan repayment sizing.
           </p>
-          <span class="pill pill-blue">RETAIL GATEWAY</span> <span class="pill pill-green">HMAC-SHA256 SECURED</span>
+          <span class="pill pill-cyan">CLIENT PORTAL</span> <span class="pill pill-green">DIRECT INTAKE</span>
         </div>
 
         <div class="card">
-          <div style="font-weight: 700; color: #0f172a; margin-bottom: 3px; font-size: 8.2pt;">
-            Gate 2: OFL Direct Commercial Portal (&gt; ₦2,000,000)
+          <div style="font-weight: 700; color: #0f172a; margin-bottom: 3px; font-size: 8.1pt;">
+            Gate 2: BDO Assisted Origination &amp; In-Field Intake
           </div>
-          <p style="font-size: 7.6pt; margin-bottom: 3px;">
-            Institutional front-door for SME and corporate clients from ₦2,000,000.01 up to ₦50M+ single obligor limit. Features bank statement OCR upload, CAC documentation, and live 28% APR commercial repayment sizer.
+          <p style="font-size: 7.5pt; margin-bottom: 3px;">
+            Empowers Business Development Officers (BDOs) to originate loans on behalf of corporate prospects visited in the field, capture bespoke financial variables, and monitor file progress.
           </p>
-          <span class="pill pill-cyan">COMMERCIAL GATEWAY</span> <span class="pill pill-purple">STRUCTURED ENTERPRISE</span>
+          <span class="pill pill-blue">BDO ASSISTED</span> <span class="pill pill-purple">FIELD SOURCING</span>
         </div>
       </div>
 
-      <div class="card card-success" style="margin-top: 5px;">
+      <div class="card card-success" style="margin-top: 4px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <strong>Corporate Identity &amp; Contact:</strong> Opticom Finance Limited &bull; RC: 347832<br />
-            <span style="font-size: 7.4pt; color: #047857;">
+            <strong>Corporate Identity &amp; Help-Line:</strong> Opticom Finance Limited &bull; RC: 347832<br />
+            <span style="font-size: 7.3pt; color: #047857;">
               10th Floor, UAC House, 1-5 Odunlami St, Lagos Island, Lagos &bull; Help-Line: <strong>0816 181 3538</strong> &bull; Email: <strong>info@opticomfinance.com</strong>
             </span>
           </div>
-          <span class="pill pill-green">LIVE PRODUCTION READY</span>
+          <span class="pill pill-green">LIVE SYSTEM ONLINE</span>
         </div>
       </div>
 
@@ -510,7 +516,7 @@
 
 
   <!-- ===================================================================== -->
-  <!-- PAGE 2: CANONICAL OPTICOM APPROVAL WORKFLOW & GOVERNANCE LIMITS       -->
+  <!-- PAGE 2: NEW LOAN APPLICATION & SEQUENTIAL APPROVAL WORKFLOW          -->
   <!-- ===================================================================== -->
   <div class="page">
     <div class="page-content">
@@ -521,93 +527,73 @@
           <img src="data:image/jpeg;base64,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" class="logo-img" alt="Opticom Logo" />
           <div>
             <div class="company-title">OPTICOM FINANCE LIMITED</div>
-            <div class="company-sub">Canonical Credit Origination &amp; Approval Authority Flow</div>
+            <div class="company-sub">End-to-End Governance Approval &amp; Exception Routing Flow</div>
           </div>
         </div>
         <div class="header-meta">
-          <strong>Doc Ref:</strong> OFL-SOP-CR-01<br />
+          <strong>Standard Ref:</strong> OFL-SOP-CR-02<br />
           <strong>RC:</strong> 347832 &bull; <strong>Helpline:</strong> 0816 181 3538
         </div>
       </div>
 
-      <h2>3. The Opticom Approval Lifecycle (PRD Sections 6, 7 &amp; 17)</h2>
+      <h2>3. The Opticom Sequential Approval Chain &amp; Exception Architecture</h2>
       <p>
-        The platform enforces Opticom's approved multi-tier governance matrix. Every credit case follows this strict sequential chain with role-segregated queues:
+        The platform enforces Opticom's approved multi-tier governance matrix. Every credit case follows this strict sequential chain with role-segregated queues and bi-directional exception rework routing:
       </p>
 
       <div class="step-box">
         <div class="step-num">1</div>
         <div class="step-content">
-          <div class="step-title">Application Intake &amp; Identity Verification (Youverify Gateway)</div>
-          <div class="step-text">Borrower or BDO submits facility request with 6-month bank statements, CAC certificate, and board resolution. Youverify automated API verifies BVN, NIN, RC status, and conducts PEP/Sanctions screening.</div>
+          <div class="step-title">Intake: Client Direct Portal OR BDO Assisted Intake</div>
+          <div class="step-text">Prospective obligor applies via public portal or BDO submits request from field visit with bank statements, CAC certificate, board resolution, and collateral profile. Facility enters <code>Submitted / Analyst Review</code>.</div>
         </div>
       </div>
 
       <div class="step-box">
         <div class="step-num">2</div>
         <div class="step-content">
-          <div class="step-title">Credit Analyst Underwriting &amp; Financial Spreading</div>
-          <div class="step-text">Analyst evaluates verified bank turnover, spreads financials, executes deterministic ratio calculations (DSCR &ge; 1.30x, DSR &le; 40%), validates collateral coverage (&ge; 1.20x), and submits recommendation to HRM.</div>
+          <div class="step-title">Credit Analyst Underwriting &amp; Exception Check</div>
+          <div class="step-text">
+            Analyst reviews financial statements, spreads turnover, and verifies documentation completeness.<br />
+            &bull; <strong>Exception / Incomplete Details:</strong> Analyst returns application to <code>BDO Rework</code>. BDO receives notification and opens case in assisted portal to supply missing items.<br />
+            &bull; <strong>Satisfied:</strong> Analyst leaves underwriting comments and forwards application to the <strong>Management Credit Committee (MCC)</strong>.
+          </div>
         </div>
       </div>
 
       <div class="step-box">
         <div class="step-num">3</div>
         <div class="step-content">
-          <div class="step-title">Head of Risk Management (HRM) — CAM Synthesis</div>
-          <div class="step-text">HRM triggers Vertex AI Gemini to generate the 12-page official Credit Appraisal Memorandum (CAM). HRM reviews risk covenants, stress testing matrices, and routes the case to Head of Business Development.</div>
+          <div class="step-title">MCC First Reviewer: Head of Business Development</div>
+          <div class="step-text">
+            The Head of Business Development is the first reviewer in MCC to receive the file from the Analyst.<br />
+            &bull; <strong>Deficiency / Query:</strong> Head of BD circles back to Credit Analyst with queries regarding missing applicant details.<br />
+            &bull; <strong>Satisfied:</strong> Head of BD records commercial comments and approves facility onward to the <strong>Head of Risk Management (HRM)</strong>.
+          </div>
         </div>
       </div>
 
       <div class="step-box">
         <div class="step-num">4</div>
         <div class="step-content">
-          <div class="step-title">Head of Business Development — Commercial Review &amp; Sanction</div>
-          <div class="step-text">Head of BD evaluates the commercial rationale, client relationship history, repayment dynamics, and interest margin. Upon commercial recommendation/approval, the case returns to HRM for final risk concurrence.</div>
+          <div class="step-title">Head of Risk Management (HRM) — Risk Sanction &amp; Alerting</div>
+          <div class="step-text">
+            HRM conducts comprehensive risk evaluation and covenants check (Vertex AI 12-page CAM synthesis).<br />
+            &bull; <strong>Risk Exception / Query:</strong> File routes back to <strong>Credit Analyst</strong>. Simultaneously, the <strong>Head of Business Development automatically receives an alert prompt</strong> notifying them of the exception.<br />
+            &bull; <strong>Satisfied:</strong> HRM logs risk sign-off and approves facility to the <strong>Managing Director (MD)</strong>.
+          </div>
         </div>
       </div>
 
       <div class="step-box">
         <div class="step-num">5</div>
         <div class="step-content">
-          <div class="step-title">HRM Concurrence &amp; Escalation to Final Executive Authority</div>
-          <div class="step-text">HRM reviews BD's commercial recommendations. Upon risk concurrence, the engine checks the facility amount against Opticom's deterministic sanction thresholds:</div>
-        </div>
-      </div>
-
-      <div class="grid-2" style="margin-top: 4px;">
-        <div class="card card-highlight">
-          <div style="font-weight: 800; color: #006b99; font-size: 8.5pt;">
-            Path A: Facilities &le; ₦20,000,000 (MD Sanction)
+          <div class="step-title">Managing Director (MD) — Executive Sanction &amp; Auto Offer Dispatch</div>
+          <div class="step-text">
+            MD holds highest executive authority (&le; ₦20,000,000).<br />
+            &bull; <strong>Reservation / Query:</strong> MD returns file to either <strong>HRM</strong> (default) or <strong>Head of BD</strong>. Instant alert prompts are dispatched to <strong>Credit Analyst, HRM, and Head of BD</strong>.<br />
+            &bull; <strong>Executive Approval:</strong> MD grants final approval &rarr; <strong>Formal facility Offer Letter is automatically generated</strong> and instantly emailed to applicant with copy to Finance.
           </div>
-          <p style="font-size: 7.5pt; margin-top: 2px;">
-            Case routes to <strong>Managing Director (MD)</strong>. MD grants final executive approval, automatically advancing case to <code>Offer Pending</code> and notifying Finance and Loan Operations.
-          </p>
-        </div>
-
-        <div class="card card-warning">
-          <div style="font-weight: 800; color: #b45309; font-size: 8.5pt;">
-            Path B: Facilities &gt; ₦20,000,000 (BCC Sanction)
-          </div>
-          <p style="font-size: 7.5pt; margin-top: 2px;">
-            MD reviews and endorses facility, escalating it to the <strong>Board Credit Committee (BCC)</strong>. BCC Chairman and Committee members grant final board sanction, triggering offer generation.
-          </p>
-        </div>
-      </div>
-
-      <div class="step-box">
-        <div class="step-num">6</div>
-        <div class="step-content">
-          <div class="step-title">Offer Letter Generation &amp; Conditions Precedent Clearance</div>
-          <div class="step-text">System generates formal facility Offer Letter with itemized Master Fee Schedule. Credit Operations verifies satisfaction of Conditions Precedent (e.g. registered mortgage, comprehensive insurance, promissory notes).</div>
-        </div>
-      </div>
-
-      <div class="step-box">
-        <div class="step-num">7</div>
-        <div class="step-content">
-          <div class="step-title">Treasury 1-Click LOAN-DISC / Xloandisk Booking &amp; NAV Settlement</div>
-          <div class="step-text">Treasury Lead executes 1-click disbursement: books loan into core LMS (LOAN-DISC / Xloandisk), generates NAV accounting voucher (e.g. <code>NAV-DISB-XXXX</code>), and logs SHA-256 audit entry.</div>
         </div>
       </div>
 
@@ -618,45 +604,51 @@
             <th>Persona Role</th>
             <th>Designated Authority</th>
             <th>Approval Limit (₦)</th>
-            <th>Governance Responsibilities</th>
+            <th>Exception Routing &amp; Governance Rules</th>
           </tr>
         </thead>
         <tbody>
           <tr>
+            <td><strong>Business Dev Officer (BDO)</strong></td>
+            <td>Assisted Intake &amp; Rework</td>
+            <td>Origination Only</td>
+            <td>Gathers documents, resolves analyst rework queries, resubmits to Analyst.</td>
+          </tr>
+          <tr>
             <td><strong>Credit Analyst</strong></td>
-            <td>Recommend &amp; Review</td>
-            <td>Up to ₦2,000,000 (Recommend Only)</td>
-            <td>Bank statement spreading, DSCR/DTI ratios, collateral analysis</td>
+            <td>Underwriting &amp; Spreading</td>
+            <td>Recommend Only</td>
+            <td>Spreads cashflow, flags missing documents back to BDO, forwards to MCC.</td>
+          </tr>
+          <tr>
+            <td><strong>Head of Business Dev</strong></td>
+            <td>1st Reviewer in MCC</td>
+            <td>Commercial Endorsement</td>
+            <td>Evaluates relationship &amp; pricing; circles back to Analyst or approves to HRM.</td>
           </tr>
           <tr>
             <td><strong>Head of Risk (HRM)</strong></td>
             <td>Risk Review &amp; Synthesis</td>
-            <td>Up to ₦5,000,000 (Initial Risk Sign-off)</td>
-            <td>12-page CAM synthesis, covenant structure, routing to BD &amp; MD</td>
-          </tr>
-          <tr>
-            <td><strong>Head of Business Dev</strong></td>
-            <td>Commercial Sanction</td>
-            <td>Commercial Review &amp; Endorsement</td>
-            <td>Market validation, client relationship, commercial pricing</td>
+            <td>Up to ₦5,000,000 (Initial Sign-off)</td>
+            <td>Synthesizes CAM; returns to Analyst (alerts Head of BD); routes to MD.</td>
           </tr>
           <tr>
             <td><strong>Managing Director (MD)</strong></td>
-            <td>Highest Executive &amp; Admin Authority</td>
+            <td>Highest Executive Authority</td>
             <td><strong>Up to ₦20,000,000 (Final Sanction)</strong></td>
-            <td>Final facility sanction &le; ₦20M; full admin oversight across platform</td>
+            <td>Sanctions facility &le; ₦20M (triggers auto offer letter); returns alert all 3 stakeholders.</td>
           </tr>
           <tr>
             <td><strong>Board Credit Committee (BCC)</strong></td>
-            <td>Board Credit Committee</td>
+            <td>Board Sanction Mandate</td>
             <td><strong>Over ₦20,000,000 (Board Sanction)</strong></td>
-            <td>Final board sanction for enterprise facilities exceeding ₦20M</td>
+            <td>Grants board credit sanction for high-value exposures exceeding ₦20,000,000.</td>
           </tr>
           <tr>
             <td><strong>Treasury Operations</strong></td>
-            <td>LOAN-DISC &amp; Settlement</td>
-            <td>Execution &amp; Core LMS Booking</td>
-            <td>Conditions precedent check, NAV voucher, LOAN-DISC sync</td>
+            <td>Disbursement &amp; Booking</td>
+            <td>Execution &amp; Settlement</td>
+            <td>Verifies conditions precedent, books into LOAN-DISC, issues NAV voucher.</td>
           </tr>
         </tbody>
       </table>
@@ -669,7 +661,152 @@
 
 
   <!-- ===================================================================== -->
-  <!-- PAGE 3: PRICING POLICY, MASTER FEE SCHEDULE & BESPOKE FEES            -->
+  <!-- PAGE 3: POST-DISBURSEMENT TELEMETRY & 5% DEFAULT PENALTY PLATFORM    -->
+  <!-- ===================================================================== -->
+  <div class="page">
+    <div class="page-content">
+      
+      <!-- Top Header -->
+      <div class="doc-header">
+        <div class="logo-box">
+          <img src="data:image/jpeg;base64,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" class="logo-img" alt="Opticom Logo" />
+          <div>
+            <div class="company-title">OPTICOM FINANCE LIMITED</div>
+            <div class="company-sub">Post-Disbursement Telemetry, Servicing &amp; Default Recovery</div>
+          </div>
+        </div>
+        <div class="header-meta">
+          <strong>Module:</strong> Live Telemetry Engine<br />
+          <strong>RC:</strong> 347832 &bull; <strong>Helpline:</strong> 0816 181 3538
+        </div>
+      </div>
+
+      <h2>5. Continuous Loan Servicing &amp; Default Recovery Platform</h2>
+      <p>
+        Following capital disbursement, the loan transitions automatically into Opticom's active telemetry platform. The engine performs continuous daily surveillance on repayment behavior, amortized collection status, and overdue obligations:
+      </p>
+
+      <div class="grid-3">
+        <div class="card card-highlight">
+          <div style="font-weight: 700; color: #006b99; font-size: 8pt; margin-bottom: 2px;">
+            Real-Time Servicing Surveillance
+          </div>
+          <p style="font-size: 7.4pt; margin: 0;">
+            Monitors monthly installment due dates, payments received, serviced principal vs interest, and remaining credit exposure across all active facilities.
+          </p>
+        </div>
+
+        <div class="card card-warning">
+          <div style="font-weight: 700; color: #b45309; font-size: 8pt; margin-bottom: 2px;">
+            Statutory 7-Day Grace Window
+          </div>
+          <p style="font-size: 7.4pt; margin: 0;">
+            If an installment is missed on its due date, the borrower is granted a 7-calendar-day grace period during which status shows <code>Grace Period Active</code> and <strong>zero penalty</strong> is charged.
+          </p>
+        </div>
+
+        <div class="card card-danger">
+          <div style="font-weight: 700; color: #991b1b; font-size: 8pt; margin-bottom: 2px;">
+            Deterministic 5% Default Penalty
+          </div>
+          <p style="font-size: 7.4pt; margin: 0;">
+            On Day 8 past due date (grace expired), a deterministic <strong>5% penalty</strong> is automatically levied on the unserviced monthly installment until paid.
+          </p>
+        </div>
+      </div>
+
+      <h2>6. Mathematical Formulation of the 5% Default Penalty Policy</h2>
+      <div class="card card-highlight">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <span style="font-size: 7pt; font-weight: 700; color: #006b99; text-transform: uppercase;">Deterministic Default Penalty Policy Formula</span>
+            <div style="font-size: 10pt; font-weight: 800; color: #041326; margin-top: 2px;">
+              Penalty Accrued = Monthly Installment &times; 5.0% &nbsp;&nbsp;(Applied Deterministically on Day 8+)
+            </div>
+            <div style="font-size: 7.4pt; color: #475569; margin-top: 2px;">
+              <strong>Grace Condition:</strong> If Overdue Days &le; 7 &rarr; Penalty = ₦0.00 &bull; If Overdue Days &gt; 7 &rarr; Penalty = 5% of monthly repayment.
+            </div>
+          </div>
+          <span class="pill pill-red">STRICT ENFORCEMENT</span>
+        </div>
+      </div>
+
+      <h2>7. Post-Disbursement Servicing Status Lifecycle</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Telemetry Status</th>
+            <th>Overdue Days</th>
+            <th>Penalty Rate</th>
+            <th>Borrower Condition &amp; Engine Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="pill pill-green">PERFORMING_CURRENT</span></td>
+            <td>0 Days</td>
+            <td>0.0% (₦0.00)</td>
+            <td>All installments serviced on or before due date. Healthy amortized debt reduction.</td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-amber">GRACE_PERIOD_ACTIVE</span></td>
+            <td>1 – 7 Days</td>
+            <td>0.0% (₦0.00)</td>
+            <td>Due date missed; statutory 7-day grace period active. Automated SMS/Email courtesy alert.</td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-red">OVERDUE_PENALTY_APPLIED</span></td>
+            <td>8 – 30 Days</td>
+            <td><strong>5.0% Accrued</strong></td>
+            <td>Grace window expired. 5% penalty levied on overdue installment; formal demand letter queued.</td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-red">CRITICAL_DELINQUENT</span></td>
+            <td>&gt; 30 Days</td>
+            <td>5.0% + Recovery</td>
+            <td>Severe default; automated referral to Special Asset Management and collateral realization.</td>
+          </tr>
+          <tr>
+            <td><span class="pill pill-blue">CLOSED_FULLY_SETTLED</span></td>
+            <td>All Serviced</td>
+            <td>Nil</td>
+            <td>100% principal and interest fully repaid; collateral discharge certificate issued.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>8. Portfolio Telemetry Simulation &amp; Live Repayment Ledger</h2>
+      <div class="grid-2">
+        <div class="card">
+          <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px; font-size: 8pt;">
+            1-Click Scenario Simulation Controls
+          </div>
+          <p style="font-size: 7.4pt; margin-bottom: 3px;">
+            The platform provides executive testing buttons on each account: <code>Current</code>, <code>Grace Period (4d)</code>, <code>5% Overdue Penalty (10d)</code>, and <code>Critical</code> to dynamically verify policy compliance in real time.
+          </p>
+          <span class="pill pill-blue">LIVE SCENARIO TESTER</span>
+        </div>
+
+        <div class="card">
+          <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px; font-size: 8pt;">
+            Automated Amortization &amp; Repayment Ledger
+          </div>
+          <p style="font-size: 7.4pt; margin-bottom: 3px;">
+            Records repayments via Direct Debit, Bank Transfer, or Cheque with instant mathematical splitting into principal reduction and interest income with ledger audit trail.
+          </p>
+          <span class="pill pill-green">INSTANT SPLIT ACCOUNTING</span>
+        </div>
+      </div>
+
+    </div>
+    <div class="footer-note">
+      Opticom Finance Limited &bull; Executive Management Walkthrough Guide &bull; Confidential
+    </div>
+  </div>
+
+
+  <!-- ===================================================================== -->
+  <!-- PAGE 4: COMMERCIAL PRICING & MASTER FEE SCHEDULE CATALOG             -->
   <!-- ===================================================================== -->
   <div class="page">
     <div class="page-content">
@@ -689,32 +826,32 @@
         </div>
       </div>
 
-      <h2>5. Central Bank of Nigeria (CBN) Benchmark &amp; Commercial Pricing</h2>
+      <h2>9. CBN Benchmark Rate &amp; Commercial Pricing Centralization</h2>
       <p>
-        The platform centralizes all pricing formulas in <strong>Tab 6: Fee Schedule &amp; Bespoke</strong> under System Configuration. In full compliance with CBN regulatory benchmarks, commercial interest rates are derived deterministically:
+        In accordance with executive directive, all pricing formulas are centralized under <strong>Tab 6: Fee Schedule, Pricing (MPR/APR) &amp; Bespoke</strong> under System Configuration. This guarantees transparent, regulatory-compliant pricing:
       </p>
 
       <div class="card card-highlight">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <span style="font-size: 7.2pt; font-weight: 700; color: #006b99; text-transform: uppercase;">Active Commercial Lending Formula</span>
-            <div style="font-size: 11pt; font-weight: 800; color: #041326; margin-top: 2px;">
+            <span style="font-size: 7pt; font-weight: 700; color: #006b99; text-transform: uppercase;">Active Commercial Pricing Formula</span>
+            <div style="font-size: 10.5pt; font-weight: 800; color: #041326; margin-top: 2px;">
               CBN MPR (23.00%) + Commercial Risk Spread (5.00%) = 28.00% APR
             </div>
-            <div style="font-size: 7.6pt; color: #475569; margin-top: 2px;">
-              Monthly Equivalent Rate: <strong>2.33% / month</strong> on reducing-balance amortization.
+            <div style="font-size: 7.4pt; color: #475569; margin-top: 2px;">
+              Monthly Equivalent Rate: <strong>2.33% / month</strong> on reducing-balance amortization schedule.
             </div>
           </div>
           <div style="text-align: right;">
-            <span class="pill pill-green">CBN MONITORED</span><br />
-            <span style="font-size: 7pt; color: #64748b;">Centralized in Fee Hub</span>
+            <span class="pill pill-green">CBN COMPLIANT</span><br />
+            <span style="font-size: 6.8pt; color: #64748b;">Sync in Admin Hub</span>
           </div>
         </div>
       </div>
 
-      <h2>6. Opticom Master Fee Schedule &amp; Bespoke Inclusions</h2>
+      <h2>10. Opticom Master Fee Catalog &amp; Bespoke Inclusions</h2>
       <p>
-        Opticom standardizes 7 baseline fees while providing complete agility to select, adjust, or add bespoke transaction fees at any point in the origination lifecycle:
+        Opticom maintains 7 standardized facility charges while allowing custom bespoke fees for specialized legal searches, perfection, or collateral management:
       </p>
 
       <table>
@@ -787,36 +924,36 @@
         </tbody>
       </table>
 
-      <h2>7. Worked Facility Deduction Simulator (Sample ₦10,000,000 Facility)</h2>
+      <h2>11. Worked Facility Deduction Simulator (Sample ₦10,000,000 Facility)</h2>
       <div class="grid-4">
         <div class="card" style="margin-bottom: 0;">
-          <div style="font-size: 7pt; color: #64748b; font-weight: 700;">SAMPLE PRINCIPAL</div>
-          <div style="font-size: 11pt; font-weight: 800; color: #041326;">₦10,000,000.00</div>
-          <div style="font-size: 6.8pt; color: #64748b;">12-Month Tenor @ 28% APR</div>
+          <div style="font-size: 6.8pt; color: #64748b; font-weight: 700;">SAMPLE PRINCIPAL</div>
+          <div style="font-size: 10.5pt; font-weight: 800; color: #041326;">₦10,000,000.00</div>
+          <div style="font-size: 6.6pt; color: #64748b;">12-Month Tenor @ 28% APR</div>
         </div>
         <div class="card" style="margin-bottom: 0;">
-          <div style="font-size: 7pt; color: #64748b; font-weight: 700;">MGT + PROCESSING (4%)</div>
-          <div style="font-size: 11pt; font-weight: 800; color: #0096cc;">₦400,000.00</div>
-          <div style="font-size: 6.8pt; color: #64748b;">Mgt ₦200k + Proc ₦200k</div>
+          <div style="font-size: 6.8pt; color: #64748b; font-weight: 700;">MGT + PROCESSING (4%)</div>
+          <div style="font-size: 10.5pt; font-weight: 800; color: #0096cc;">₦400,000.00</div>
+          <div style="font-size: 6.6pt; color: #64748b;">Mgt ₦200k + Proc ₦200k</div>
         </div>
         <div class="card" style="margin-bottom: 0;">
-          <div style="font-size: 7pt; color: #64748b; font-weight: 700;">VAT ON FEES (7.5%)</div>
-          <div style="font-size: 11pt; font-weight: 800; color: #0096cc;">₦30,000.00</div>
-          <div style="font-size: 6.8pt; color: #64748b;">7.5% of ₦400,000 fees</div>
+          <div style="font-size: 6.8pt; color: #64748b; font-weight: 700;">VAT ON FEES (7.5%)</div>
+          <div style="font-size: 10.5pt; font-weight: 800; color: #0096cc;">₦30,000.00</div>
+          <div style="font-size: 6.6pt; color: #64748b;">7.5% of ₦400,000 fees</div>
         </div>
         <div class="card" style="margin-bottom: 0;">
-          <div style="font-size: 7pt; color: #64748b; font-weight: 700;">STAMP DUTY (0.125%)</div>
-          <div style="font-size: 11pt; font-weight: 800; color: #0096cc;">₦12,500.00</div>
-          <div style="font-size: 6.8pt; color: #64748b;">Statutory FIRS rate</div>
+          <div style="font-size: 6.8pt; color: #64748b; font-weight: 700;">STAMP DUTY (0.125%)</div>
+          <div style="font-size: 10.5pt; font-weight: 800; color: #0096cc;">₦12,500.00</div>
+          <div style="font-size: 6.6pt; color: #64748b;">Statutory FIRS rate</div>
         </div>
       </div>
 
-      <div class="card card-success" style="margin-top: 8px;">
+      <div class="card card-success" style="margin-top: 6px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <div style="font-size: 7.2pt; font-weight: 700; color: #065f46; text-transform: uppercase;">Net Upfront Disbursed Capital to Borrower</div>
-            <div style="font-size: 12pt; font-weight: 800; color: #047857;">
-              ₦9,557,500.00 <span style="font-size: 8pt; font-weight: 600; color: #065f46;">(Total Upfront Statutory Deductions: ₦442,500.00 &bull; 4.425%)</span>
+            <div style="font-size: 7pt; font-weight: 700; color: #065f46; text-transform: uppercase;">Net Upfront Disbursed Capital to Borrower</div>
+            <div style="font-size: 11pt; font-weight: 800; color: #047857;">
+              ₦9,557,500.00 <span style="font-size: 7.6pt; font-weight: 600; color: #065f46;">(Total Upfront Statutory Deductions: ₦442,500.00 &bull; 4.425%)</span>
             </div>
           </div>
           <span class="pill pill-green">AUTOMATED BREAKDOWN</span>
@@ -831,7 +968,7 @@
 
 
   <!-- ===================================================================== -->
-  <!-- PAGE 4: 6-ACT LIVE DEMONSTRATION SCRIPT (PRESENTER ROADMAP)           -->
+  <!-- PAGE 5: 7-ACT EXECUTIVE LIVE DEMONSTRATION SCRIPT                    -->
   <!-- ===================================================================== -->
   <div class="page">
     <div class="page-content">
@@ -842,98 +979,73 @@
           <img src="data:image/jpeg;base64,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" class="logo-img" alt="Opticom Logo" />
           <div>
             <div class="company-title">OPTICOM FINANCE LIMITED</div>
-            <div class="company-sub">Executive Live Demonstration Script (6-Act Roadmap)</div>
+            <div class="company-sub">Executive Live Demonstration Script (7-Act Roadmap)</div>
           </div>
         </div>
         <div class="header-meta">
-          <strong>Demo Duration:</strong> 15-20 Mins<br />
+          <strong>Demo Duration:</strong> 20 Mins<br />
           <strong>Helpline:</strong> 0816 181 3538
         </div>
       </div>
 
-      <h2>8. Step-by-Step Live Demonstration Script</h2>
+      <h2>12. Step-by-Step Live Demonstration Script</h2>
       <p>
-        Use this script to guide the management team through the live platform. Follow the 6 acts in sequence:
+        Guide the Opticom Executive Committee through the live platform following these 7 structured acts:
       </p>
 
       <div class="step-box">
         <div class="step-num">1</div>
         <div class="step-content">
-          <div class="step-title">ACT 1: Public Borrower Front-Door &amp; Commercial Repayment Sizer</div>
-          <div class="step-text">
-            <strong>URL:</strong> <code>http://localhost:5173/</code> &bull; <strong>Goal:</strong> Show high-trust institutional elegance.
-          </div>
-          <div class="talking-point">
-            <strong>Talking Points:</strong> Drag the loan calculator between ₦5M, ₦15M, and ₦50M. Show transparent 28% APR interest calculation (23% CBN MPR + 5% spread) and upfront fee breakdown. Click <em>"Apply for Commercial Loan"</em> to show the multi-document upload and corporate manifest.
-          </div>
+          <div class="step-title">ACT 1: Intake Options — Public Portal &amp; BDO Assisted Origination</div>
+          <div class="step-text">Show borrower self-service calculator at <code>http://localhost:5173/</code> with 28% APR. Then switch to <code>Business Dev Officer (BDO)</code> in internal cockpit to show in-field assisted loan capture.</div>
         </div>
       </div>
 
       <div class="step-box">
         <div class="step-num">2</div>
         <div class="step-content">
-          <div class="step-title">ACT 2: Admin Cockpit &amp; MD Executive Privilege</div>
-          <div class="step-text">
-            <strong>URL:</strong> <code>http://localhost:5173/staff</code> &bull; <strong>Persona:</strong> <code>Managing Director (MD)</code> &bull; <strong>Screen:</strong> <code>Admin &amp; Settings</code>
-          </div>
-          <div class="talking-point">
-            <strong>Talking Points:</strong> Demonstrate that MD holds supreme administrative authority. Show Tab 5 (Credit Limits: ₦2M Analyst, ₦5M HRM, ₦20M MD, &gt;₦20M BCC; and Webhooks) and Tab 6 (Master Fee Schedule &amp; CBN 23% MPR / 28% APR pricing formula with 1-click update).
-          </div>
+          <div class="step-title">ACT 2: Analyst Underwriting &amp; BDO Rework Exception Routing</div>
+          <div class="step-text">Switch to <code>Credit Analyst</code>. Open <code>OFL-2026-00008 (Crestview Eng, ₦7.2M)</code> in BDO Rework. Show how missing documents return the file back to BDO Segun Adeleke, and how satisfied files forward to MCC.</div>
         </div>
       </div>
 
       <div class="step-box">
         <div class="step-num">3</div>
         <div class="step-content">
-          <div class="step-title">ACT 3: Underwriting &amp; AI Credit Appraisal Memorandum (CAM)</div>
-          <div class="step-text">
-            <strong>Persona Switch:</strong> <code>Head of Risk Management (HRM)</code> &bull; <strong>Case:</strong> <code>OFL-2026-00006 (Sunrise Foods, ₦6.0M)</code>
-          </div>
-          <div class="talking-point">
-            <strong>Talking Points:</strong> Open Case 6 from Risk Review Queue. Show verified bank statement analysis (GTBank ₦18.2M/mo, DSCR 1.74x). Click <em>"Generate AI CAM"</em> to watch Google Vertex AI synthesize the official 12-page Opticom Credit Appraisal Memorandum with SWOT, covenants, and amortization.
-          </div>
+          <div class="step-title">ACT 3: MCC First Reviewer — Head of Business Development</div>
+          <div class="step-text">Switch to <code>Head of Business Development</code>. Open <code>OFL-2026-00005 (Apex Marine, ₦12M)</code>. Show commercial rationale, pricing evaluation, and approval onward to Head of Risk Management (HRM).</div>
         </div>
       </div>
 
       <div class="step-box">
         <div class="step-num">4</div>
         <div class="step-content">
-          <div class="step-title">ACT 4: Commercial Review &amp; Multi-Tier Approvals (Head of BD, MD, BCC)</div>
-          <div class="step-text">
-            <strong>Cases:</strong> <code>OFL-2026-00005 (Apex Marine, ₦12M)</code> &bull; <code>OFL-2026-00004 (Medilink, ₦15M)</code> &bull; <code>OFL-2026-00003 (Leo-Akinboni, ₦45M)</code>
-          </div>
-          <div class="talking-point">
-            <strong>Talking Points:</strong><br />
-            &bull; Switch to <code>Head of BD</code>: Show Case 5 in commercial review queue, add commercial endorsement.<br />
-            &bull; Switch to <code>MD</code>: Open Case 4 (₦15M Medilink Diagnostics &le; ₦20M). Click <em>"Approve Facility"</em>. Show automated Offer Letter issuance and instant dispatch notification to Finance.<br />
-            &bull; Switch to <code>BCC</code>: Open Case 3 (₦45M Haulage &gt; ₦20M). Show board credit deliberation and final BCC sanction!
-          </div>
+          <div class="step-title">ACT 4: Head of Risk (HRM) Review &amp; Exception Prompt to Head of BD</div>
+          <div class="step-text">Switch to <code>Head of Risk Management (HRM)</code>. Open <code>OFL-2026-00006 (Sunrise Foods, ₦6M)</code>. Synthesize Vertex AI 12-page CAM. Demonstrate that if HRM raises a risk query, file returns to Analyst and Head of BD receives an instant prompt alert.</div>
         </div>
       </div>
 
       <div class="step-box">
         <div class="step-num">5</div>
         <div class="step-content">
-          <div class="step-title">ACT 5: Exception Governance &amp; Youverify KYC Resolution</div>
-          <div class="step-text">
-            <strong>Screen:</strong> <code>Exceptions &amp; Rework</code> &bull; <strong>Case:</strong> <code>OFL-2026-00008 (Crestview Eng, ₦7.2M)</code>
-          </div>
-          <div class="talking-point">
-            <strong>Talking Points:</strong> Show the Exception Manager with live 24-hour SLA countdown. Point out the Youverify Director NIN mismatch and DTI policy threshold flag. Show resolution notes and audit convergence.
-          </div>
+          <div class="step-title">ACT 5: MD Sanction, Stakeholder Alerting &amp; Auto Offer Letter</div>
+          <div class="step-text">Switch to <code>Managing Director (MD)</code>. Open <code>OFL-2026-00004 (Medilink Diagnostics, ₦15M)</code>. Show MD return selector (HRM vs Head of BD) that alerts Analyst, HRM, and BD. Click <em>"Approve Facility"</em>: Offer Letter is auto-generated and emailed!</div>
         </div>
       </div>
 
       <div class="step-box">
         <div class="step-num">6</div>
         <div class="step-content">
-          <div class="step-title">ACT 6: Conditions Clearance &amp; 1-Click LOAN-DISC / Xloandisk Booking</div>
-          <div class="step-text">
-            <strong>Persona Switch:</strong> <code>Treasury &amp; Loan Operations</code> &bull; <strong>Case:</strong> <code>OFL-2026-00002 (Greenline Agro, ₦8.5M)</code>
-          </div>
-          <div class="talking-point">
-            <strong>Talking Points:</strong> Open Case 2 in Disbursement Queue. Show all 3 Conditions Precedent satisfied. Show fee deduction schedule (₦7,826,375 net disbursement). Click <em>"Execute 1-Click LOAN-DISC Booking"</em>. Instant confirmation with LOAN-DISC facility ID and NAV ledger reference <code>NAV-DISB-XXXX</code>.
-          </div>
+          <div class="step-title">ACT 6: Treasury 1-Click LOAN-DISC / Xloandisk Booking</div>
+          <div class="step-text">Switch to <code>Treasury &amp; Loan Operations</code>. Open <code>OFL-2026-00002 (Greenline Agro, ₦8.5M)</code> in Ready for Disbursement queue. Show verified conditions precedent. Click <em>"Execute 1-Click LOAN-DISC Booking"</em>: issues <code>NAV-DISB-XXXX</code> voucher.</div>
+        </div>
+      </div>
+
+      <div class="step-box">
+        <div class="step-num">7</div>
+        <div class="step-content">
+          <div class="step-title">ACT 7: Loan Performance Telemetry &amp; 5% Default Penalty Enforcement</div>
+          <div class="step-text">Navigate to <code>Loan Performance Telemetry</code> tab. Review portfolio KPIs: ₦74.5M disbursed, ₦8.5M serviced. Open <code>OFL-2026-00010 (Bluefin Marine, ₦16M)</code>: 4 days overdue, 7-day grace active, <strong>₦0.00 penalty</strong>. Open <code>OFL-2026-00011 (Zenith Petrochem, ₦12.5M)</code>: 10 days overdue, grace expired, <strong>5% penalty (₦60,316.24) automatically levied</strong>. Demonstrate 1-click status simulation!</div>
         </div>
       </div>
 
@@ -945,7 +1057,7 @@
 
 
   <!-- ===================================================================== -->
-  <!-- PAGE 5: LIVE DEMO REFERENCE SHEET & EXECUTIVE SIGN-OFF                -->
+  <!-- PAGE 6: 11 LIVE DEMO CASES REFERENCE MATRIX & SIGN-OFF               -->
   <!-- ===================================================================== -->
   <div class="page">
     <div class="page-content">
@@ -960,38 +1072,35 @@
           </div>
         </div>
         <div class="header-meta">
-          <strong>Pipeline:</strong> 9 Pre-Populated Cases<br />
+          <strong>Pipeline:</strong> 11 Pre-Populated Cases<br />
           <strong>Helpline:</strong> 0816 181 3538
         </div>
       </div>
 
-      <h2>9. Pre-Populated Live Demo Cases Matrix</h2>
+      <h2>13. Pre-Populated Live Demo Cases Matrix (11 Active Accounts)</h2>
       <table>
         <thead>
           <tr>
             <th>Case Ref</th>
             <th>Borrower / Obligor Entity</th>
-            <th>Sector</th>
             <th>Amount (₦)</th>
-            <th>Current Stage</th>
+            <th>Workflow Stage</th>
             <th>Active Persona Queue</th>
-            <th>Key Demo Action</th>
+            <th>Key Governance / Telemetry Feature Demonstrated</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td><strong>OFL-2026-00001</strong></td>
             <td>Adebayo Adeleke (Retail)</td>
-            <td>Retail Trade</td>
             <td>₦1,850,000</td>
             <td><span class="pill pill-blue">Analyst Review</span></td>
             <td>Credit Analyst</td>
-            <td>BESTO partner webhook ingestion demo</td>
+            <td>BESTO partner webhook ingestion (&le; ₦2.0M)</td>
           </tr>
           <tr>
             <td><strong>OFL-2026-00002</strong></td>
             <td>Greenline Agro-Allied Limited</td>
-            <td>Agro-Processing</td>
             <td>₦8,500,000</td>
             <td><span class="pill pill-green">Ready for Disb</span></td>
             <td>Treasury Lead</td>
@@ -1000,70 +1109,79 @@
           <tr>
             <td><strong>OFL-2026-00003</strong></td>
             <td>LEO-AKINBONI GLOBAL ENTERPRISES</td>
-            <td>Haulage Logistics</td>
             <td>₦45,000,000</td>
-            <td><span class="pill pill-cyan">BCC/Authorisation</span></td>
+            <td><span class="pill pill-cyan">BCC Sanction</span></td>
             <td>BCC Chair</td>
             <td><strong>Board Credit Sanction (&gt; ₦20M Mandate)</strong></td>
           </tr>
           <tr>
             <td><strong>OFL-2026-00004</strong></td>
             <td>Medilink Diagnostic Services Ltd</td>
-            <td>Healthcare</td>
             <td>₦15,000,000</td>
             <td><span class="pill pill-cyan">MD Decision</span></td>
             <td>Managing Director</td>
-            <td><strong>MD Final Sanction (&le; ₦20M Mandate)</strong></td>
+            <td><strong>MD Final Sanction (&le; ₦20M) &amp; Auto Offer Letter</strong></td>
           </tr>
           <tr>
             <td><strong>OFL-2026-00005</strong></td>
             <td>Apex Marine &amp; Offshore Ltd</td>
-            <td>Maritime Energy</td>
             <td>₦12,000,000</td>
             <td><span class="pill pill-purple">Head of BD Review</span></td>
             <td>Head of BD</td>
-            <td>Commercial review &amp; pricing endorsement</td>
+            <td><strong>MCC 1st Reviewer commercial evaluation</strong></td>
           </tr>
           <tr>
             <td><strong>OFL-2026-00006</strong></td>
             <td>Sunrise Confectioneries Ltd</td>
-            <td>Food Mfg</td>
             <td>₦6,000,000</td>
             <td><span class="pill pill-purple">HRM Review</span></td>
             <td>Head of Risk (HRM)</td>
-            <td><strong>Vertex AI 12-Page CAM Generation</strong></td>
+            <td><strong>Vertex AI 12-Page CAM &amp; Exception Prompt to BD</strong></td>
           </tr>
           <tr>
             <td><strong>OFL-2026-00007</strong></td>
             <td>Nexus Broadband &amp; Telecom Ltd</td>
-            <td>Telecom Fiber</td>
             <td>₦28,000,000</td>
-            <td><span class="pill pill-green">Disbursed/Monitor</span></td>
+            <td><span class="pill pill-green">Disbursed / Monitor</span></td>
             <td>Treasury / Portfolio</td>
-            <td>Active repayment schedule &amp; monitoring</td>
+            <td><strong>Current &amp; Performing (0 days overdue, ₦0 penalty)</strong></td>
           </tr>
           <tr>
             <td><strong>OFL-2026-00008</strong></td>
             <td>Crestview Engineering Ltd</td>
-            <td>Civil Works</td>
             <td>₦7,200,000</td>
-            <td><span class="pill pill-amber">Analyst Review</span></td>
-            <td>Credit Analyst</td>
-            <td><strong>Exceptions Manager &amp; 24h SLA Rework</strong></td>
+            <td><span class="pill pill-amber">BDO Rework</span></td>
+            <td>BDO (Segun Adeleke)</td>
+            <td><strong>Analyst return to BDO for incomplete documents</strong></td>
           </tr>
           <tr>
             <td><strong>OFL-2026-00009</strong></td>
             <td>Golden Prime Distribution Ltd</td>
-            <td>FMCG Wholesale</td>
             <td>₦18,000,000</td>
             <td><span class="pill pill-blue">Offer Pending</span></td>
             <td>Credit Operations</td>
-            <td>Offer Letter &amp; Bespoke Fee Schedule</td>
+            <td>Auto-generated formal Offer Letter &amp; email dispatch</td>
+          </tr>
+          <tr>
+            <td><strong>OFL-2026-00010</strong></td>
+            <td>Bluefin Marine Coldchain Ltd</td>
+            <td>₦16,000,000</td>
+            <td><span class="pill pill-amber">Disbursed / Monitor</span></td>
+            <td>Portfolio Telemetry</td>
+            <td><strong>Grace Period Active: 4 days overdue, ₦0 penalty</strong></td>
+          </tr>
+          <tr>
+            <td><strong>OFL-2026-00011</strong></td>
+            <td>Zenith Petrochemical Logistics</td>
+            <td>₦12,500,000</td>
+            <td><span class="pill pill-red">Disbursed / Monitor</span></td>
+            <td>Portfolio Telemetry</td>
+            <td><strong>Overdue Penalty: 10 days, 5% penalty (₦60,316.24)</strong></td>
           </tr>
         </tbody>
       </table>
 
-      <h2>10. Staff Persona Quick-Switch Cheat Sheet</h2>
+      <h2>14. Staff Persona Quick-Switch Reference</h2>
       <table>
         <thead>
           <tr>
@@ -1081,10 +1199,10 @@
             <td>Highest Executive Sanction (&le; ₦20M) &amp; Platform Admin</td>
           </tr>
           <tr>
-            <td><strong>System Administrator</strong></td>
-            <td>Admin Console</td>
-            <td><code>admin@opticomfinance.com</code></td>
-            <td>SSO, SMTP, MFA, Credit Limits, Webhooks &amp; Fee Hub</td>
+            <td><strong>Head of Business Dev</strong></td>
+            <td>Dapo Adeleke</td>
+            <td><code>dapo.adeleke@opticomfinance.com</code></td>
+            <td>MCC 1st Reviewer, Commercial Rationale &amp; Pricing Endorsement</td>
           </tr>
           <tr>
             <td><strong>Head of Risk (HRM)</strong></td>
@@ -1093,33 +1211,27 @@
             <td>Risk Review Queue, AI CAM Synthesis &amp; Risk Concurrence</td>
           </tr>
           <tr>
-            <td><strong>Head of Business Dev</strong></td>
-            <td>Dapo Adeleke</td>
-            <td><code>dapo.adeleke@opticomfinance.com</code></td>
-            <td>Commercial Sanction Queue, Commercial Rationale &amp; Margins</td>
-          </tr>
-          <tr>
-            <td><strong>Board Credit Committee (BCC)</strong></td>
-            <td>Emeka Nnamdi (BCC Chair)</td>
-            <td><code>emeka.nnamdi@opticomfinance.com</code></td>
-            <td>Board Sanctions Queue for High-Value Facilities (&gt; ₦20M)</td>
-          </tr>
-          <tr>
             <td><strong>Credit Analyst</strong></td>
             <td>Babatunde Adebayo</td>
             <td><code>tunde.adebayo@opticomfinance.com</code></td>
-            <td>Underwriting Queue, Bank Statement OCR &amp; Financial Spreading</td>
+            <td>Underwriting Queue, Spreading, BDO Query Resolution</td>
           </tr>
           <tr>
-            <td><strong>Treasury &amp; Loan Operations</strong></td>
+            <td><strong>Business Dev Officer (BDO)</strong></td>
+            <td>Segun Adeleke</td>
+            <td><code>segun.adeleke@opticomfinance.com</code></td>
+            <td>Assisted Intake &amp; BDO Rework Queue</td>
+          </tr>
+          <tr>
+            <td><strong>Treasury Operations</strong></td>
             <td>Ibrahim Musa</td>
             <td><code>ibrahim.musa@opticomfinance.com</code></td>
-            <td>Disbursement Queue, 1-Click LOAN-DISC Booking &amp; NAV Vouchers</td>
+            <td>Disbursement, LOAN-DISC Booking &amp; Telemetry Surveillance</td>
           </tr>
         </tbody>
       </table>
 
-      <h2>11. Executive Acceptance &amp; Sign-off Block</h2>
+      <h2>15. Executive Acceptance &amp; Sign-off Block</h2>
       <div class="sign-grid">
         <div class="sign-box">
           <div class="sign-line"></div>
