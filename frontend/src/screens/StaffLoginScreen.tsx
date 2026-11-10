@@ -748,6 +748,60 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
                           Microsoft Entra ID
                         </button>
                       </div>
+
+                      {/* Authorized Personnel Quick Credentials Reference */}
+                      <div style={{
+                        marginTop: '1.25rem',
+                        padding: '0.85rem',
+                        borderRadius: '8px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        textAlign: 'left'
+                      }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Demonstration &amp; UAT Logins</span>
+                          <span style={{ color: '#0096cc', fontWeight: 600 }}>Default PIN: 1988</span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+                          {[
+                            { label: 'Managing Director (MD)', user: 'md' },
+                            { label: 'Credit Analyst', user: 'analyst' },
+                            { label: 'Head of Risk (HRM)', user: 'hrm' },
+                            { label: 'Head of BD (MCC)', user: 'bd' },
+                            { label: 'System Admin', user: 'admin' },
+                            { label: 'Field Officer (BDO)', user: 'bdo' },
+                            { label: 'Board Committee (BCC)', user: 'bcc' },
+                            { label: 'Treasury Lead', user: 'treasury' }
+                          ].map(item => (
+                            <button
+                              key={item.user}
+                              type="button"
+                              onClick={() => {
+                                setUsername(item.user);
+                                setPin('1988');
+                                setError(null);
+                              }}
+                              style={{
+                                padding: '0.35rem 0.5rem',
+                                borderRadius: '5px',
+                                border: '1px solid #cbd5e1',
+                                background: '#ffffff',
+                                fontSize: '0.7rem',
+                                textAlign: 'left',
+                                cursor: 'pointer',
+                                color: '#1e293b',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                              }}
+                              title={`Click to fill: ${item.user} / 1988`}
+                            >
+                              <span style={{ fontWeight: 600 }}>{item.label}</span>
+                              <code style={{ fontSize: '0.65rem', color: '#0096cc' }}>{item.user}</code>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </form>
                 ) : (

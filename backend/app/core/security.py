@@ -92,6 +92,30 @@ STAFF_DIRECTORY: Dict[str, Dict[str, Any]] = {
         "role": "IT_OWNER",
         "pin": "1988",
         "permissions": ["integration:retry", "exception:technical_restore", "telemetry:admin"]
+    },
+    "bdo": {
+        "id": "USR-OFL-008",
+        "email": "segun.adeleke@opticomfinance.com",
+        "name": "Segun Adeleke (Business Dev Officer)",
+        "role": "BDO",
+        "pin": "1988",
+        "permissions": ["intake:assisted", "case:read", "intake:originate"]
+    },
+    "operations": {
+        "id": "USR-OFL-009",
+        "email": "kemi.balogun@opticomfinance.com",
+        "name": "Kemi Balogun (Credit Operations)",
+        "role": "OPERATIONS",
+        "pin": "1988",
+        "permissions": ["offer:generate", "conditions:verify", "case:read"]
+    },
+    "auditor": {
+        "id": "USR-OFL-010",
+        "email": "farooq.mohammed@opticomfinance.com",
+        "name": "Farooq Mohammed (Compliance Auditor)",
+        "role": "AUDITOR",
+        "pin": "1988",
+        "permissions": ["audit:read", "audit:export", "case:read"]
     }
 }
 
