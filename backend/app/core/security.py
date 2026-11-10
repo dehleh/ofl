@@ -10,7 +10,6 @@ from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 
 from ..config import settings
-from ..database import utc_now
 
 # JWT Secret & Algorithm
 SECRET_KEY = getattr(settings, "JWT_SECRET_KEY", "OFL-ENTERPRISE-CREDIT-SECRET-KEY-2026-X99")
@@ -65,6 +64,30 @@ STAFF_DIRECTORY: Dict[str, Dict[str, Any]] = {
         "id": "USR-OFL-003",
         "email": "emeka.nnamdi@opticomfinance.com",
         "name": "Emeka Nnamdi (BCC Chair)",
+        "role": "BCC",
+        "pin": "1988",
+        "permissions": ["approval:approve_unlimited", "rejection:recommend", "case:read"]
+    },
+    "bcc_emeka": {
+        "id": "USR-OFL-003",
+        "email": "emeka.nnamdi@opticomfinance.com",
+        "name": "Emeka Nnamdi (BCC Chair)",
+        "role": "BCC",
+        "pin": "1988",
+        "permissions": ["approval:approve_unlimited", "rejection:recommend", "case:read"]
+    },
+    "bcc_aliyu": {
+        "id": "USR-OFL-011",
+        "email": "aliyu.dangote@opticomfinance.com",
+        "name": "Alhaji Aliyu Dangote (BCC Member - Risk Trustee)",
+        "role": "BCC",
+        "pin": "1988",
+        "permissions": ["approval:approve_unlimited", "rejection:recommend", "case:read"]
+    },
+    "bcc_zainab": {
+        "id": "USR-OFL-012",
+        "email": "zainab.ahmed@opticomfinance.com",
+        "name": "Mrs. Zainab Ahmed (BCC Member - Legal Trustee)",
         "role": "BCC",
         "pin": "1988",
         "permissions": ["approval:approve_unlimited", "rejection:recommend", "case:read"]
@@ -141,7 +164,7 @@ def decode_access_token(token: str) -> TokenPayload:
             detail="Authentication token has expired. Please log in again.",
             headers={"WWW-Authenticate": "Bearer"}
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token credentials.",

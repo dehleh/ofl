@@ -1,18 +1,20 @@
 """
 Offer Management and Conditions Precedent Router (PRD FR-12, FR-13, FR-14)
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from typing import List, Dict, Any, Optional
 
 from ...database import get_db, utc_now
-from ...models import CreditCase, Offer, ConditionItem, CaseState, AuditEvent
+from ...models import CreditCase, Offer, ConditionItem, CaseState
 from ...schemas.schemas import OfferGenerateRequest, OfferActionRequest, ConditionUpdateRequest
 from ...core.state_machine import TransitionService
 from ...core.financial_engine import FinancialEngine
 from ...core.config_manager import ConfigManager
 from ...integrations.notification_service import NotificationService
+from ...services.approval_document_service import ApprovalDocumentService
 from pydantic import BaseModel
 
 class CaseFeeUpdateRequest(BaseModel):
@@ -318,7 +320,7 @@ def update_condition_status(
     credit_case = db.query(CreditCase).filter(CreditCase.id == case_id).first()
     unmet = db.query(ConditionItem).filter(
         ConditionItem.case_id == case_id,
-        ConditionItem.mandatory == True,
+        ConditionItem.mandatory.is_(True),
         ConditionItem.status != "SATISFIED"
     ).count()
     
@@ -341,3 +343,53 @@ def update_condition_status(
         "all_mandatory_conditions_satisfied": ready_for_disbursement,
         "case_state": credit_case.state
     }
+
+
+@router.get("/offer-documents")
+def get_case_offer_documents(
+    case_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the complete post-approval executive legal document package
+    dynamically populated with borrower, guarantor, and collateral terms (Section 11).
+    """
+    credit_case = db.query(CreditCase).filter(
+        (CreditCase.id == case_id) | (CreditCase.case_number == case_id)
+    ).first()
+    if not credit_case:
+        raise HTTPException(status_code=404, detail="Case not found.")
+
+    docs = ApprovalDocumentService.generate_case_documents(credit_case=credit_case, db=db)
+    return {
+        "case_id": credit_case.id,
+        "case_number": credit_case.case_number,
+        "documents_count": len(docs),
+        "documents": docs
+    }
+
+
+@router.get("/offer-documents/{doc_type}")
+def get_case_offer_document_view(
+    case_id: str,
+    doc_type: str,
+    raw_html: bool = Query(default=False),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns a specific post-approval legal document as JSON or renderable HTML.
+    """
+    credit_case = db.query(CreditCase).filter(
+        (CreditCase.id == case_id) | (CreditCase.case_number == case_id)
+    ).first()
+    if not credit_case:
+        raise HTTPException(status_code=404, detail="Case not found.")
+
+    docs = ApprovalDocumentService.generate_case_documents(credit_case=credit_case, db=db)
+    matching = next((d for d in docs if d["doc_type"].upper() == doc_type.upper()), None)
+    if not matching:
+        raise HTTPException(status_code=404, detail=f"Document type '{doc_type}' not found for this facility.")
+
+    if raw_html:
+        return HTMLResponse(content=matching["html"])
+    return matching

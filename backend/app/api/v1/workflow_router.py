@@ -1,14 +1,13 @@
 """
 Workflow and Approval Decision Router (PRD FR-08, FR-09, FR-10, FR-11, Section 6)
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any, Optional
 
-from ...database import get_db, utc_now
+from ...database import get_db
 from ...models import (
     CreditCase, Approval, ExceptionItem, CaseState, 
-    Offer, ConditionItem
+    ConditionItem
 )
 from ...schemas.schemas import WorkflowTransitionRequest, ApprovalDecisionRequest
 from ...core.state_machine import TransitionService
@@ -72,7 +71,8 @@ def submit_approval_decision(
     )
     
     # Check mandate permissions if deciding to APPROVE
-    if payload.decision == "APPROVE":
+    current_level = payload.role.upper().replace(" ", "_")
+    if payload.decision == "APPROVE" and current_level not in ["HRM", "HEAD_OF_RISK_MANAGEMENT", "HEAD_OF_BD", "BD", "BDO_HEAD"]:
         can_approve, reason = AuthorityMatrix.can_user_approve(payload.role, amount)
         if not can_approve:
             raise HTTPException(
@@ -92,6 +92,7 @@ def submit_approval_decision(
         conditions_mandated=payload.conditions_mandated or []
     )
     db.add(approval)
+    db.flush()
     
     # Store mandated conditions into condition_items table
     if payload.conditions_mandated:
@@ -108,6 +109,7 @@ def submit_approval_decision(
     # Route based on decision type
     next_state = credit_case.state
     current_level = payload.role.upper().replace(" ", "_")
+    response_message = f"Approval decision '{payload.decision}' recorded successfully."
 
     if payload.decision in ["RETURN_FOR_REWORK", "RETURN_TO_BDO"]:
         # Evaluate return originator and route to appropriate prior stage with stakeholder alerts
@@ -192,14 +194,20 @@ def submit_approval_decision(
         next_state = CaseState.REJECTED.value
 
     elif payload.decision in ["APPROVE", "RECOMMEND_APPROVE", "RESUBMIT"]:
-        chain = AuthorityMatrix.get_required_approval_chain(amount)
-        
         # Check previous approvals for this case revision
         past_approvals = db.query(Approval).filter(
             Approval.case_id == credit_case.id,
-            Approval.revision == credit_case.revision
+            Approval.revision == credit_case.revision,
+            Approval.invalidated_at.is_(None)
         ).all()
-        has_bcc_approval = any(a.authority_level in ["BCC", "BOARD_CREDIT_COMMITTEE"] for a in past_approvals)
+
+        bcc_approvals = [
+            a for a in past_approvals
+            if a.authority_level in ["BCC", "BOARD_CREDIT_COMMITTEE"]
+            and a.decision in ["APPROVE", "RECOMMEND_APPROVE"]
+        ]
+        distinct_bcc_actors = list(dict.fromkeys([a.actor for a in bcc_approvals if a.actor]))
+        has_bcc_quorum = len(distinct_bcc_actors) >= 2
 
         if current_level in ["BDO", "BUSINESS_DEV_OFFICER", "BUSINESS_DEVELOPMENT_OFFICER"]:
             # BDO re-submits application details to Credit Analyst
@@ -214,6 +222,7 @@ def submit_approval_decision(
             if not ok:
                 raise HTTPException(status_code=400, detail=msg)
             next_state = CaseState.ANALYST_REVIEW.value
+            response_message = "BDO updated customer details and forwarded to Credit Analyst."
 
         elif current_level in ["ANALYST", "CREDIT_ANALYST"]:
             # 1. Analyst -> Head of Business Development (First reviewer in MCC)
@@ -234,6 +243,7 @@ def submit_approval_decision(
                 amount=amount,
                 analyst_actor=payload.actor
             )
+            response_message = "Credit Analyst recommended case and forwarded to Head of Business Development (MCC)."
 
         elif current_level in ["HEAD_OF_BD", "BDO_HEAD", "BD"]:
             # 2. Head of Business Development (MCC) -> HRM
@@ -248,6 +258,7 @@ def submit_approval_decision(
             if not ok:
                 raise HTTPException(status_code=400, detail=msg)
             next_state = CaseState.HRM_REVIEW.value
+            response_message = "Head of Business Development (MCC) approved and forwarded to Head of Risk Management."
 
         elif current_level in ["HRM", "HEAD_OF_RISK_MANAGEMENT"]:
             # 3. HRM -> MD
@@ -263,23 +274,26 @@ def submit_approval_decision(
             if not ok:
                 raise HTTPException(status_code=400, detail=msg)
             next_state = target_stage
+            response_message = "HRM completed risk review and forwarded to Managing Director for final executive sanction."
 
         elif current_level in ["MD", "MANAGING_DIRECTOR", "CEO", "ADMIN", "SYSADMIN"]:
             # 4. MD approves: If amount <= ₦20m, final approval & offer letter auto-generated; else routes to BCC
-            if amount <= AuthorityMatrix.TIER_BCC_THRESHOLD or has_bcc_approval:
+            if amount <= AuthorityMatrix.TIER_BCC_THRESHOLD or has_bcc_quorum:
                 ok, msg = TransitionService.execute_transition(
                     db=db,
                     credit_case=credit_case,
                     to_state=CaseState.OFFER_PENDING.value,
                     actor=payload.actor,
                     role=payload.role,
-                    reason="Managing Director granted executive facility approval; offer letter auto-generated and dispatched."
+                    reason="Managing Director granted executive facility approval; offer letter and legal document suite auto-generated."
                 )
                 if not ok:
                     raise HTTPException(status_code=400, detail=msg)
                 next_state = CaseState.OFFER_PENDING.value
                 
-                # Auto-generate offer letter and email applicant
+                # Auto-generate offer letter and accompanying post-approval legal document suite
+                from ...services.approval_document_service import ApprovalDocumentService
+                ApprovalDocumentService.generate_case_documents(credit_case=credit_case, db=db)
                 NotificationService.auto_generate_and_email_offer_letter(credit_case=credit_case, db=db)
                 NotificationService.notify_finance_and_disbursement_initiated(
                     case_number=credit_case.case_number,
@@ -288,48 +302,128 @@ def submit_approval_decision(
                     final_approver=payload.actor,
                     approver_role="Managing Director"
                 )
+                response_message = "Managing Director granted executive facility approval. Complete legal offer document package auto-generated and dispatched."
             else:
-                # Facility > ₦20m mandates Board Credit Committee (BCC) final approval
+                # Facility > ₦20m mandates Board Credit Committee (BCC) final approval (Quorum: 2 of 3 members)
                 ok, msg = TransitionService.execute_transition(
                     db=db,
                     credit_case=credit_case,
                     to_state=CaseState.BCC_REVIEW.value,
                     actor=payload.actor,
                     role=payload.role,
-                    reason=f"MD endorsed commercial facility exceeding ₦20m (₦{amount:,.2f}); routed to Board Credit Committee for final sanction."
+                    reason=f"MD endorsed commercial facility exceeding ₦20m (₦{amount:,.2f}); routed to Board Credit Committee for final sanction (2 of 3 member quorum required)."
                 )
                 if not ok:
                     raise HTTPException(status_code=400, detail=msg)
                 next_state = CaseState.BCC_REVIEW.value
+                response_message = f"Facility exceeds ₦20m (₦{amount:,.2f}). Routed to Board Credit Committee (BCC) for 2-of-3 quorum sanction."
 
         elif current_level in ["BCC", "BOARD_CREDIT_COMMITTEE"]:
-            # 5. BCC final sanction on facilities > ₦20m
-            ok, msg = TransitionService.execute_transition(
-                db=db,
-                credit_case=credit_case,
-                to_state=CaseState.OFFER_PENDING.value,
-                actor=payload.actor,
-                role=payload.role,
-                reason="Board Credit Committee granted final facility approval; offer letter auto-generated and dispatched."
-            )
-            if not ok:
-                raise HTTPException(status_code=400, detail=msg)
-            next_state = CaseState.OFFER_PENDING.value
-            
-            NotificationService.auto_generate_and_email_offer_letter(credit_case=credit_case, db=db)
-            NotificationService.notify_finance_and_disbursement_initiated(
-                case_number=credit_case.case_number,
-                obligor_name=credit_case.application.customer.name,
-                amount=amount,
-                final_approver=payload.actor,
-                approver_role="Board Credit Committee"
-            )
+            # 5. BCC 2-of-3 Quorum on facilities > ₦20m
+            if len(distinct_bcc_actors) >= 2:
+                ok, msg = TransitionService.execute_transition(
+                    db=db,
+                    credit_case=credit_case,
+                    to_state=CaseState.OFFER_PENDING.value,
+                    actor=payload.actor,
+                    role=payload.role,
+                    reason=f"Board Credit Committee quorum achieved ({len(distinct_bcc_actors)}/3 members approved: {', '.join(distinct_bcc_actors)}). Final facility approval granted."
+                )
+                if not ok:
+                    raise HTTPException(status_code=400, detail=msg)
+                next_state = CaseState.OFFER_PENDING.value
+                
+                from ...services.approval_document_service import ApprovalDocumentService
+                ApprovalDocumentService.generate_case_documents(credit_case=credit_case, db=db)
+                NotificationService.auto_generate_and_email_offer_letter(credit_case=credit_case, db=db)
+                NotificationService.notify_finance_and_disbursement_initiated(
+                    case_number=credit_case.case_number,
+                    obligor_name=credit_case.application.customer.name,
+                    amount=amount,
+                    final_approver=f"BCC Quorum ({', '.join(distinct_bcc_actors)})",
+                    approver_role="Board Credit Committee"
+                )
+                response_message = f"Board Credit Committee quorum achieved ({len(distinct_bcc_actors)}/3 members approved: {', '.join(distinct_bcc_actors)}). Facility approved and legal document package generated."
+            else:
+                # Quorum not yet reached (e.g. 1 of 2 approved, awaiting 1 more member)
+                next_state = CaseState.BCC_REVIEW.value
+                response_message = f"BCC approval recorded for {payload.actor}. Quorum progress: {len(distinct_bcc_actors)} of 2 required Board member approvals recorded (Awaiting 1 more BCC member approval)."
 
     db.commit()
     db.refresh(credit_case)
     
     return {
-        "message": f"Approval decision '{payload.decision}' recorded successfully.",
+        "message": response_message,
         "case_state": next_state,
-        "case_revision": credit_case.revision
+        "case_revision": credit_case.revision,
+        "bcc_quorum": {
+            "required": 2,
+            "total": 3,
+            "approved_count": len(distinct_bcc_actors),
+            "approved_members": distinct_bcc_actors,
+            "quorum_achieved": len(distinct_bcc_actors) >= 2
+        } if current_level in ["BCC", "BOARD_CREDIT_COMMITTEE"] or amount > AuthorityMatrix.TIER_BCC_THRESHOLD else None
+    }
+
+
+@router.get("/bcc-status")
+def get_bcc_quorum_status(
+    case_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Returns the BCC 2-of-3 quorum status for facilities exceeding ₦20m.
+    """
+    credit_case = db.query(CreditCase).filter(
+        (CreditCase.id == case_id) | (CreditCase.case_number == case_id)
+    ).first()
+    if not credit_case:
+        raise HTTPException(status_code=404, detail="Case not found.")
+
+    board_members = [
+        {"name": "Emeka Nnamdi", "role": "BCC Chair", "email": "emeka.nnamdi@opticomfinance.com"},
+        {"name": "Alhaji Aliyu Dangote", "role": "BCC Member - Risk Trustee", "email": "aliyu.dangote@opticomfinance.com"},
+        {"name": "Mrs. Zainab Ahmed", "role": "BCC Member - Legal Trustee", "email": "zainab.ahmed@opticomfinance.com"}
+    ]
+
+    past_approvals = db.query(Approval).filter(
+        Approval.case_id == credit_case.id,
+        Approval.revision == credit_case.revision,
+        Approval.invalidated_at.is_(None),
+        Approval.authority_level.in_(["BCC", "BOARD_CREDIT_COMMITTEE"]),
+        Approval.decision.in_(["APPROVE", "RECOMMEND_APPROVE"])
+    ).all()
+
+    approving_actors = {a.actor.lower() for a in past_approvals if a.actor}
+    members_status = []
+    for bm in board_members:
+        has_approved = any(
+            bm["name"].lower() in act 
+            or bm["email"].lower() in act
+            or ("emeka" in act if "emeka" in bm["name"].lower() else False)
+            or ("aliyu" in act if "aliyu" in bm["name"].lower() else False)
+            or ("zainab" in act if "zainab" in bm["name"].lower() else False)
+            for act in approving_actors
+        )
+        members_status.append({
+            "name": bm["name"],
+            "role": bm["role"],
+            "email": bm["email"],
+            "has_approved": has_approved
+        })
+
+    approved_count = sum(1 for m in members_status if m["has_approved"])
+    if approved_count < len(approving_actors):
+        approved_count = len(approving_actors)
+
+    return {
+        "case_id": credit_case.id,
+        "case_number": credit_case.case_number,
+        "amount": credit_case.application.amount if credit_case.application else 0.0,
+        "is_bcc_tier": (credit_case.application.amount or 0.0) > AuthorityMatrix.TIER_BCC_THRESHOLD,
+        "required_quorum": 2,
+        "total_members": 3,
+        "approved_count": approved_count,
+        "quorum_achieved": approved_count >= 2,
+        "members": members_status
     }

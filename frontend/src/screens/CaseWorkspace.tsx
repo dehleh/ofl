@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, FileText, CheckCircle, AlertTriangle, ShieldCheck,
   Send, RefreshCw, Cpu, UserCheck, CheckSquare, DollarSign, ExternalLink,
-  ShieldAlert, Clock, PlusCircle, Zap, Receipt, Plus, Trash2, Percent
+  ShieldAlert, Clock, PlusCircle, Zap, Receipt, Plus, Trash2, Percent,
+  Printer, Download, Copy, FileCheck, Award
 } from 'lucide-react';
 import {
   fetchCaseWorkspace, generateAICam, updateCam, submitApprovalDecision,
   generateOffer, takeOfferAction, updateCondition, confirmNavDisbursement,
   executeOneClickLoandiscDisbursement, syncLoanDisc, raiseException, triggerYouverifyKyc,
   fetchCaseFees, updateCaseFees, calculateCaseFeesPreview,
-  fetchSingleLoanPerformance, recordLoanRepayment, simulateLoanPerformanceStatus
+  fetchSingleLoanPerformance, recordLoanRepayment, simulateLoanPerformanceStatus,
+  fetchCaseOfferDocuments, fetchBccStatus
 } from '../services/api';
 import { OpticomCamDocument } from '../components/OpticomCamDocument';
 import { BankStatementAnalyzerCard } from '../components/BankStatementAnalyzerCard';
@@ -85,6 +87,15 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
 
   // Youverify Verification State
   const [kycLoading, setKycLoading] = useState(false);
+
+  // Post-Approval Legal Documents State
+  const [offerDocuments, setOfferDocuments] = useState<any[]>([]);
+  const [selectedDocIndex, setSelectedDocIndex] = useState(0);
+  const [loadingOfferDocs, setLoadingOfferDocs] = useState(false);
+  const [copiedDoc, setCopiedDoc] = useState(false);
+
+  // BCC Quorum Status State
+  const [bccStatus, setBccStatus] = useState<any>(null);
 
   // Case Fees & Upfront Deductions State
   const [caseFees, setCaseFees] = useState<any[]>([]);
@@ -210,6 +221,31 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
     }
   };
 
+  const loadOfferDocuments = async () => {
+    setLoadingOfferDocs(true);
+    try {
+      const res = await fetchCaseOfferDocuments(caseId);
+      if (res && res.documents) {
+        setOfferDocuments(res.documents);
+      }
+    } catch (e) {
+      console.warn('Could not load offer documents:', e);
+    } finally {
+      setLoadingOfferDocs(false);
+    }
+  };
+
+  const loadBccStatus = async () => {
+    try {
+      const res = await fetchBccStatus(caseId);
+      if (res) {
+        setBccStatus(res);
+      }
+    } catch (e) {
+      console.warn('Could not load BCC status:', e);
+    }
+  };
+
   const loadWorkspace = async () => {
     setLoading(true);
     try {
@@ -219,6 +255,8 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
         setSelectedCamIndex(data.cam_versions.length - 1);
       }
       loadCaseFees();
+      loadOfferDocuments();
+      loadBccStatus();
       if (data.case && (data.case.state === 'Disbursed/Monitoring' || data.case.state === 'Ready for Disbursement' || (data.disbursements && data.disbursements.length > 0))) {
         loadLoanPerformance(data.case.id || caseId);
       }
@@ -892,6 +930,130 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
             </div>
           </div>
 
+          {/* BCC 2-OF-3 QUORUM GOVERNANCE GATE */}
+          {(application.amount > 20000000 || bccStatus?.is_bcc_tier || workspace?.bcc_quorum?.is_bcc_tier) && (
+            <div className="glass-panel" style={{
+              padding: '1.25rem',
+              border: '1.5px solid #0096cc',
+              background: 'linear-gradient(135deg, rgba(0, 150, 204, 0.08) 0%, rgba(4, 19, 38, 0.4) 100%)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Award size={20} color="#0096cc" />
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-highlight)' }}>
+                    Board Credit Committee (BCC) 2-of-3 Quorum Gate
+                  </h4>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Quorum Policy:</span>
+                  <span className={`status-pill ${
+                    (bccStatus?.quorum_achieved ?? workspace?.bcc_quorum?.quorum_achieved) ? 'pill-green' : 'pill-amber'
+                  }`} style={{ fontWeight: 700, fontSize: '0.75rem' }}>
+                    {(bccStatus?.quorum_achieved ?? workspace?.bcc_quorum?.quorum_achieved)
+                      ? '✓ QUORUM ACHIEVED (2/3 APPROVED)'
+                      : `QUORUM PENDING (${(bccStatus?.approved_count ?? workspace?.bcc_quorum?.approved_count ?? 0)}/2 REQUIRED)`}
+                  </span>
+                </div>
+              </div>
+
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0 0 1rem 0' }}>
+                Statutory governance for commercial exposures exceeding ₦20,000,000. Approval mandates <strong>at least 2 out of 3 Board members</strong> before offer generation and document dispatch can execute.
+              </p>
+
+              {/* Quorum Progress Bar */}
+              <div style={{ marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+                  <span>Board Sign-off Progress</span>
+                  <span>
+                    <strong>{(bccStatus?.approved_count ?? workspace?.bcc_quorum?.approved_count ?? 0)}</strong> of 2 required votes recorded (3 members total)
+                  </span>
+                </div>
+                <div style={{
+                  height: '8px',
+                  width: '100%',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '999px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${Math.min(100, (((bccStatus?.approved_count ?? workspace?.bcc_quorum?.approved_count ?? 0) / 2) * 100))}%`,
+                    background: (bccStatus?.quorum_achieved ?? workspace?.bcc_quorum?.quorum_achieved)
+                      ? 'linear-gradient(90deg, #10b981 0%, #059669 100%)'
+                      : 'linear-gradient(90deg, #0096cc 0%, #eab308 100%)',
+                    transition: 'width 0.4s ease'
+                  }} />
+                </div>
+              </div>
+
+              {/* 3 Board Member Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.75rem' }}>
+                {(bccStatus?.members || workspace?.bcc_quorum?.members || [
+                  { name: "Emeka Nnamdi", title: "BCC Chair", email: "emeka.nnamdi@opticomfinance.com", has_approved: false },
+                  { name: "Alhaji Aliyu Dangote", title: "BCC Member - Risk Trustee", email: "aliyu.dangote@opticomfinance.com", has_approved: false },
+                  { name: "Mrs. Zainab Ahmed", title: "BCC Member - Legal Trustee", email: "zainab.ahmed@opticomfinance.com", has_approved: false }
+                ]).map((member: any, idx: number) => (
+                  <div key={idx} style={{
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    background: member.has_approved ? 'rgba(16, 185, 129, 0.1)' : 'var(--bg-surface)',
+                    border: `1.5px solid ${member.has_approved ? '#10b981' : 'var(--border-subtle)'}`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '0.5rem'
+                  }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: '0.85rem', color: 'var(--text-highlight)' }}>{member.name}</strong>
+                        {member.has_approved ? (
+                          <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                            <CheckCircle size={13} /> APPROVED
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                            <Clock size={13} /> PENDING
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#0096cc', fontWeight: 600 }}>{member.title || member.role}</div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{member.email}</div>
+                    </div>
+
+                    {!member.has_approved && caseData.state === 'BCC/Authorisation' && (
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        style={{ fontSize: '0.72rem', padding: '0.35rem 0.5rem' }}
+                        onClick={async () => {
+                          setApprovalComments(`BCC vote registered by ${member.name}.`);
+                          try {
+                            setActionLoading(true);
+                            const res = await submitApprovalDecision(caseId, {
+                              decision: 'APPROVE',
+                              actor: member.name,
+                              role: 'BCC',
+                              comments: `Official Board Credit Committee approval sanction recorded by ${member.name} (${member.title || member.role}).`
+                            });
+                            setMessageBanner({ type: 'success', text: res.message });
+                            loadWorkspace();
+                          } catch (e: any) {
+                            setMessageBanner({ type: 'error', text: e.message || 'Approval recording failed' });
+                          } finally {
+                            setActionLoading(false);
+                          }
+                        }}
+                        disabled={actionLoading}
+                      >
+                        Sign as {member.name.split(' ')[0]}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="split-view">
             {/* Decision Form */}
             <div className="glass-panel" style={{ padding: '1.5rem' }}>
@@ -1449,6 +1611,208 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
               </div>
             </div>
 
+          </div>
+
+          {/* POST-APPROVAL LEGAL DOCUMENT PACKAGE VIEWER */}
+          <div className="glass-panel" style={{ padding: '1.5rem', marginTop: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <FileCheck size={20} color="var(--brand-teal-light)" />
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
+                    Opticom Post-Approval Legal Document Suite
+                  </h3>
+                  <span className="status-pill pill-cyan" style={{ fontSize: '0.7rem' }}>
+                    {offerDocuments.length} Documents Generated
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0 0' }}>
+                  Official legal instrument package automatically rendered from Opticom executive contract templates. Dynamically bound with obligor, guarantor, 7-day grace period, and 5% monthly default covenants.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    if (!offerDocuments[selectedDocIndex]) return;
+                    const doc = offerDocuments[selectedDocIndex];
+                    const printWindow = window.open('', '_blank');
+                    if (printWindow) {
+                      printWindow.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                          <head>
+                            <title>${doc.title} - ${caseData.case_number}</title>
+                            <style>
+                              body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #041326; background: #fff; line-height: 1.5; }
+                              @page { size: A4; margin: 20mm; }
+                              @media print { body { padding: 0; } }
+                              .legal-doc { max-width: 800px; margin: 0 auto; }
+                            </style>
+                          </head>
+                          <body>
+                            ${doc.html}
+                            <script>window.onload = function() { window.print(); };</script>
+                          </body>
+                        </html>
+                      `);
+                      printWindow.document.close();
+                    }
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <Printer size={14} /> Print / Export PDF
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    if (!offerDocuments[selectedDocIndex]) return;
+                    const doc = offerDocuments[selectedDocIndex];
+                    const blob = new Blob([doc.html], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = doc.filename || `${doc.doc_type}_${caseData.case_number}.html`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <Download size={14} /> Download File
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    if (!offerDocuments[selectedDocIndex]) return;
+                    navigator.clipboard.writeText(offerDocuments[selectedDocIndex].html);
+                    setCopiedDoc(true);
+                    setTimeout(() => setCopiedDoc(false), 2000);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <Copy size={14} /> {copiedDoc ? 'Copied HTML!' : 'Copy Code'}
+                </button>
+              </div>
+            </div>
+
+            {loadingOfferDocs ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                <RefreshCw size={24} className="spin" style={{ marginBottom: '0.5rem' }} />
+                <div>Compiling and rendering post-approval legal documents...</div>
+              </div>
+            ) : offerDocuments.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '2.5rem',
+                background: 'var(--bg-surface)',
+                borderRadius: '8px',
+                border: '1px dashed var(--border-subtle)',
+                color: 'var(--text-muted)'
+              }}>
+                <FileText size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
+                <div>Legal documents suite will be compiled upon executive credit approval.</div>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={loadOfferDocuments}
+                  style={{ marginTop: '0.75rem' }}
+                >
+                  Preview Current Documents Now
+                </button>
+              </div>
+            ) : (
+              <div>
+                {/* Document Selector Ribbon */}
+                <div style={{
+                  display: 'flex',
+                  gap: '0.4rem',
+                  overflowX: 'auto',
+                  paddingBottom: '0.5rem',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  marginBottom: '1rem'
+                }}>
+                  {offerDocuments.map((doc: any, idx: number) => {
+                    const isSelected = idx === selectedDocIndex;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setSelectedDocIndex(idx)}
+                        style={{
+                          padding: '0.5rem 0.85rem',
+                          borderRadius: '6px',
+                          border: isSelected ? '1.5px solid #0096cc' : '1px solid var(--border-subtle)',
+                          background: isSelected ? 'rgba(0, 150, 204, 0.15)' : 'var(--bg-surface)',
+                          color: isSelected ? '#0096cc' : 'var(--text-secondary)',
+                          fontWeight: isSelected ? 700 : 500,
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem'
+                        }}
+                      >
+                        <span>{doc.title}</span>
+                        {doc.is_mandatory && (
+                          <span style={{ fontSize: '0.62rem', background: 'rgba(0, 150, 204, 0.2)', padding: '1px 5px', borderRadius: '4px' }}>
+                            Req
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Selected Document Info Bar */}
+                {offerDocuments[selectedDocIndex] && (
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0.5rem 0.85rem',
+                    background: 'var(--bg-surface)',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-subtle)',
+                    marginBottom: '1rem',
+                    fontSize: '0.75rem'
+                  }}>
+                    <div>
+                      <strong style={{ color: 'var(--text-highlight)' }}>{offerDocuments[selectedDocIndex].title}</strong> &bull;{' '}
+                      <span style={{ color: 'var(--text-muted)' }}>{offerDocuments[selectedDocIndex].subtitle}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+                        {offerDocuments[selectedDocIndex].filename}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Rendered Legal Document Container */}
+                {offerDocuments[selectedDocIndex] && (
+                  <div style={{
+                    background: '#ffffff',
+                    color: '#041326',
+                    borderRadius: '8px',
+                    padding: '2.5rem',
+                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.25)',
+                    maxHeight: '650px',
+                    overflowY: 'auto',
+                    border: '1px solid #cbd5e1',
+                    fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif"
+                  }}>
+                    <div dangerouslySetInnerHTML={{ __html: offerDocuments[selectedDocIndex].html }} />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
         </div>

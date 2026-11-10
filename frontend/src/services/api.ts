@@ -571,4 +571,22 @@ export async function simulateLoanPerformanceStatus(caseId: string, scenario: 'C
   return json;
 }
 
+export async function fetchCaseOfferDocuments(caseId: string) {
+  const res = await fetch(`${API_BASE}/cases/${encodeURIComponent(caseId)}/offer-documents`, {
+    headers: getAuthHeaders()
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function fetchBccStatus(caseId: string) {
+  const res = await fetch(`${API_BASE}/cases/${encodeURIComponent(caseId)}/bcc-status`, {
+    headers: getAuthHeaders()
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
 

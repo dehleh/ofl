@@ -1,16 +1,16 @@
 """
 Credit Cases API Router (PRD FR-04, FR-02, FR-03, Section 11 Case Workspace)
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any, Optional
+from typing import Optional
 import hashlib
 
 from ...database import get_db, utc_now
 from ...models import (
     CreditCase, Application, Customer, Document, 
     KYCCheck, FinancialAssessment, CAMVersion, ExceptionItem,
-    Approval, Offer, ConditionItem, Disbursement, AuditEvent, CaseState
+    Approval, Offer, ConditionItem, Disbursement, AuditEvent
 )
 from ...core.financial_engine import FinancialEngine
 from ...integrations.youverify_adapter import YouverifyAdapter
@@ -103,6 +103,50 @@ def get_case_workspace(case_id: str, db: Session = Depends(get_db)):
     audit_events = db.query(AuditEvent).filter(
         AuditEvent.entity_id.in_([credit_case.case_number, credit_case.id])
     ).order_by(AuditEvent.timestamp.desc()).limit(30).all()
+
+    # Calculate BCC Quorum state for cases > ₦20m
+    board_members_config = [
+        {"id": "USR-OFL-003", "name": "Emeka Nnamdi", "title": "BCC Chair", "email": "emeka.nnamdi@opticomfinance.com"},
+        {"id": "USR-OFL-011", "name": "Alhaji Aliyu Dangote", "title": "BCC Member - Risk Trustee", "email": "aliyu.dangote@opticomfinance.com"},
+        {"id": "USR-OFL-012", "name": "Mrs. Zainab Ahmed", "title": "BCC Member - Legal Trustee", "email": "zainab.ahmed@opticomfinance.com"},
+    ]
+    current_rev_approvals = [
+        a for a in approvals 
+        if a.revision == credit_case.revision 
+        and a.invalidated_at is None 
+        and a.authority_level in ["BCC", "BOARD_CREDIT_COMMITTEE"]
+        and a.decision in ["APPROVE", "RECOMMEND_APPROVE"]
+    ]
+    approving_actors = {a.actor.lower() for a in current_rev_approvals if a.actor}
+    board_members_status = []
+    for bm in board_members_config:
+        has_voted = any(
+            bm["name"].lower() in actor 
+            or bm["email"].lower() in actor 
+            or ("emeka" in actor if "emeka" in bm["name"].lower() else False)
+            or ("aliyu" in actor if "aliyu" in bm["name"].lower() else False)
+            or ("zainab" in actor if "zainab" in bm["name"].lower() else False)
+            for actor in approving_actors
+        )
+        board_members_status.append({
+            "id": bm["id"],
+            "name": bm["name"],
+            "title": bm["title"],
+            "email": bm["email"],
+            "has_approved": has_voted
+        })
+    approved_count = sum(1 for m in board_members_status if m["has_approved"])
+    if approved_count < len(approving_actors):
+        approved_count = len(approving_actors)
+
+    bcc_quorum_data = {
+        "is_bcc_tier": (app.amount or 0.0) > 20000000.0,
+        "required_quorum": 2,
+        "total_members": 3,
+        "approved_count": approved_count,
+        "quorum_achieved": approved_count >= 2,
+        "members": board_members_status
+    }
     
     return {
         "case": {
@@ -277,7 +321,8 @@ def get_case_workspace(case_id: str, db: Session = Depends(get_db)):
                 "details": au.details
             }
             for au in audit_events
-        ]
+        ],
+        "bcc_quorum": bcc_quorum_data
     }
 
 @router.post("/{case_id}/documents")
