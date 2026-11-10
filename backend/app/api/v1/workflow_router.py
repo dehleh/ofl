@@ -111,6 +111,24 @@ def submit_approval_decision(
     current_level = payload.role.upper().replace(" ", "_")
     response_message = f"Approval decision '{payload.decision}' recorded successfully."
 
+    if payload.decision in ["COMMENT", "DELIBERATION_NOTE", "NOTE"]:
+        # Record official deliberation comment across review hierarchy without state change
+        NotificationService.create_in_app_notification(
+            title=f"Deliberation Note: {credit_case.case_number}",
+            message=f"{payload.actor} ({payload.role}) recorded review observation: {payload.comments}",
+            notification_type="INFO",
+            category="DELIBERATION_NOTE",
+            case_number=credit_case.case_number,
+            recipient_role="ALL"
+        )
+        db.commit()
+        return {
+            "message": f"Deliberation review comment from {payload.actor} recorded successfully.",
+            "case_state": credit_case.state,
+            "case_revision": credit_case.revision,
+            "bcc_quorum": None
+        }
+
     if payload.decision in ["RETURN_FOR_REWORK", "RETURN_TO_BDO"]:
         # Evaluate return originator and route to appropriate prior stage with stakeholder alerts
         if current_level in ["ANALYST", "CREDIT_ANALYST"] or payload.decision == "RETURN_TO_BDO":
@@ -222,6 +240,12 @@ def submit_approval_decision(
             if not ok:
                 raise HTTPException(status_code=400, detail=msg)
             next_state = CaseState.ANALYST_REVIEW.value
+            NotificationService.notify_bdo_resubmission_to_analyst(
+                case_number=credit_case.case_number,
+                obligor_name=credit_case.application.customer.name,
+                bdo_actor=payload.actor,
+                comments=payload.comments
+            )
             response_message = "BDO updated customer details and forwarded to Credit Analyst."
 
         elif current_level in ["ANALYST", "CREDIT_ANALYST"]:
@@ -258,6 +282,13 @@ def submit_approval_decision(
             if not ok:
                 raise HTTPException(status_code=400, detail=msg)
             next_state = CaseState.HRM_REVIEW.value
+            NotificationService.notify_head_of_bd_approval_to_hrm(
+                case_number=credit_case.case_number,
+                obligor_name=credit_case.application.customer.name,
+                amount=amount,
+                bd_actor=payload.actor,
+                comments=payload.comments
+            )
             response_message = "Head of Business Development (MCC) approved and forwarded to Head of Risk Management."
 
         elif current_level in ["HRM", "HEAD_OF_RISK_MANAGEMENT"]:
@@ -274,6 +305,13 @@ def submit_approval_decision(
             if not ok:
                 raise HTTPException(status_code=400, detail=msg)
             next_state = target_stage
+            NotificationService.notify_hrm_approval_to_md(
+                case_number=credit_case.case_number,
+                obligor_name=credit_case.application.customer.name,
+                amount=amount,
+                hrm_actor=payload.actor,
+                comments=payload.comments
+            )
             response_message = "HRM completed risk review and forwarded to Managing Director for final executive sanction."
 
         elif current_level in ["MD", "MANAGING_DIRECTOR", "CEO", "ADMIN", "SYSADMIN"]:

@@ -620,4 +620,17 @@ export async function fetchBccStatus(caseId: string) {
   return json;
 }
 
+export async function fetchTelemetryReportData(period: string = 'quarterly') {
+  const res = await fetch(`${API_BASE}/telemetry/reports?period=${encodeURIComponent(period)}`, {
+    headers: getAuthHeaders()
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export function getTelemetryExportUrl(period: string = 'quarterly', format: 'csv' | 'html' = 'csv') {
+  return `${API_BASE}/telemetry/reports/export?period=${encodeURIComponent(period)}&format=${encodeURIComponent(format)}`;
+}
+
 

@@ -153,3 +153,118 @@ def test_telemetry_rest_endpoints(funded_case):
     data3 = res3.json()
     assert data3["performance_status"] == "OVERDUE_PENALTY_APPLIED"
     assert data3["penalty_accrued"] > 0
+
+
+def test_telemetry_periodic_reports_and_downloads(funded_case):
+    """
+    Tests downloading monthly, quarterly, biannual, and annual telemetry reports
+    in JSON, CSV, and printable executive HTML formats.
+    """
+    case, loan_perf = funded_case
+
+    # Test JSON report endpoints for all 4 periods
+    for period in ["monthly", "quarterly", "biannual", "annual"]:
+        res = client.get(f"/api/v1/telemetry/reports?period={period}")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["period"] == period
+        assert "portfolio_metrics" in data
+        assert "accounts" in data
+        assert data["portfolio_metrics"]["total_disbursed_principal"] > 0
+        assert "status_distribution" in data
+
+    # Test CSV export
+    csv_res = client.get("/api/v1/telemetry/reports/export?period=quarterly&format=csv")
+    assert csv_res.status_code == 200
+    assert "text/csv" in csv_res.headers["content-type"]
+    assert "OPTICOM FINANCE LIMITED" in csv_res.text
+    assert "PORTFOLIO SUMMARY METRICS" in csv_res.text
+    assert "STATUS STRATIFICATION" in csv_res.text
+    assert case.case_number in csv_res.text
+
+    # Test Printable HTML/PDF export
+    html_res = client.get("/api/v1/telemetry/reports/export?period=biannual&format=html")
+    assert html_res.status_code == 200
+    assert "text/html" in html_res.headers["content-type"]
+    assert "OPTICOM FINANCE LIMITED" in html_res.text
+    assert "Biannual Portfolio Health" in html_res.text
+    assert "Folashade Tinubu" in html_res.text
+    assert "Chidinma Okafor" in html_res.text
+    assert "Dapo Adeleke" in html_res.text
+
+
+def test_deliberation_comment_trail_and_notifications():
+    """
+    Tests that Analyst, Head of BD, HRM, MD, and BCC can all leave review comments
+    in a comment box, which record into the deliberation trail and emit notifications.
+    """
+    create_res = client.post("/api/v1/intake/direct", json={
+        "applicant_name": "DELIBERATION LOGISTICS LTD",
+        "applicant_type": "CORPORATE",
+        "email": "info@deliberationlogistics.ng",
+        "phone": "+2348088889999",
+        "rc_number": "RC-556677",
+        "bvn": "22998877665",
+        "amount": 15_000_000.0,
+        "tenor_months": 12,
+        "purpose": "Logistics fleet renewal",
+        "monthly_income": 3_500_000.0
+    })
+    assert create_res.status_code == 201
+    case_id = create_res.json()["case_id"]
+
+    # 1. Post a standalone deliberation note / comment without changing state
+    comment_res = client.post(f"/api/v1/cases/{case_id}/approval", json={
+        "actor": "Babatunde Adebayo",
+        "role": "ANALYST",
+        "decision": "COMMENT",
+        "comments": "Reviewed tax clearance and verified audited accounts. Financials appear sound."
+    })
+    assert comment_res.status_code == 200
+    assert "Deliberation review comment" in comment_res.json()["message"]
+
+    # 2. Advance case to ANALYST_REVIEW
+    client.post(f"/api/v1/cases/{case_id}/transition", json={
+        "to_state": CaseState.ANALYST_REVIEW.value,
+        "actor": "KYC Engine",
+        "role": "ANALYST",
+        "reason": "KYC Cleared."
+    })
+
+    # 3. Analyst forwards to Head of BD with comment
+    analyst_res = client.post(f"/api/v1/cases/{case_id}/approval", json={
+        "actor": "Babatunde Adebayo",
+        "role": "ANALYST",
+        "decision": "RECOMMEND_APPROVE",
+        "comments": "CAM complete. Recommended facility ₦15M to MCC (Head of BD)."
+    })
+    assert analyst_res.status_code == 200
+    assert analyst_res.json()["case_state"] == CaseState.HEAD_OF_BD_REVIEW.value
+
+    # 4. Head of BD leaves commercial review comment & forwards to HRM
+    bd_res = client.post(f"/api/v1/cases/{case_id}/approval", json={
+        "actor": "Dapo Adeleke",
+        "role": "HEAD_OF_BD",
+        "decision": "APPROVE",
+        "comments": "MCC commercial sponsor concurrence. Customer is high-volume corporate client."
+    })
+    assert bd_res.status_code == 200
+    assert bd_res.json()["case_state"] == CaseState.HRM_REVIEW.value
+
+    # 5. HRM raises exception query with comments -> routes back to Analyst
+    hrm_res = client.post(f"/api/v1/cases/{case_id}/approval", json={
+        "actor": "Chidinma Okafor",
+        "role": "HRM",
+        "decision": "RETURN_FOR_REWORK",
+        "comments": "Need updated 3-month statement to verify turnover seasonality."
+    })
+    assert hrm_res.status_code == 200
+    assert hrm_res.json()["case_state"] == CaseState.ANALYST_REVIEW.value
+
+    # Verify all comments are present in workspace approvals trail
+    ws = client.get(f"/api/v1/cases/{case_id}/workspace").json()
+    approval_comments = [a["comments"] for a in ws["approvals"]]
+    assert any("audited accounts" in c for c in approval_comments)
+    assert any("Recommended facility ₦15M" in c for c in approval_comments)
+    assert any("commercial sponsor concurrence" in c for c in approval_comments)
+    assert any("seasonality" in c for c in approval_comments)

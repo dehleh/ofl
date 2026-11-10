@@ -18,13 +18,19 @@ import {
   Search,
   ExternalLink,
   Percent,
-  CheckCheck
+  CheckCheck,
+  Download,
+  Printer,
+  Eye,
+  X
 } from 'lucide-react';
 import { 
   fetchLoanPortfolioPerformance, 
   fetchSingleLoanPerformance, 
   recordLoanRepayment, 
-  simulateLoanPerformanceStatus 
+  simulateLoanPerformanceStatus,
+  fetchTelemetryReportData,
+  getTelemetryExportUrl
 } from '../services/api';
 
 interface LoanPerformanceTelemetryProps {
@@ -51,6 +57,35 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
   const [paymentNote, setPaymentNote] = useState<string>('');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState<boolean>(false);
   const [paymentFeedback, setPaymentFeedback] = useState<string | null>(null);
+
+  // Periodic Telemetry Reports (Monthly, Quarterly, Biannual, Annual) State
+  const [selectedPeriod, setSelectedPeriod] = useState<'monthly' | 'quarterly' | 'biannual' | 'annual'>('quarterly');
+  const [showReportPreviewModal, setShowReportPreviewModal] = useState<boolean>(false);
+  const [reportData, setReportData] = useState<any>(null);
+  const [loadingReport, setLoadingReport] = useState<boolean>(false);
+
+  const handleDownloadCsv = (period: string = selectedPeriod) => {
+    const url = getTelemetryExportUrl(period, 'csv');
+    window.open(url, '_blank');
+  };
+
+  const handlePrintPdf = (period: string = selectedPeriod) => {
+    const url = getTelemetryExportUrl(period, 'html');
+    window.open(url, '_blank');
+  };
+
+  const handleOpenReportPreview = async (period: string = selectedPeriod) => {
+    setLoadingReport(true);
+    setShowReportPreviewModal(true);
+    try {
+      const data = await fetchTelemetryReportData(period);
+      setReportData(data);
+    } catch (e) {
+      console.error('Failed to load report data', e);
+    } finally {
+      setLoadingReport(false);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -269,14 +304,23 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
           </p>
         </div>
 
-        <button 
-          onClick={loadData}
-          disabled={loading}
-          className="btn-secondary"
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px' }}
-        >
-          <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh Telemetry
-        </button>
+        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+          <button
+            onClick={() => handleOpenReportPreview(selectedPeriod)}
+            className="btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px' }}
+          >
+            <FileText size={14} color="#0096cc" /> Executive Reports
+          </button>
+          <button 
+            onClick={loadData}
+            disabled={loading}
+            className="btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px' }}
+          >
+            <RefreshCw size={14} className={loading ? 'spin' : ''} /> Refresh Telemetry
+          </button>
+        </div>
       </div>
 
       {/* Opticom 7-Day Grace & 5% Default Penalty Policy Banner */}
@@ -325,6 +369,122 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Grace Window</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#d97706' }}>7 Days</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Executive Telemetry Periodic Reporting & Downloads Hub */}
+      <div style={{
+        background: 'var(--bg-surface)',
+        border: '1.5px solid rgba(0, 150, 204, 0.25)',
+        borderRadius: '10px',
+        padding: '1.15rem 1.35rem',
+        marginBottom: '1.5rem',
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: 'rgba(0, 150, 204, 0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#0096cc'
+            }}>
+              <Download size={18} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-highlight)' }}>
+                Download Telemetry Reports &amp; Periodic Audits
+              </div>
+              <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                Official compliance dossiers covering funded facilities, servicing performance, DPD aging, 5% penalties, and collection yields.
+              </div>
+            </div>
+          </div>
+
+          {/* Period Selector Tabs */}
+          <div style={{ display: 'flex', background: 'var(--bg-card)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border-color)', gap: '4px' }}>
+            <button
+              className={`btn-filter ${selectedPeriod === 'monthly' ? 'active' : ''}`}
+              style={{ padding: '6px 12px', fontSize: '0.78rem', borderRadius: '6px' }}
+              onClick={() => setSelectedPeriod('monthly')}
+            >
+              📅 Monthly (30d)
+            </button>
+            <button
+              className={`btn-filter ${selectedPeriod === 'quarterly' ? 'active' : ''}`}
+              style={{ padding: '6px 12px', fontSize: '0.78rem', borderRadius: '6px' }}
+              onClick={() => setSelectedPeriod('quarterly')}
+            >
+              📊 Quarterly (90d)
+            </button>
+            <button
+              className={`btn-filter ${selectedPeriod === 'biannual' ? 'active' : ''}`}
+              style={{ padding: '6px 12px', fontSize: '0.78rem', borderRadius: '6px' }}
+              onClick={() => setSelectedPeriod('biannual')}
+            >
+              📈 Biannual (6Mo)
+            </button>
+            <button
+              className={`btn-filter ${selectedPeriod === 'annual' ? 'active' : ''}`}
+              style={{ padding: '6px 12px', fontSize: '0.78rem', borderRadius: '6px' }}
+              onClick={() => setSelectedPeriod('annual')}
+            >
+              🏛️ Annual (1Yr)
+            </button>
+          </div>
+        </div>
+
+        {/* Selected Period Details and Download Actions Bar */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          padding: '0.85rem 1rem',
+          background: 'rgba(0, 150, 204, 0.04)',
+          borderRadius: '8px',
+          border: '1px solid rgba(0, 150, 204, 0.18)'
+        }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-highlight)' }}>
+              {selectedPeriod === 'monthly' ? 'Monthly Servicing & Repayment Audit (30 Days)' :
+               selectedPeriod === 'quarterly' ? 'Quarterly Portfolio Health & Delinquency Synthesis (90 Days / Q-Audit)' :
+               selectedPeriod === 'biannual' ? 'Biannual Comprehensive Risk & Recovery Audit (Half-Year / 180 Days)' :
+               'Annual Fiscal Year Underwriting & Default Telemetry (365 Days)'}
+            </div>
+            <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Includes itemized borrower rosters, DPD aging, 5% penalties, and statutory sign-offs for MD, HRM, and Head of BD.
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center' }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => handleOpenReportPreview(selectedPeriod)}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', padding: '6px 12px' }}
+            >
+              <Eye size={14} color="#0096cc" /> Preview Report
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => handleDownloadCsv(selectedPeriod)}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', padding: '6px 12px', borderColor: '#059669', color: '#059669' }}
+            >
+              <Download size={14} /> Download CSV (Excel)
+            </button>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => handlePrintPdf(selectedPeriod)}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', padding: '6px 14px' }}
+            >
+              <Printer size={14} /> Print / Save PDF Report
+            </button>
           </div>
         </div>
       </div>
@@ -1033,6 +1193,246 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Telemetry Report Preview Modal */}
+      {showReportPreviewModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '1.5rem',
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: 'var(--panel-bg)',
+            border: '1px solid var(--border-color)',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '1050px',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            overflow: 'hidden'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid var(--border-color)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: 'var(--bg-card)'
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FileText size={18} color="#0096cc" />
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-highlight)' }}>
+                    {reportData ? reportData.period_title : 'Telemetry Executive Report Dossier'}
+                  </h3>
+                  <span className="status-pill pill-cyan" style={{ fontSize: '0.7rem' }}>
+                    {selectedPeriod.toUpperCase()} AUDIT
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  {reportData ? `Reporting Window: ${reportData.reporting_window_start} to ${reportData.reporting_window_end} (${reportData.reporting_window_days} Days) • Generated: ${reportData.generated_at}` : 'Loading report metadata...'}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => handleDownloadCsv(selectedPeriod)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem' }}
+                >
+                  <Download size={13} /> CSV
+                </button>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => handlePrintPdf(selectedPeriod)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem' }}
+                >
+                  <Printer size={13} /> Print / Save PDF
+                </button>
+                <button
+                  onClick={() => setShowReportPreviewModal(false)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+              {loadingReport ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                  <RefreshCw size={24} className="spin" style={{ marginBottom: '0.5rem' }} />
+                  <div>Compiling telemetry and reconciling performance indicators...</div>
+                </div>
+              ) : reportData ? (
+                <div>
+                  {/* KPI Cards */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '1rem',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <div style={{ padding: '1rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Disbursed Capital</div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0096cc', marginTop: '2px' }}>
+                        ₦{reportData.portfolio_metrics.total_disbursed_principal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        {reportData.portfolio_metrics.total_active_facilities} Active Facilities
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '1rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Repayments Serviced</div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981', marginTop: '2px' }}>
+                        ₦{reportData.portfolio_metrics.total_amount_serviced.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#10b981', marginTop: '2px' }}>
+                        Recovery Efficiency: {reportData.portfolio_metrics.collection_efficiency_rate}%
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '1rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Outstanding Balance</div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#d97706', marginTop: '2px' }}>
+                        ₦{reportData.portfolio_metrics.total_outstanding_balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        Principal Exposure: ₦{reportData.portfolio_metrics.total_outstanding_exposure.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '1rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>5% Default Penalties</div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#dc2626', marginTop: '2px' }}>
+                        ₦{reportData.portfolio_metrics.total_penalties_accrued.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#dc2626', marginTop: '2px' }}>
+                        Levied on overdue &gt; 7 days
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Risk Stratification Row */}
+                  <div style={{
+                    background: 'rgba(0, 150, 204, 0.05)',
+                    border: '1px solid rgba(0, 150, 204, 0.2)',
+                    borderRadius: '8px',
+                    padding: '0.75rem 1rem',
+                    marginBottom: '1.25rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontSize: '0.8rem',
+                    flexWrap: 'wrap',
+                    gap: '0.75rem'
+                  }}>
+                    <div>
+                      <strong>Delinquency Distribution:</strong> {reportData.status_distribution.PERFORMING_CURRENT} Current &bull; {reportData.status_distribution.GRACE_PERIOD_ACTIVE} Grace (1-7d) &bull; <span style={{ color: '#dc2626', fontWeight: 700 }}>{reportData.status_distribution.OVERDUE_PENALTY_APPLIED} Overdue (5% Pen)</span> &bull; {reportData.status_distribution.CRITICAL_DELINQUENT} Critical Default
+                    </div>
+                    <div style={{ color: 'var(--text-muted)' }}>
+                      PAR 30: ₦{reportData.portfolio_metrics.portfolio_at_risk_par30.toLocaleString(undefined, { minimumFractionDigits: 2 })} &bull; NPL Ratio: {reportData.portfolio_metrics.npl_ratio_pct}%
+                    </div>
+                  </div>
+
+                  {/* Accounts Table */}
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--bg-card)', borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
+                          <th style={{ padding: '8px 10px' }}>Facility Ref</th>
+                          <th style={{ padding: '8px 10px' }}>Borrower</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right' }}>Disbursed</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right' }}>Serviced</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right' }}>Outstanding</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'center' }}>Due Date</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'center' }}>Overdue</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right' }}>5% Penalty</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'center' }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportData.accounts.map((acc: any, idx: number) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '8px 10px', fontWeight: 600, fontFamily: 'monospace' }}>{acc.facility_number}</td>
+                            <td style={{ padding: '8px 10px', fontWeight: 700 }}>{acc.borrower_name}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right' }}>₦{acc.disbursed_principal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right', color: '#10b981', fontWeight: 600 }}>₦{acc.total_amount_serviced.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700 }}>₦{acc.outstanding_total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'center' }}>{acc.next_due_date}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: acc.days_overdue > 7 ? '#dc2626' : acc.days_overdue > 0 ? '#d97706' : '#10b981' }}>
+                              {acc.days_overdue}d
+                            </td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right', color: acc.penalty_accrued > 0 ? '#dc2626' : 'var(--text-muted)', fontWeight: 700 }}>
+                              {acc.penalty_accrued > 0 ? `₦${acc.penalty_accrued.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '₦0.00'}
+                            </td>
+                            <td style={{ padding: '8px 10px', textAlign: 'center' }}>
+                              {getStatusBadge(acc.performance_status, acc.days_overdue, acc.penalty_accrued)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Executive Reconciliation & Sign-off Footer */}
+                  <div style={{
+                    marginTop: '2rem',
+                    paddingTop: '1.5rem',
+                    borderTop: '1px dashed var(--border-color)',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '1.5rem',
+                    textAlign: 'center',
+                    fontSize: '0.78rem'
+                  }}>
+                    <div>
+                      <div style={{ borderBottom: '1px solid var(--text-muted)', width: '140px', margin: '20px auto 4px auto' }} />
+                      <strong>Dapo Adeleke</strong><br/>
+                      <span style={{ color: 'var(--text-muted)' }}>Head of Business Development</span><br/>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Commercial Audit</span>
+                    </div>
+                    <div>
+                      <div style={{ borderBottom: '1px solid var(--text-muted)', width: '140px', margin: '20px auto 4px auto' }} />
+                      <strong>Chidinma Okafor</strong><br/>
+                      <span style={{ color: 'var(--text-muted)' }}>Head of Risk Management</span><br/>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Risk Concurrence</span>
+                    </div>
+                    <div>
+                      <div style={{ borderBottom: '1px solid var(--text-muted)', width: '140px', margin: '20px auto 4px auto' }} />
+                      <strong>Folashade Tinubu</strong><br/>
+                      <span style={{ color: 'var(--text-muted)' }}>Managing Director</span><br/>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Executive Approval</span>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       )}

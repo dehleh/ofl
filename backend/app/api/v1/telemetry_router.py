@@ -1,7 +1,7 @@
 """
 Telemetry, Operational Reporting and Azure AI Cost Dashboard (PRD FR-18, FR-28, FR-29)
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Dict, Any, Optional, List
@@ -348,4 +348,45 @@ def simulate_status_endpoint(
         "penalty_accrued": res.penalty_accrued,
         "outstanding_total": res.outstanding_total
     }
+
+# ==============================================================================
+# TELEMETRY PERIODIC REPORTING & EXPORT ENGINE (MONTHLY, QUARTERLY, BIANNUAL, ANNUAL)
+# ==============================================================================
+from datetime import datetime, timezone
+from ...services.telemetry_report_service import TelemetryReportService
+
+@router.get("/reports")
+def get_telemetry_report_data(
+    period: str = Query("quarterly", description="Reporting period: monthly, quarterly, biannual, annual"),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns aggregated JSON telemetry dataset for specified period (monthly, quarterly, biannual, annual).
+    """
+    return TelemetryReportService.get_report_dataset(period=period, db=db)
+
+@router.get("/reports/export")
+def export_telemetry_report(
+    period: str = Query("quarterly", description="Reporting period: monthly, quarterly, biannual, annual"),
+    format: str = Query("csv", description="Export format: csv or html"),
+    db: Session = Depends(get_db)
+):
+    """
+    Downloads telemetry report as CSV spreadsheet or printable executive HTML/PDF dossier.
+    """
+    clean_period = period.lower().strip()
+    if clean_period not in ["monthly", "quarterly", "biannual", "annual"]:
+        clean_period = "quarterly"
+
+    if format.lower().strip() == "html":
+        html_content = TelemetryReportService.generate_html_report(period=clean_period, db=db)
+        return Response(content=html_content, media_type="text/html")
+
+    csv_content = TelemetryReportService.generate_csv_report(period=clean_period, db=db)
+    filename = f"OFL_Telemetry_{clean_period.capitalize()}_Report_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 

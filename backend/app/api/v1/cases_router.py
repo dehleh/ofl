@@ -77,6 +77,7 @@ def list_cases(
     return {"total": total, "items": items}
 
 @router.get("/{case_id}")
+@router.get("/{case_id}/workspace")
 def get_case_workspace(case_id: str, db: Session = Depends(get_db)):
     """
     Retrieves full Case Workspace dossier (Section 11).

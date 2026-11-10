@@ -390,19 +390,24 @@ class NotificationService:
         cls,
         case_number: str,
         obligor_name: str,
-        reason: str,
-        actor: str = "Head of Risk Management"
+        reason: Optional[str] = None,
+        actor: str = "Head of Risk Management",
+        hrm_actor: Optional[str] = None,
+        exception_query: Optional[str] = None
     ):
         """
         Dispatches alerts when HRM queries an application and returns to Credit Analyst.
         Head of Business Development ALSO receives the prompt/alert in their notification tray.
         Delivered via Email and In-App notification.
         """
+        effective_reason = exception_query or reason or "HRM Risk Exception"
+        effective_actor = hrm_actor or actor or "Head of Risk Management"
+
         # 1. Prompt to Analyst
         cls.send_email(
             to_email="tunde.adebayo@opticomfinance.com",
             subject=f"[EXCEPTION ALERT] Case {case_number} Returned for Rework",
-            html_body=f"<p>Dear Credit Analyst,</p><p>HRM ({actor}) has raised an exception on facility <strong>{case_number}</strong> ({obligor_name}):</p><blockquote>{reason}</blockquote><p>Please resolve the queries and update the dossier.</p>",
+            html_body=f"<p>Dear Credit Analyst,</p><p>HRM ({effective_actor}) has raised an exception on facility <strong>{case_number}</strong> ({obligor_name}):</p><blockquote>{effective_reason}</blockquote><p>Please resolve the queries and update the dossier.</p>",
             template="HRM_EXCEPTION_ANALYST",
             metadata={"case_number": case_number, "target": "ANALYST"}
         )
@@ -411,7 +416,7 @@ class NotificationService:
         cls.send_email(
             to_email="dapo.adeleke@opticomfinance.com",
             subject=f"[INFO ALERT] Case {case_number} ({obligor_name}) Returned to Analyst with Exception",
-            html_body=f"<p>Dear Head of Business Development,</p><p>Please be advised that facility <strong>{case_number}</strong> ({obligor_name}) has been returned to the Credit Analyst by HRM for exception resolution:</p><blockquote>{reason}</blockquote>",
+            html_body=f"<p>Dear Head of Business Development,</p><p>Please be advised that facility <strong>{case_number}</strong> ({obligor_name}) has been returned to the Credit Analyst by HRM for exception resolution:</p><blockquote>{effective_reason}</blockquote>",
             template="HRM_EXCEPTION_HEAD_OF_BD",
             metadata={"case_number": case_number, "target": "HEAD_OF_BD"}
         )
@@ -419,7 +424,7 @@ class NotificationService:
         # In-App Notifications for both Analyst and Head of BD
         cls.create_in_app_notification(
             title=f"HRM Risk Exception Alert: {case_number}",
-            message=f"HRM ({actor}) raised exception on {obligor_name}: \"{reason}\". Returned to Analyst; Head of BD alerted.",
+            message=f"HRM ({effective_actor}) raised exception on {obligor_name}: \"{effective_reason}\". Returned to Analyst; Head of BD alerted.",
             notification_type="WARNING",
             category="RISK_EXCEPTION",
             case_number=case_number,
@@ -427,7 +432,7 @@ class NotificationService:
         )
         cls.create_in_app_notification(
             title=f"Exception Notice: {case_number}",
-            message=f"HRM returned facility {obligor_name} to Analyst for exception rework: \"{reason}\".",
+            message=f"HRM returned facility {obligor_name} to Analyst for exception rework: \"{effective_reason}\".",
             notification_type="INFO",
             category="RISK_EXCEPTION",
             case_number=case_number,
@@ -439,15 +444,19 @@ class NotificationService:
         cls,
         case_number: str,
         obligor_name: str,
-        target_role: str,
-        reason: str,
-        actor: str = "Managing Director"
+        target_role: str = "Head of Risk Management",
+        reason: Optional[str] = None,
+        actor: str = "Managing Director",
+        md_actor: Optional[str] = None,
+        md_reservation: Optional[str] = None
     ):
         """
         When MD returns an application (to HRM or Head of BD):
         Analyst, HRM, and Head of BD ALL receive a prompt that MD has returned the facility.
         Delivered via Email and In-App notification.
         """
+        effective_reason = md_reservation or reason or "MD Executive Reservation"
+        effective_actor = md_actor or actor or "Managing Director"
         stakeholders = [
             ("tunde.adebayo@opticomfinance.com", "Credit Analyst"),
             ("chidinma.okafor@opticomfinance.com", "Head of Risk Management"),
@@ -535,6 +544,92 @@ class NotificationService:
             category="BCC_REVIEW",
             case_number=case_number,
             recipient_role="BCC"
+        )
+
+    @classmethod
+    def notify_head_of_bd_approval_to_hrm(
+        cls,
+        case_number: str,
+        obligor_name: str,
+        amount: float,
+        bd_actor: str,
+        comments: str
+    ):
+        """
+        When Head of BD approves case in MCC, alerts HRM with BD's endorsement and comments.
+        """
+        hrm_email = "chidinma.okafor@opticomfinance.com"
+        cls.send_email(
+            to_email=hrm_email,
+            subject=f"[MCC ENDORSEMENT] Case {case_number} ({obligor_name}) - ₦{amount:,.2f}",
+            html_body=f"<p>Dear Head of Risk Management,</p><p>Head of Business Development <strong>{bd_actor}</strong> has reviewed and commercially sanctioned facility <strong>{case_number}</strong> ({obligor_name}) for <strong>₦{amount:,.2f}</strong>.</p><p><strong>Commercial Comments:</strong> {comments}</p><p>Case is now routed to your Risk Review Queue for risk concurrence.</p>",
+            template="MCC_ENDORSED_TO_HRM",
+            metadata={"case_number": case_number, "amount": amount, "bd_actor": bd_actor}
+        )
+        cls.create_in_app_notification(
+            title=f"MCC Endorsement: {case_number}",
+            message=f"Head of BD ({bd_actor}) approved {obligor_name} (₦{amount:,.2f}) and forwarded to HRM. Comments: {comments[:100]}...",
+            notification_type="INFO",
+            category="HRM_REVIEW",
+            case_number=case_number,
+            recipient_role="HRM"
+        )
+
+    @classmethod
+    def notify_hrm_approval_to_md(
+        cls,
+        case_number: str,
+        obligor_name: str,
+        amount: float,
+        hrm_actor: str,
+        comments: str
+    ):
+        """
+        When HRM approves risk review, alerts Managing Director with HRM's concurrence and comments.
+        """
+        md_email = "folashade.tinubu@opticomfinance.com"
+        cls.send_email(
+            to_email=md_email,
+            subject=f"[EXECUTIVE SANCTION REQUIRED] Case {case_number} ({obligor_name}) - ₦{amount:,.2f}",
+            html_body=f"<p>Dear Managing Director,</p><p>Head of Risk Management <strong>{hrm_actor}</strong> has completed credit risk assessment on <strong>{case_number}</strong> ({obligor_name}) for <strong>₦{amount:,.2f}</strong> and concurred with approval.</p><p><strong>Risk Assessment Comments:</strong> {comments}</p><p>Case is now placed in your Executive Sanctions Queue for final facility approval.</p>",
+            template="HRM_CONCURRENCE_TO_MD",
+            metadata={"case_number": case_number, "amount": amount, "hrm_actor": hrm_actor}
+        )
+        cls.create_in_app_notification(
+            title=f"Risk Concurrence: {case_number}",
+            message=f"HRM ({hrm_actor}) approved risk appraisal for {obligor_name} (₦{amount:,.2f}) and forwarded to Managing Director. Comments: {comments[:100]}...",
+            notification_type="INFO",
+            category="MD_DECISION",
+            case_number=case_number,
+            recipient_role="MD"
+        )
+
+    @classmethod
+    def notify_bdo_resubmission_to_analyst(
+        cls,
+        case_number: str,
+        obligor_name: str,
+        bdo_actor: str,
+        comments: str
+    ):
+        """
+        When BDO updates documentation or clarifications, alerts Credit Analyst.
+        """
+        analyst_email = "tunde.adebayo@opticomfinance.com"
+        cls.send_email(
+            to_email=analyst_email,
+            subject=f"[APPLICATION REWORK UPDATED] Case {case_number} ({obligor_name})",
+            html_body=f"<p>Dear Credit Analyst,</p><p>Business Development Officer <strong>{bdo_actor}</strong> has uploaded updated customer documentation and clarifications for facility <strong>{case_number}</strong> ({obligor_name}).</p><p><strong>BDO Submission Notes:</strong> {comments}</p><p>Please review updated inputs in your Underwriting Queue.</p>",
+            template="BDO_RESUBMISSION_TO_ANALYST",
+            metadata={"case_number": case_number, "bdo_actor": bdo_actor}
+        )
+        cls.create_in_app_notification(
+            title=f"BDO Updated Application: {case_number}",
+            message=f"BDO {bdo_actor} submitted updated details for {obligor_name}. Analyst review required.",
+            notification_type="INFO",
+            category="ANALYST_REVIEW",
+            case_number=case_number,
+            recipient_role="ANALYST"
         )
 
     @classmethod

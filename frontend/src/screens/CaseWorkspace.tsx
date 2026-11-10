@@ -3,7 +3,7 @@ import {
   ArrowLeft, FileText, CheckCircle, AlertTriangle, ShieldCheck,
   Send, RefreshCw, Cpu, UserCheck, CheckSquare, DollarSign, ExternalLink,
   ShieldAlert, Clock, PlusCircle, Zap, Receipt, Plus, Trash2, Percent,
-  Printer, Download, Copy, FileCheck, Award
+  Printer, Download, Copy, FileCheck, Award, MessageSquare, ChevronDown, ChevronUp
 } from 'lucide-react';
 import {
   fetchCaseWorkspace, generateAICam, updateCam, submitApprovalDecision,
@@ -70,6 +70,18 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
   const [mandatedCondition, setMandatedCondition] = useState('');
   const [returnTargetRole, setReturnTargetRole] = useState<'HRM' | 'HEAD_OF_BD'>('HRM');
   const [loanPerformance, setLoanPerformance] = useState<any>(null);
+
+  // Multi-tier review comments trail state
+  const [quickCommentText, setQuickCommentText] = useState('');
+  const [showCommentTrail, setShowCommentTrail] = useState(true);
+  const storedUser = React.useMemo(() => {
+    try {
+      const raw = localStorage.getItem('ofl_user_profile');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, []);
 
   // Treasury Form State
   const [navReference, setNavReference] = useState('');
@@ -336,9 +348,9 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
       const conditionsList = mandatedCondition.trim() ? [mandatedCondition.trim()] : [];
       const res = await submitApprovalDecision(caseData.id, {
         decision: approvalDecision,
-        actor: `${currentPersona} Officer`,
+        actor: storedUser?.name || `${currentPersona} Reviewer`,
         role: currentPersona,
-        comments: approvalComments || `${approvalDecision} decision recorded by ${currentPersona}`,
+        comments: approvalComments || `${approvalDecision} decision recorded by ${storedUser?.name || currentPersona}`,
         conditions_mandated: conditionsList,
         target_role: returnTargetRole
       });
@@ -348,6 +360,27 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
       await loadWorkspace();
     } catch (err: any) {
       setMessageBanner({ type: 'error', text: err.detail || err.message || 'Approval submission failed' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handlePostQuickComment = async () => {
+    if (!quickCommentText.trim()) return;
+    setActionLoading(true);
+    setMessageBanner(null);
+    try {
+      const res = await submitApprovalDecision(caseData.id, {
+        decision: 'COMMENT',
+        actor: storedUser?.name || `${currentPersona} Reviewer`,
+        role: currentPersona,
+        comments: quickCommentText.trim()
+      });
+      setMessageBanner({ type: 'success', text: res.message || 'Deliberation review comment recorded successfully.' });
+      setQuickCommentText('');
+      await loadWorkspace();
+    } catch (err: any) {
+      setMessageBanner({ type: 'error', text: err.detail || err.message || 'Failed to record comment' });
     } finally {
       setActionLoading(false);
     }
@@ -507,6 +540,203 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
           <span>{messageBanner.text}</span>
         </div>
       )}
+
+      {/* Multi-Tier Governance Review & Deliberation Comment Trail */}
+      <div style={{
+        background: 'var(--bg-surface)',
+        border: '1.5px solid rgba(0, 150, 204, 0.25)',
+        borderRadius: '10px',
+        padding: '1.15rem 1.35rem',
+        marginBottom: '1.5rem',
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showCommentTrail ? '1rem' : '0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '8px',
+              background: 'rgba(0, 150, 204, 0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#0096cc'
+            }}>
+              <MessageSquare size={18} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <strong style={{ fontSize: '0.98rem', color: 'var(--text-highlight)' }}>
+                  Multi-Tier Governance Review &amp; Deliberation Trail
+                </strong>
+                <span className="status-pill pill-cyan" style={{ fontSize: '0.68rem', padding: '0.1rem 0.5rem' }}>
+                  {approvals.length} Deliberations Logged
+                </span>
+                {exceptions.filter((e: any) => e.status !== 'RESOLVED').length > 0 && (
+                  <span className="status-pill pill-amber" style={{ fontSize: '0.68rem', padding: '0.1rem 0.5rem' }}>
+                    Active Exception Query
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Audited comments from Credit Analyst, Head of BD (MCC), HRM, MD, and BCC Board Trustees.
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              onClick={() => setShowCommentTrail(!showCommentTrail)}
+              className="btn btn-secondary btn-sm"
+              style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            >
+              {showCommentTrail ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              {showCommentTrail ? 'Hide Deliberations' : 'Show Deliberations'}
+            </button>
+          </div>
+        </div>
+
+        {showCommentTrail && (
+          <div>
+            {/* Historical Deliberations List */}
+            {approvals.length === 0 ? (
+              <div style={{
+                padding: '0.85rem',
+                borderRadius: '8px',
+                background: 'rgba(0, 0, 0, 0.02)',
+                border: '1px dashed var(--border-subtle)',
+                fontSize: '0.82rem',
+                color: 'var(--text-muted)',
+                marginBottom: '1rem',
+                textAlign: 'center'
+              }}>
+                No review comments logged yet. Use the review box below to record observations, queries, or committee guidance.
+              </div>
+            ) : (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+                maxHeight: '340px',
+                overflowY: 'auto',
+                marginBottom: '1rem',
+                paddingRight: '0.35rem'
+              }}>
+                {approvals.map((a: any) => {
+                  const isReturn = a.decision === 'RETURN_FOR_REWORK' || a.decision === 'RETURN_TO_BDO';
+                  const isApprove = a.decision === 'APPROVE' || a.decision === 'RECOMMEND_APPROVE';
+                  const borderCol = isReturn ? 'rgba(239, 68, 68, 0.45)' : isApprove ? 'rgba(16, 185, 129, 0.35)' : 'rgba(0, 150, 204, 0.3)';
+                  const bgCol = isReturn ? 'rgba(239, 68, 68, 0.04)' : isApprove ? 'rgba(16, 185, 129, 0.03)' : 'rgba(0, 150, 204, 0.03)';
+
+                  return (
+                    <div key={a.id} style={{
+                      padding: '0.85rem 1rem',
+                      borderRadius: '8px',
+                      background: bgCol,
+                      border: `1px solid ${borderCol}`,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.4rem'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <strong style={{ fontSize: '0.85rem', color: 'var(--text-highlight)' }}>
+                            {a.actor}
+                          </strong>
+                          <span style={{
+                            fontSize: '0.7rem',
+                            padding: '2px 7px',
+                            borderRadius: '4px',
+                            background: '#0096cc15',
+                            color: '#0096cc',
+                            fontWeight: 700
+                          }}>
+                            {a.authority_level}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                            {new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &bull; {new Date(a.created_at).toLocaleDateString()}
+                          </span>
+                          <span className={`status-pill ${isApprove ? 'pill-green' : isReturn ? 'pill-red' : 'pill-cyan'}`} style={{ fontSize: '0.7rem' }}>
+                            {a.decision.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{
+                        fontSize: '0.84rem',
+                        color: isReturn ? '#b91c1c' : 'var(--text-secondary)',
+                        lineHeight: 1.5,
+                        background: isReturn ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
+                        padding: isReturn ? '6px 10px' : '0',
+                        borderRadius: isReturn ? '4px' : '0',
+                        fontWeight: isReturn ? 600 : 400
+                      }}>
+                        {isReturn && <span style={{ marginRight: '4px' }}>⚠️ Query / Reservation:</span>}
+                        {a.comments}
+                      </div>
+
+                      {a.conditions_mandated && a.conditions_mandated.length > 0 && (
+                        <div style={{ fontSize: '0.75rem', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <CheckCircle size={12} /> Mandated Condition: {a.conditions_mandated.join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Deliberation Comment Box */}
+            <div style={{
+              background: 'rgba(0, 150, 204, 0.04)',
+              border: '1px solid rgba(0, 150, 204, 0.2)',
+              borderRadius: '8px',
+              padding: '0.85rem 1rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0096cc', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <MessageSquare size={13} />
+                  Add Deliberation Review / Comment as {storedUser?.name || currentPersona}
+                </label>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                  Notifies Analyst, Head of BD, HRM, MD, and BCC
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <textarea
+                  className="form-textarea"
+                  rows={2}
+                  style={{ fontSize: '0.82rem', flex: '1 1 300px' }}
+                  placeholder="Record committee review comments, queries, or observations for other approvers..."
+                  value={quickCommentText}
+                  onChange={(e) => setQuickCommentText(e.target.value)}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', justifyContent: 'center' }}>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={handlePostQuickComment}
+                    disabled={actionLoading || !quickCommentText.trim()}
+                    style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', padding: '0.5rem 0.85rem' }}
+                  >
+                    <Send size={13} /> Post Comment
+                  </button>
+                  {activeTab !== 'APPROVALS' && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setActiveTab('APPROVALS')}
+                      style={{ whiteSpace: 'nowrap', fontSize: '0.72rem', padding: '0.35rem 0.65rem' }}
+                    >
+                      Formal Sanctions &rarr;
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Dossier Tabs */}
       <div className="nav-bar" style={{ padding: '0.5rem 0', background: 'transparent', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1.5rem', overflowX: 'auto', display: 'flex', gap: '0.35rem' }}>
@@ -946,9 +1176,8 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Quorum Policy:</span>
-                  <span className={`status-pill ${
-                    (bccStatus?.quorum_achieved ?? workspace?.bcc_quorum?.quorum_achieved) ? 'pill-green' : 'pill-amber'
-                  }`} style={{ fontWeight: 700, fontSize: '0.75rem' }}>
+                  <span className={`status-pill ${(bccStatus?.quorum_achieved ?? workspace?.bcc_quorum?.quorum_achieved) ? 'pill-green' : 'pill-amber'
+                    }`} style={{ fontWeight: 700, fontSize: '0.75rem' }}>
                     {(bccStatus?.quorum_achieved ?? workspace?.bcc_quorum?.quorum_achieved)
                       ? '✓ QUORUM ACHIEVED (2/3 APPROVED)'
                       : `QUORUM PENDING (${(bccStatus?.approved_count ?? workspace?.bcc_quorum?.approved_count ?? 0)}/2 REQUIRED)`}
