@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   UserCheck,
   Radio,
@@ -14,6 +14,11 @@ import {
   Zap,
   Clock
 } from 'lucide-react';
+import {
+  fetchInAppNotifications,
+  markNotificationRead,
+  markAllNotificationsRead
+} from '../services/api';
 
 interface HeaderProps {
   currentPersona: string;
@@ -45,10 +50,9 @@ export const Header: React.FC<HeaderProps> = ({
   onSignOut,
   onExitToPublicClient
 }) => {
-  const isProduction = import.meta.env.PROD || import.meta.env.VITE_APP_ENV === 'production';
-  // Dev tools can be explicitly enabled for local development/demo if desired
-  const showDevSwitcher = !isProduction || import.meta.env.VITE_ENABLE_DEV_SWITCHER === 'true';
-  const showApiStatusBadge = !isProduction || import.meta.env.VITE_ENABLE_API_BADGE === 'true';
+  // By default, hide diagnostic badge and persona switcher for clean production view
+  const showDevSwitcher = import.meta.env.VITE_ENABLE_DEV_SWITCHER === 'true';
+  const showApiStatusBadge = import.meta.env.VITE_ENABLE_API_BADGE === 'true';
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Array<{
@@ -60,67 +64,47 @@ export const Header: React.FC<HeaderProps> = ({
     category: string;
     unread: boolean;
     caseNumber?: string;
-  }>>([
-    {
-      id: 'NOTIF-001',
-      title: 'HRM Risk Exception Alert',
-      message: 'HRM raised exception on OFL-2026-0881 and routed to Credit Analyst. Head of BD alerted.',
-      time: 'Just now',
-      type: 'WARNING',
-      category: 'RISK EXCEPTION',
-      unread: true,
-      caseNumber: 'OFL-2026-0881'
-    },
-    {
-      id: 'NOTIF-002',
-      title: 'MD Return Notification',
-      message: 'Managing Director returned OFL-2026-0882 for clarification. Analyst, HRM, & BD prompted.',
-      time: '6 mins ago',
-      type: 'URGENT',
-      category: 'EXECUTIVE RETURN',
-      unread: true,
-      caseNumber: 'OFL-2026-0882'
-    },
-    {
-      id: 'NOTIF-003',
-      title: '5% Default Penalty Levied',
-      message: '7-Day Grace Period expired on ACC-OFL-2026-003. 5% overdue penalty applied (₦28,819.44).',
-      time: '18 mins ago',
-      type: 'WARNING',
-      category: 'LOAN TELEMETRY',
-      unread: true,
-      caseNumber: 'OFL-2026-0883'
-    },
-    {
-      id: 'NOTIF-004',
-      title: 'Offer Letter Auto-Generated & Dispatched',
-      message: 'MD approved facility OFL-2026-0880 (₦15,000,000). Offer letter dispatched to applicant.',
-      time: '42 mins ago',
-      type: 'SUCCESS',
-      category: 'OFFER DISPATCHED',
-      unread: true,
-      caseNumber: 'OFL-2026-0880'
-    },
-    {
-      id: 'NOTIF-005',
-      title: 'MCC Review Assigned to Head of BD',
-      message: 'Credit Analyst completed CAM for Dangote Flour Mills; assigned to Head of BD (MCC).',
-      time: '1 hour ago',
-      type: 'INFO',
-      category: 'MCC ASSIGNMENT',
-      unread: false,
-      caseNumber: 'OFL-2026-0884'
-    }
-  ]);
+  }>>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadInAppNotifications = async () => {
+      try {
+        const notifs = await fetchInAppNotifications(currentPersona);
+        if (isMounted && Array.isArray(notifs)) {
+          setNotifications(notifs);
+        }
+      } catch (e) {
+        // Fallback silently if offline or endpoint initializing
+      }
+    };
+
+    loadInAppNotifications();
+    const interval = setInterval(loadInAppNotifications, 8000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [currentPersona]);
 
   const unreadCount = notifications.filter(n => n.unread).length;
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+    try {
+      await markAllNotificationsRead(currentPersona);
+    } catch {
+      // ignore
+    }
   };
 
-  const markRead = (id: string) => {
+  const markRead = async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: false } : n));
+    try {
+      await markNotificationRead(id);
+    } catch {
+      // ignore
+    }
   };
   return (
     <header className="app-header">

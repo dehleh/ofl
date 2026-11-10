@@ -198,3 +198,65 @@ def test_bcc_quorum_workflow_and_api():
     assert doc_html_res.status_code == 200
     assert "ZENITH MEGA CONTRACTORS LTD" in doc_html_res.text
     assert "OPTICOM FINANCE LIMITED" in doc_html_res.text
+
+    # 8. Verify multi-recipient email dispatch (Applicant + Guarantor) & In-App notifications
+    telemetry_data = client.get("/api/v1/telemetry/notifications").json()
+    delivery_logs = telemetry_data.get("delivery_logs", [])
+    recipients = [log.get("recipient") for log in delivery_logs if isinstance(log, dict)]
+    assert "operations@zenithmega.ng" in recipients
+
+    # Verify In-App notifications API
+    in_app_res = client.get("/api/v1/notifications")
+    assert in_app_res.status_code == 200
+    in_app_items = in_app_res.json()
+    assert len(in_app_items) > 0
+    first_notif_id = in_app_items[0]["id"]
+
+    # Mark single notification as read
+    read_res = client.post(f"/api/v1/notifications/{first_notif_id}/read")
+    assert read_res.status_code == 200
+    assert read_res.json()["success"] is True
+
+    # Mark all as read
+    all_read_res = client.post("/api/v1/notifications/mark-all-read")
+    assert all_read_res.status_code == 200
+    assert all_read_res.json()["success"] is True
+
+
+def test_bcc_approval_blocked_without_prior_md_approval():
+    """
+    Hard Invariant: Facilities > ₦20m require Managing Director (MD) endorsement
+    before Board Credit Committee (BCC) members can vote or achieve quorum.
+    """
+    create_res = client.post("/api/v1/intake/direct", json={
+        "applicant_name": "APEX COMMERCE CORP",
+        "applicant_type": "CORPORATE",
+        "email": "corp@apexcommerce.ng",
+        "phone": "+2348011223344",
+        "rc_number": "RC-778899",
+        "bvn": "22114455667",
+        "amount": 28_000_000.0,  # > ₦20M
+        "tenor_months": 18,
+        "purpose": "Inventory expansion and machinery funding",
+        "monthly_income": 4_500_000.0
+    })
+    assert create_res.status_code == 201
+    case_id = create_res.json()["case_id"]
+
+    # Put in BCC_REVIEW manually or attempt BCC approval without MD approval
+    client.post(f"/api/v1/cases/{case_id}/transition", json={
+        "to_state": CaseState.BCC_REVIEW.value,
+        "actor": "Admin Override",
+        "role": "ADMIN",
+        "reason": "Routing to test BCC guard without MD endorsement."
+    })
+
+    # BCC member attempts approval without prior MD approval
+    bcc_res = client.post(f"/api/v1/cases/{case_id}/approval", json={
+        "actor": "Emeka Nnamdi",
+        "role": "BCC",
+        "decision": "APPROVE",
+        "comments": "BCC Chair premature approval test."
+    })
+    assert bcc_res.status_code == 400
+    assert "Managing Director (MD) endorsement is mandatory" in bcc_res.json()["detail"]

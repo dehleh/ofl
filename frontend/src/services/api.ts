@@ -43,6 +43,37 @@ export async function fetchNotificationLogs() {
   return res.json();
 }
 
+export async function fetchInAppNotifications(role?: string, unreadOnly: boolean = false) {
+  const query = new URLSearchParams();
+  if (role) query.append('role', role);
+  if (unreadOnly) query.append('unread_only', 'true');
+  const res = await fetch(`${API_BASE}/notifications?${query.toString()}`, {
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to fetch in-app notifications');
+  return res.json();
+}
+
+export async function markNotificationRead(id: string) {
+  const res = await fetch(`${API_BASE}/notifications/${id}/read`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to mark notification as read');
+  return res.json();
+}
+
+export async function markAllNotificationsRead(role?: string) {
+  const query = new URLSearchParams();
+  if (role) query.append('role', role);
+  const res = await fetch(`${API_BASE}/notifications/mark-all-read?${query.toString()}`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  if (!res.ok) throw new Error('Failed to mark all notifications as read');
+  return res.json();
+}
+
 export async function fetchBackgroundJobs(caseId?: string) {
   const url = caseId ? `${API_BASE}/jobs?case_id=${encodeURIComponent(caseId)}` : `${API_BASE}/jobs`;
   const res = await fetch(url, { headers: getAuthHeaders() });

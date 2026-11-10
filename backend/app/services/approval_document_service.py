@@ -169,6 +169,12 @@ class ApprovalDocumentService:
         )
         guarantor_phone = verified_attrs.get("guarantor_phone") or external_refs.get("guarantor_phone") or "0802 334 5566"
         guarantor_occupation = verified_attrs.get("guarantor_occupation") or external_refs.get("guarantor_occupation") or "Managing Director / Corporate Investor"
+        guarantor_email = (
+            verified_attrs.get("guarantor_email") or 
+            external_refs.get("guarantor_email") or
+            raw_payload.get("guarantor_email") or 
+            f"guarantor.{guarantor_name.split()[0].lower()}@opticomfinance.com"
+        )
 
         now = datetime.now(timezone.utc)
         date_str = now.strftime("%B %d, %Y")
@@ -178,6 +184,7 @@ class ApprovalDocumentService:
         return {
             "case_id": credit_case.id,
             "case_number": credit_case.case_number,
+            "guarantor_email": guarantor_email,
             "date_str": date_str,
             "month_name": month_name,
             "day_str": day_str,

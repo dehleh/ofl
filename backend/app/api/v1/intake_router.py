@@ -80,7 +80,12 @@ def submit_direct_application(
         "means_of_id_type": payload.means_of_id_type,
         "means_of_id_number": payload.means_of_id_number,
         "collateral_description": payload.collateral_description,
-        "facility_type": payload.facility_type
+        "facility_type": payload.facility_type,
+        "guarantor_name": payload.guarantor_name,
+        "guarantor_email": payload.guarantor_email,
+        "guarantor_phone": payload.guarantor_phone,
+        "guarantor_address": payload.guarantor_address,
+        "guarantor_occupation": payload.guarantor_occupation
     }
 
     if not customer:

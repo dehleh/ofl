@@ -316,9 +316,27 @@ def submit_approval_decision(
                 if not ok:
                     raise HTTPException(status_code=400, detail=msg)
                 next_state = CaseState.BCC_REVIEW.value
-                response_message = f"Facility exceeds ₦20m (₦{amount:,.2f}). Routed to Board Credit Committee (BCC) for 2-of-3 quorum sanction."
+                NotificationService.notify_bcc_board_convened(
+                    case_number=credit_case.case_number,
+                    obligor_name=credit_case.application.customer.name,
+                    amount=amount,
+                    md_actor=payload.actor
+                )
+                response_message = f"Facility exceeds ₦20m (₦{amount:,.2f}). MD approved and routed to Board Credit Committee (BCC) for 2-of-3 quorum sanction."
 
         elif current_level in ["BCC", "BOARD_CREDIT_COMMITTEE"]:
+            # Hard invariant: MD endorsement is mandatory before BCC quorum can approve
+            has_md_approval = any(
+                a.authority_level in ["MD", "MANAGING_DIRECTOR", "CEO", "ADMIN"] and 
+                a.decision in ["APPROVE", "RECOMMEND_APPROVE"]
+                for a in past_approvals
+            )
+            if not has_md_approval:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Managing Director (MD) endorsement is mandatory before Board Credit Committee (BCC) quorum can convene."
+                )
+
             # 5. BCC 2-of-3 Quorum on facilities > ₦20m
             if len(distinct_bcc_actors) >= 2:
                 ok, msg = TransitionService.execute_transition(
@@ -347,6 +365,13 @@ def submit_approval_decision(
             else:
                 # Quorum not yet reached (e.g. 1 of 2 approved, awaiting 1 more member)
                 next_state = CaseState.BCC_REVIEW.value
+                NotificationService.notify_bcc_quorum_progress(
+                    case_number=credit_case.case_number,
+                    obligor_name=credit_case.application.customer.name,
+                    approving_actor=payload.actor,
+                    approved_count=len(distinct_bcc_actors),
+                    required_count=2
+                )
                 response_message = f"BCC approval recorded for {payload.actor}. Quorum progress: {len(distinct_bcc_actors)} of 2 required Board member approvals recorded (Awaiting 1 more BCC member approval)."
 
     db.commit()

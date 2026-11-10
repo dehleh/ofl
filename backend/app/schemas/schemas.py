@@ -22,6 +22,11 @@ class DirectApplicationCreate(BaseModel):
     means_of_id_number: Optional[str] = None
     collateral_description: Optional[str] = None
     facility_type: Optional[str] = None
+    guarantor_name: Optional[str] = None
+    guarantor_email: Optional[str] = None
+    guarantor_phone: Optional[str] = None
+    guarantor_address: Optional[str] = None
+    guarantor_occupation: Optional[str] = None
     amount: float = Field(..., gt=0)
     tenor_months: int = Field(..., ge=1, le=84)
     purpose: str = Field(..., min_length=5)

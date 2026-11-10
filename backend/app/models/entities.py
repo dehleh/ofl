@@ -380,3 +380,22 @@ class LoanPerformance(Base):
 
     credit_case = relationship("CreditCase", back_populates="loan_performance")
 
+
+class InAppNotification(Base):
+    """
+    In-App Notifications and Alerts (Multi-Channel with Email & SMS).
+    Delivered directly to staff cockpit tray and applicant portal.
+    """
+    __tablename__ = "in_app_notifications"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    recipient_role = Column(String(50), default="ALL")  # ALL, ANALYST, MD, HRM, HEAD_OF_BD, BCC, OPERATIONS, TREASURY
+    recipient_email = Column(String(255), nullable=True)
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    notification_type = Column(String(30), default="INFO")  # WARNING, URGENT, SUCCESS, INFO
+    category = Column(String(50), default="GENERAL")
+    case_number = Column(String(50), nullable=True)
+    unread = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=utc_now)
+
