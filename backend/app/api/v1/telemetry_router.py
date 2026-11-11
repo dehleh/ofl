@@ -3,10 +3,10 @@ Telemetry, Operational Reporting and Azure AI Cost Dashboard (PRD FR-18, FR-28, 
 """
 from fastapi import APIRouter, Depends, Response, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 from typing import Dict, Any, Optional, List
 
-from ...database import get_db
+from ...database import get_db, engine
 from ...models import CreditCase, Application, CAMVersion, ExceptionItem, Disbursement, CaseState
 from ...config import settings
 from ...integrations.gcs_service import GoogleCloudStorageService
@@ -99,7 +99,7 @@ def get_ai_cost_telemetry(db: Session = Depends(get_db)):
     }
 
 @router.get("/gcp-infrastructure")
-def get_gcp_infrastructure_status():
+def get_gcp_infrastructure_status(db: Session = Depends(get_db)):
     """
     Returns deployment telemetry for Google Cloud Platform services:
     Vertex AI, Google Cloud Storage, Secret Manager, Cloud Logging, and Cloud SQL.
@@ -107,6 +107,16 @@ def get_gcp_infrastructure_status():
     gcs_status = GoogleCloudStorageService.get_storage_telemetry()
     secrets_status = GCPSecretManagerService.get_secrets_inventory()
     logging_status = GoogleCloudLoggingService.get_logging_telemetry()
+
+    dialect_name = engine.dialect.name
+    db_status = "CONNECTED"
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception as exc:
+        db_status = f"DEGRADED ({type(exc).__name__})"
+
+    is_pg = dialect_name.startswith("postgresql")
+    db_label = "PostgreSQL (Google Cloud SQL)" if is_pg else f"SQLite ({dialect_name} local/fallback)"
 
     return {
         "cloud_platform": "Google Cloud Platform (GCP)",
@@ -122,8 +132,10 @@ def get_gcp_infrastructure_status():
             "secret_manager": secrets_status,
             "cloud_logging": logging_status,
             "database": {
-                "engine": "PostgreSQL (Cloud SQL on GCP in Production; SQLite local dev)",
-                "status": "CONNECTED"
+                "engine": db_label,
+                "dialect": dialect_name,
+                "cloud_sql_active": is_pg,
+                "status": db_status
             }
         }
     }

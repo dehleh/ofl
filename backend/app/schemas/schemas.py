@@ -8,6 +8,9 @@ from datetime import datetime
 class BVNResolveRequest(BaseModel):
     bvn: str = Field(..., min_length=10, max_length=11)
 
+class RCResolveRequest(BaseModel):
+    rc_number: str = Field(..., min_length=4, max_length=32)
+
 class DirectApplicationCreate(BaseModel):
     applicant_name: str = Field(..., min_length=2)
     applicant_type: str = Field(default="INDIVIDUAL")  # INDIVIDUAL, SME, CORPORATE
@@ -27,6 +30,7 @@ class DirectApplicationCreate(BaseModel):
     guarantor_phone: Optional[str] = None
     guarantor_address: Optional[str] = None
     guarantor_occupation: Optional[str] = None
+    guarantor_bvn: Optional[str] = None
     amount: float = Field(..., gt=0)
     tenor_months: int = Field(..., ge=1, le=84)
     purpose: str = Field(..., min_length=5)

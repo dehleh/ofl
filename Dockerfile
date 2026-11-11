@@ -33,8 +33,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r ./requirements.txt
 
-# Copy backend application code
+# Copy backend application code, migrations, and scripts
 COPY backend/app ./app
+COPY backend/alembic ./alembic
+COPY backend/alembic.ini ./alembic.ini
+COPY backend/scripts ./scripts
 
 # Copy built frontend static assets into static folder for FastAPI to serve in production
 COPY --from=frontend-builder /app/frontend/dist ./frontend_dist
@@ -42,5 +45,5 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend_dist
 # Expose Google Cloud Run default port
 EXPOSE 8080
 
-# Run Uvicorn listening on $PORT
-CMD exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 2
+# Bootstrap Cloud SQL schema & mandatory system configs once before spawning workers
+CMD python -c "from app.database import init_db; init_db()" && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 2

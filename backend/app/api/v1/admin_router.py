@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from ...database import get_db, utc_now
 from ...models.entities import SystemConfiguration, StaffUser
 from ...core.config_manager import ConfigManager
+from ...core.email_gateway import dispatch_email
 from ...core.security import get_current_user, TokenPayload, STAFF_DIRECTORY
 from ...core.cloud_logger import GoogleCloudLoggingService
 
@@ -146,12 +147,19 @@ def test_email_configuration(
     current_user: TokenPayload = Depends(get_current_user)
 ):
     """
-    Dispatches a real-time diagnostic test email using custom SMTP or configured email client.
+    Dispatches a real-time diagnostic test email using the configured Email Service API or SMTP gateway.
     """
-    result = ConfigManager.test_email_connection(
+    result = dispatch_email(
+        to_email=payload.recipient,
+        subject="[OPTICOM DIAGNOSTIC] Email Service Gateway Verification",
+        html_body=(
+            "<h3>Opticom Finance Limited — Outbound Email Gateway Test</h3>"
+            "<p>This message confirms your Email Service API / SMTP configuration is active and "
+            "ready for internal staff notifications, executive alerts, and customer offer packages.</p>"
+        ),
+        template="EMAIL_GATEWAY_DIAGNOSTIC",
         db=db,
-        recipient=payload.recipient,
-        config_override=payload.config_override
+        config_override=payload.config_override,
     )
 
     GoogleCloudLoggingService.emit_audit_event(
@@ -364,7 +372,14 @@ def seed_demo_data_endpoint(
     """
     Seeds / resets the full 9-case demonstration pipeline and RBAC tasks directly on GCP or local environments.
     """
-    from ...scripts.seed_executive_demo import seed_demo
+    try:
+        from ...scripts.seed_executive_demo import seed_demo
+    except (ImportError, ValueError):
+        import sys, os
+        backend_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        if backend_root not in sys.path:
+            sys.path.insert(0, backend_root)
+        from scripts.seed_executive_demo import seed_demo
     seed_demo(db_session=db)
     return {
         "message": "Successfully seeded/refreshed 9 executive demonstration cases on environment.",

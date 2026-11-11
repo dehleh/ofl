@@ -127,6 +127,15 @@ export async function resolveBVNIdentity(bvn: string) {
   return safeJson(res);
 }
 
+export async function resolveRCNumber(rcNumber: string) {
+  const res = await fetch(`${API_BASE}/intake/resolve-rc`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rc_number: rcNumber })
+  });
+  return safeJson(res);
+}
+
 export async function submitDirectApplication(data: any) {
   const res = await fetch(`${API_BASE}/intake/direct`, {
     method: 'POST',

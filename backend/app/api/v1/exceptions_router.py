@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 
-from ...database import get_db, utc_now, generate_uuid
+from ...database import get_db, utc_now, generate_uuid, as_utc
 from ...models import (
     CreditCase, 
     ExceptionItem, 
@@ -87,7 +87,7 @@ def list_exceptions(
         sla_hours_left = None
         is_breached = False
         if ex.sla_due_at:
-            delta = ex.sla_due_at - (ex.resolved_at or now)
+            delta = as_utc(ex.sla_due_at) - as_utc(ex.resolved_at or now)
             sla_hours_left = round(delta.total_seconds() / 3600, 1)
             is_breached = sla_hours_left < 0
 

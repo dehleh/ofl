@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from .config import settings
-from .database import engine, Base, SessionLocal
+from .database import engine, Base, SessionLocal, init_db
 from .api.v1.intake_router import router as intake_router
 from .api.v1.cases_router import router as cases_router
 from .api.v1.cam_router import router as cam_router
@@ -27,30 +27,33 @@ from .core.config_manager import ConfigManager
 
 def seed_initial_demo_data():
     """
-    Seeds initial realistic demonstration cases for UAT walkthrough.
+    Bootstraps mandatory production configs & staff users on all environments,
+    and seeds demonstration credit cases in non-production environments.
     """
+    init_db()
     if settings.ENVIRONMENT.lower() == "production":
         return
 
     db = SessionLocal()
-    ConfigManager.seed_defaults_if_needed(db)
-    from .models import CreditCase
-    seed_demo = None
     try:
-        from scripts.seed_executive_demo import seed_demo
-    except Exception:
+        from .models import CreditCase
+        seed_demo = None
         try:
-            import sys, os
-            sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
             from scripts.seed_executive_demo import seed_demo
         except Exception:
-            seed_demo = None
-    
-    if seed_demo and db.query(CreditCase).count() == 0:
-        seed_demo(db_session=db)
-    db.close()
+            try:
+                import sys, os
+                sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+                from scripts.seed_executive_demo import seed_demo
+            except Exception:
+                seed_demo = None
 
-# Ensure schema tables exist for all engines & test runners
+        if seed_demo and db.query(CreditCase).count() == 0:
+            seed_demo(db_session=db)
+    finally:
+        db.close()
+
+# Ensure schema tables exist for single-process & test runners
 try:
     Base.metadata.create_all(bind=engine)
 except Exception:
@@ -58,8 +61,6 @@ except Exception:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize database tables
-    Base.metadata.create_all(bind=engine)
     seed_initial_demo_data()
     yield
 

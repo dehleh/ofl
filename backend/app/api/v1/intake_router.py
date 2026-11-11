@@ -7,14 +7,14 @@ from typing import List, Dict, Any, Optional
 import hashlib
 import json
 
-from ...database import get_db, utc_now
+from ...database import get_db, utc_now, generate_next_case_number
 from ...config import settings
 from ...models import (
     Customer, Application, CreditCase, Document, 
     FinancialAssessment, IntegrationEvent, CaseState, IntakeChannel,
     ExceptionItem, AuditEvent
 )
-from ...schemas.schemas import DirectApplicationCreate, BestoInboundPayload, BVNResolveRequest
+from ...schemas.schemas import DirectApplicationCreate, BestoInboundPayload, BVNResolveRequest, RCResolveRequest
 from ...core.financial_engine import FinancialEngine
 from ...core.webhook_security import verify_hmac_signature
 from ...core.config_manager import ConfigManager
@@ -43,6 +43,19 @@ def resolve_bvn_identity(payload: BVNResolveRequest, db: Session = Depends(get_d
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=res.get("error", "Unable to resolve BVN.")
+        )
+    return res
+
+@router.post("/resolve-rc")
+def resolve_rc_identity(payload: RCResolveRequest, db: Session = Depends(get_db)):
+    """
+    Verifies a Nigerian CAC Registration Number (RC / BN) via Youverify or CAC corporate directory.
+    """
+    res = YouverifyAdapter.resolve_rc_number(payload.rc_number, db=db)
+    if not res.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=res.get("error", "Unable to verify CAC RC/BN number.")
         )
     return res
 
@@ -85,7 +98,8 @@ def submit_direct_application(
         "guarantor_email": payload.guarantor_email,
         "guarantor_phone": payload.guarantor_phone,
         "guarantor_address": payload.guarantor_address,
-        "guarantor_occupation": payload.guarantor_occupation
+        "guarantor_occupation": payload.guarantor_occupation,
+        "guarantor_bvn": payload.guarantor_bvn
     }
 
     if not customer:
@@ -129,9 +143,8 @@ def submit_direct_application(
     db.add(application)
     db.flush()
     
-    # Generate Case Number
-    case_count = db.query(CreditCase).count() + 1
-    case_number = f"OFL-{utc_now().year}-{case_count:05d}"
+    # Generate collision-safe sequential Case Number
+    case_number = generate_next_case_number(db)
     
     # Create CreditCase (Initial stage: KYC Pending / Analyst Review)
     credit_case = CreditCase(
@@ -183,6 +196,16 @@ def submit_direct_application(
     
     db.commit()
     db.refresh(credit_case)
+
+    from ...integrations.notification_service import NotificationService
+    NotificationService.notify_new_application_submitted(
+        case_number=credit_case.case_number,
+        obligor_name=payload.applicant_name,
+        amount=payload.amount,
+        facility_type=payload.facility_type or "Working Capital",
+        guarantor_name=payload.guarantor_name,
+        channel="OFL_DIRECT"
+    )
     
     return {
         "message": "Direct OFL application submitted successfully.",
@@ -250,12 +273,14 @@ async def youverify_webhook_handler(
     data = payload.get("data", {})
     provider_ref = data.get("id") or data.get("verificationId") or f"YV-WEBHOOK-{utc_now().strftime('%Y%m%d%H%M%S')}"
 
-    # Log integration event
+    # Log integration event (PostgreSQL NOT NULL safe payload_hash)
+    payload_hash = hashlib.sha256(body_bytes or b"{}").hexdigest()
     event_log = IntegrationEvent(
         external_system="YOUVERIFY",
         idempotency_key=f"YV-{provider_ref}-{event_type}",
-        payload=payload,
-        status="PROCESSED"
+        payload_hash=payload_hash,
+        acknowledgment=payload,
+        status="ACKNOWLEDGED"
     )
     db.add(event_log)
     db.commit()

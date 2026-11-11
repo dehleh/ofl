@@ -676,15 +676,35 @@ export const AdminConfigPortal: React.FC = () => {
             </div>
 
             <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label className="form-label">Integration Mode</label>
+              <label className="form-label">Integration Mode (Email Service API vs Corporate SMTP)</label>
               <select
                 className="form-select"
-                value={emailForm.mode || 'CUSTOM_SMTP'}
-                onChange={(e) => setEmailForm({ ...emailForm, mode: e.target.value })}
+                value={emailForm.mode || 'SENDGRID'}
+                onChange={(e) => {
+                  const nextMode = e.target.value;
+                  const presetMap: Record<string, { provider_name: string; api_endpoint: string }> = {
+                    SENDGRID: { provider_name: 'SendGrid Email Service API', api_endpoint: 'https://api.sendgrid.com/v3/mail/send' },
+                    DEFAULT_SENDGRID: { provider_name: 'SendGrid / Google Cloud Managed API', api_endpoint: 'https://api.sendgrid.com/v3/mail/send' },
+                    RESEND: { provider_name: 'Resend Transactional Email API', api_endpoint: 'https://api.resend.com/emails' },
+                    POSTMARK: { provider_name: 'Postmark Server Email API', api_endpoint: 'https://api.postmarkapp.com/email' },
+                    CUSTOM_API: { provider_name: 'Custom Internal Email Service HTTP API', api_endpoint: emailForm.api_endpoint || '' },
+                    CUSTOM_SMTP: { provider_name: 'Opticom Exchange Mail Server', api_endpoint: '' }
+                  };
+                  const preset = presetMap[nextMode] || { provider_name: '', api_endpoint: '' };
+                  setEmailForm({
+                    ...emailForm,
+                    mode: nextMode,
+                    provider_name: preset.provider_name || emailForm.provider_name,
+                    api_endpoint: preset.api_endpoint !== undefined ? preset.api_endpoint : emailForm.api_endpoint
+                  });
+                }}
               >
+                <option value="SENDGRID">SendGrid Email Service API (v3 REST API — Recommended)</option>
+                <option value="RESEND">Resend Transactional Email API (REST API)</option>
+                <option value="POSTMARK">Postmark Server Email API (REST API)</option>
+                <option value="CUSTOM_API">Custom Email Service HTTP API (Amazon SES / Mailgun / Webhook)</option>
+                <option value="DEFAULT_SENDGRID">Google Cloud / SendGrid Managed Gateway (Legacy Preset)</option>
                 <option value="CUSTOM_SMTP">Corporate SMTP Server (Microsoft 365, Exchange, Private Postfix)</option>
-                <option value="DEFAULT_SENDGRID">Google Cloud / SendGrid Managed Gateway</option>
-                <option value="CUSTOM_API">Custom HTTP Mail API (Amazon SES, Postmark, Mailgun)</option>
               </select>
             </div>
 
@@ -692,79 +712,136 @@ export const AdminConfigPortal: React.FC = () => {
               <label className="form-label">Mail Client / Provider Name</label>
               <input
                 type="text"
+                name="email_provider_name"
+                autoComplete="off"
                 className="form-input"
-                placeholder="e.g. Opticom Exchange Mail Server"
+                placeholder="e.g. SendGrid Production Gateway or Opticom Exchange Mail Server"
                 value={emailForm.provider_name || ''}
                 onChange={(e) => setEmailForm({ ...emailForm, provider_name: e.target.value })}
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-              <div className="form-group">
-                <label className="form-label">SMTP Server Host</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. mail.opticom.ng or smtp.office365.com"
-                  value={emailForm.smtp_host || ''}
-                  onChange={(e) => setEmailForm({ ...emailForm, smtp_host: e.target.value })}
-                />
-              </div>
+            {(emailForm.mode === 'SENDGRID' || emailForm.mode === 'DEFAULT_SENDGRID' || emailForm.mode === 'RESEND' || emailForm.mode === 'POSTMARK' || emailForm.mode === 'CUSTOM_API') ? (
+              <div style={{
+                padding: '1rem',
+                borderRadius: '8px',
+                background: 'rgba(0, 150, 204, 0.06)',
+                border: '1px solid rgba(0, 150, 204, 0.25)',
+                marginBottom: '1rem'
+              }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--brand-cerulean)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Transactional Email Service API Credentials
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">Port</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  placeholder="587"
-                  value={emailForm.smtp_port || 587}
-                  onChange={(e) => setEmailForm({ ...emailForm, smtp_port: parseInt(e.target.value) || 587 })}
-                />
-              </div>
-            </div>
+                <div className="form-group" style={{ marginBottom: '0.85rem' }}>
+                  <label className="form-label">Email Service API Endpoint URL</label>
+                  <input
+                    type="url"
+                    name="email_api_endpoint"
+                    autoComplete="off"
+                    className="form-input"
+                    placeholder="https://api.sendgrid.com/v3/mail/send"
+                    value={emailForm.api_endpoint || ''}
+                    onChange={(e) => setEmailForm({ ...emailForm, api_endpoint: e.target.value })}
+                  />
+                </div>
 
-            <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label className="form-label">Transport Encryption Security</label>
-              <select
-                className="form-select"
-                value={emailForm.security || 'STARTTLS'}
-                onChange={(e) => setEmailForm({ ...emailForm, security: e.target.value })}
-              >
-                <option value="STARTTLS">STARTTLS (Port 587 Recommended)</option>
-                <option value="SSL_TLS">SSL / TLS (Port 465)</option>
-                <option value="NONE">Unencrypted Plain (Internal Intranet Port 25)</option>
-              </select>
-            </div>
+                <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                  <label className="form-label">Email Service API Key / Bearer Token</label>
+                  <input
+                    type="password"
+                    name="email_api_key_secret"
+                    autoComplete="new-password"
+                    className="form-input"
+                    placeholder="Enter SendGrid / Resend / Postmark API Key (masked once saved)"
+                    value={emailForm.api_key || ''}
+                    onChange={(e) => setEmailForm({ ...emailForm, api_key: e.target.value })}
+                  />
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                    Stored encrypted in Opticom configuration repository. Dispatches internal staff alerts (Analyst, BD, HRM, MD, BCC, Treasury) and customer/guarantor legal documents alongside In-App notifications.
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">SMTP Server Host</label>
+                    <input
+                      type="text"
+                      name="email_smtp_host"
+                      autoComplete="off"
+                      className="form-input"
+                      placeholder="e.g. mail.opticomfinance.com or smtp.office365.com"
+                      value={emailForm.smtp_host || ''}
+                      onChange={(e) => setEmailForm({ ...emailForm, smtp_host: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Port</label>
+                    <input
+                      type="number"
+                      name="email_smtp_port"
+                      autoComplete="off"
+                      className="form-input"
+                      placeholder="587"
+                      value={emailForm.smtp_port || 587}
+                      onChange={(e) => setEmailForm({ ...emailForm, smtp_port: parseInt(e.target.value) || 587 })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Transport Encryption Security</label>
+                  <select
+                    className="form-select"
+                    value={emailForm.security || 'STARTTLS'}
+                    onChange={(e) => setEmailForm({ ...emailForm, security: e.target.value })}
+                  >
+                    <option value="STARTTLS">STARTTLS (Port 587 Recommended)</option>
+                    <option value="SSL_TLS">SSL / TLS (Port 465)</option>
+                    <option value="NONE">Unencrypted Plain (Internal Intranet Port 25)</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">SMTP Username / Account ID</label>
+                    <input
+                      type="text"
+                      name="email_smtp_username_cfg"
+                      autoComplete="off"
+                      className="form-input"
+                      placeholder="e.g. customercare@opticomfinance.com"
+                      value={emailForm.username || ''}
+                      onChange={(e) => setEmailForm({ ...emailForm, username: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">SMTP Password / App Secret</label>
+                    <input
+                      type="password"
+                      name="email_smtp_password_cfg"
+                      autoComplete="new-password"
+                      className="form-input"
+                      placeholder="••••••••••••"
+                      value={emailForm.password || ''}
+                      onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-              <div className="form-group">
-                <label className="form-label">Username / Account ID</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. credit.notifications@opticom.ng"
-                  value={emailForm.username || ''}
-                  onChange={(e) => setEmailForm({ ...emailForm, username: e.target.value })}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Password / App Secret</label>
-                <input
-                  type="password"
-                  className="form-input"
-                  placeholder="••••••••••••"
-                  value={emailForm.password || ''}
-                  onChange={(e) => setEmailForm({ ...emailForm, password: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
               <div className="form-group">
                 <label className="form-label">Sender Display Name</label>
                 <input
                   type="text"
+                  name="email_from_name"
+                  autoComplete="off"
                   className="form-input"
                   placeholder="Opticom Finance Credit Operations"
                   value={emailForm.from_name || ''}
@@ -776,12 +853,38 @@ export const AdminConfigPortal: React.FC = () => {
                 <label className="form-label">Sender Email Address</label>
                 <input
                   type="email"
+                  name="email_from_email"
+                  autoComplete="off"
                   className="form-input"
-                  placeholder="credit.notifications@opticom.ng"
+                  placeholder="info@opticomfinance.com"
                   value={emailForm.from_email || ''}
                   onChange={(e) => setEmailForm({ ...emailForm, from_email: e.target.value })}
                 />
               </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Reply-To Address (Optional)</label>
+                <input
+                  type="email"
+                  name="email_reply_to"
+                  autoComplete="off"
+                  className="form-input"
+                  placeholder="customercare@opticomfinance.com"
+                  value={emailForm.reply_to || ''}
+                  onChange={(e) => setEmailForm({ ...emailForm, reply_to: e.target.value })}
+                />
+              </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.35rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={emailForm.enabled !== false}
+                  onChange={(e) => setEmailForm({ ...emailForm, enabled: e.target.checked })}
+                />
+                <span>Dual Notification Dispatch Active</span>
+              </label>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -790,7 +893,7 @@ export const AdminConfigPortal: React.FC = () => {
                 onClick={() => handleSaveConfig('EMAIL_CLIENT', emailForm)}
                 disabled={savingKey === 'EMAIL_CLIENT'}
               >
-                {savingKey === 'EMAIL_CLIENT' ? 'Saving Credentials...' : 'Save Email Server Configuration'}
+                {savingKey === 'EMAIL_CLIENT' ? 'Saving Credentials...' : 'Save Email API / Server Configuration'}
               </button>
             </div>
           </div>

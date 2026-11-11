@@ -206,40 +206,79 @@ class NotificationService:
         return record
 
     @classmethod
+    def _resolve_staff_emails(cls, roles: List[str], default_emails: List[str]) -> List[str]:
+        """Merges configured StaffUser emails for target roles with baseline Opticom distribution addresses."""
+        recipients = list(default_emails)
+        seen = {e.lower() for e in recipients if e}
+        try:
+            from ..database import SessionLocal
+            from ..models.entities import StaffUser
+            db = SessionLocal()
+            try:
+                rows = (
+                    db.query(StaffUser)
+                    .filter(StaffUser.is_active.is_(True), StaffUser.role.in_(roles))
+                    .all()
+                )
+                for row in rows:
+                    if row.email and row.email.lower() not in seen:
+                        recipients.append(row.email)
+                        seen.add(row.email.lower())
+            finally:
+                db.close()
+        except Exception:
+            pass
+        return recipients
+
+    @classmethod
     def send_email(
         cls,
         to_email: str,
         subject: str,
         html_body: str,
         template: str = "OFFICIAL_NOTIFICATION",
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        attachments: Optional[List[Dict[str, Any]]] = None,
+        db: Optional[Any] = None
     ) -> Dict[str, Any]:
         """
-        Dispatches transactional Email via SendGrid / Google Workspace SMTP.
+        Dispatches transactional Email via configured Email Service API (SendGrid, Resend, Postmark, Custom API)
+        or Corporate SMTP Gateway.
         """
-        delivery_id = f"EML-{uuid.uuid4().hex[:10].upper()}"
-        provider = "SENDGRID_ENTERPRISE"
-        try:
-            from ..database import SessionLocal
-            from ..core.config_manager import ConfigManager
-            db = SessionLocal()
-            email_cfg = ConfigManager.get_config_value(db, "EMAIL_CLIENT")
-            db.close()
-            if email_cfg and email_cfg.get("enabled"):
-                mode = email_cfg.get("mode", "CUSTOM_SMTP")
-                host = email_cfg.get("smtp_host", "mail.opticom.ng")
-                provider = f"{mode} ({host})" if mode == "CUSTOM_SMTP" else mode
-        except Exception:
-            pass
+        from ..core.email_gateway import dispatch_email
+        from ..database import SessionLocal
 
+        delivery_id = f"EML-{uuid.uuid4().hex[:10].upper()}"
+        owns_session = db is None
+        session = db or SessionLocal()
+        try:
+            dispatch_res = dispatch_email(
+                to_email=to_email,
+                subject=subject,
+                html_body=html_body,
+                template=template,
+                db=session,
+                attachments=attachments,
+            )
+        finally:
+            if owns_session:
+                try:
+                    session.close()
+                except Exception:
+                    pass
+
+        is_ok = bool(dispatch_res.get("success"))
         record = {
             "id": delivery_id,
             "channel": "EMAIL",
             "recipient": to_email,
             "subject": subject,
             "template": template,
-            "status": "SENT",
-            "provider": provider,
+            "status": "SENT" if is_ok else "FAILED",
+            "delivery_status": dispatch_res.get("status", "SENT_SANDBOX"),
+            "provider": dispatch_res.get("provider", "CUSTOM_SMTP"),
+            "latency_ms": dispatch_res.get("latency_ms", 0.0),
+            "diagnostic_message": dispatch_res.get("message", ""),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "metadata": metadata or {}
         }
@@ -247,10 +286,10 @@ class NotificationService:
         GoogleCloudLoggingService.emit_audit_event(
             actor="SYSTEM_NOTIFICATION_DAEMON",
             role="SYSTEM",
-            event="NOTIFICATION_EMAIL_DISPATCHED",
+            event="NOTIFICATION_EMAIL_DISPATCHED" if is_ok else "NOTIFICATION_EMAIL_FAILED",
             entity="NOTIFICATION",
             entity_id=delivery_id,
-            reason=f"Email sent to {to_email}",
+            reason=dispatch_res.get("message") or f"Email processed for {to_email}",
             correlation_id=delivery_id,
             details=record
         )
@@ -310,6 +349,20 @@ class NotificationService:
         )
         cls.send_sms(to_phone=customer_phone, message=sms_msg, template="OFFER_ISSUED", metadata={"case_number": case_number})
 
+        if customer_email:
+            cls.send_email(
+                to_email=customer_email,
+                subject=f"Opticom Finance Offer Issued — {case_number} (₦{approved_amount:,.2f})",
+                html_body=(
+                    f"<p>Dear Valued Customer,</p>"
+                    f"<p>Your formal Offer Letter for Case <strong>{case_number}</strong> "
+                    f"(<strong>₦{approved_amount:,.2f}</strong> over <strong>{tenor_months} months</strong>, "
+                    f"estimated repayment <strong>₦{monthly_repayment:,.2f}/month</strong>) has been issued.</p>"
+                ),
+                template="OFFER_ISSUED",
+                metadata={"case_number": case_number, "approved_amount": approved_amount}
+            )
+
         cls.create_in_app_notification(
             title=f"Offer Issued: {case_number}",
             message=f"Loan offer of ₦{approved_amount:,.2f} issued to borrower ({tenor_months}M @ ₦{monthly_repayment:,.2f}/mo).",
@@ -338,11 +391,104 @@ class NotificationService:
         )
         cls.send_sms(to_phone=customer_phone, message=sms_msg, template="FACILITY_DISBURSED", metadata={"case_number": case_number, "nav_ref": nav_reference})
 
+        if customer_email:
+            cls.send_email(
+                to_email=customer_email,
+                subject=f"Disbursement Confirmed — Facility {case_number} (₦{amount:,.2f})",
+                html_body=(
+                    f"<p>Dear Valued Partner,</p>"
+                    f"<p>Facility <strong>{case_number}</strong> in the amount of <strong>₦{amount:,.2f}</strong> "
+                    f"has been disbursed. Core Banking Reference: <strong>{nav_reference}</strong>.</p>"
+                ),
+                template="FACILITY_DISBURSED",
+                metadata={"case_number": case_number, "nav_ref": nav_reference}
+            )
+
         cls.create_in_app_notification(
             title=f"Facility Capital Disbursed: {case_number}",
             message=f"Disbursement of ₦{amount:,.2f} confirmed via RTGS (LOAN-DISC Ref: {nav_reference}).",
             notification_type="SUCCESS",
             category="DISBURSED",
+            case_number=case_number,
+            recipient_role="ALL"
+        )
+
+    @classmethod
+    def notify_new_application_submitted(
+        cls,
+        case_number: str,
+        obligor_name: str,
+        amount: float,
+        facility_type: str,
+        guarantor_name: Optional[str] = None,
+        channel: str = "OFL_DIRECT"
+    ):
+        """Alerts internal underwriting and business development staff via Email and In-App on new intake."""
+        recipients = cls._resolve_staff_emails(
+            roles=["ANALYST", "BDO", "HEAD_OF_BD"],
+            default_emails=["tunde.adebayo@opticomfinance.com", "dapo.adeleke@opticomfinance.com"]
+        )
+        guarantor_note = f"<p><strong>Guarantor on File:</strong> {guarantor_name}</p>" if guarantor_name else ""
+        for email in recipients:
+            cls.send_email(
+                to_email=email,
+                subject=f"[NEW INTAKE] Case {case_number} ({obligor_name}) — ₦{amount:,.2f}",
+                html_body=(
+                    f"<p>A new <strong>{facility_type or 'Credit Facility'}</strong> request has entered the "
+                    f"Opticom underwriting queue via <strong>{channel}</strong>.</p>"
+                    f"<p><strong>Case:</strong> {case_number} | <strong>Obligor:</strong> {obligor_name} | "
+                    f"<strong>Quantum:</strong> ₦{amount:,.2f}</p>{guarantor_note}"
+                ),
+                template="NEW_APPLICATION_INTAKE",
+                metadata={"case_number": case_number, "amount": amount, "channel": channel}
+            )
+
+        cls.create_in_app_notification(
+            title=f"New Credit Application: {case_number}",
+            message=f"{obligor_name} requested ₦{amount:,.2f} ({facility_type or 'Credit Facility'}). Assigned to Analyst intake queue.",
+            notification_type="INFO",
+            category="NEW_APPLICATION",
+            case_number=case_number,
+            recipient_role="ALL"
+        )
+
+    @classmethod
+    def notify_deliberation_comment(
+        cls,
+        case_number: str,
+        obligor_name: str,
+        actor: str,
+        role: str,
+        comments: str
+    ):
+        """Notifies underwriting and executive committee reviewers via Email and In-App when a review note is posted."""
+        recipients = cls._resolve_staff_emails(
+            roles=["ANALYST", "HEAD_OF_BD", "HRM", "MD", "BCC"],
+            default_emails=[
+                "tunde.adebayo@opticomfinance.com",
+                "dapo.adeleke@opticomfinance.com",
+                "chidinma.okafor@opticomfinance.com",
+                "folashade.tinubu@opticomfinance.com"
+            ]
+        )
+        for email in recipients:
+            cls.send_email(
+                to_email=email,
+                subject=f"[REVIEW NOTE] {case_number} ({obligor_name}) — Comment by {actor} ({role})",
+                html_body=(
+                    f"<p><strong>{actor} ({role})</strong> added an official committee review note on "
+                    f"Case <strong>{case_number}</strong> ({obligor_name}):</p>"
+                    f"<blockquote>{comments}</blockquote>"
+                ),
+                template="DELIBERATION_NOTE",
+                metadata={"case_number": case_number, "actor": actor, "role": role}
+            )
+
+        cls.create_in_app_notification(
+            title=f"Deliberation Note: {case_number}",
+            message=f"{actor} ({role}) recorded review observation: {comments}",
+            notification_type="INFO",
+            category="DELIBERATION_NOTE",
             case_number=case_number,
             recipient_role="ALL"
         )

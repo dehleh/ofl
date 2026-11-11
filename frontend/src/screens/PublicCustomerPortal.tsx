@@ -33,7 +33,8 @@ import {
   CreditCard,
   Image as ImageIcon
 } from 'lucide-react';
-import { submitDirectApplication, trackApplication, respondToApplicantException, fetchPricingPolicy, resolveBVNIdentity, PricingPolicy } from '../services/api';
+import { submitDirectApplication, trackApplication, respondToApplicantException, fetchPricingPolicy, resolveBVNIdentity, resolveRCNumber, PricingPolicy } from '../services/api';
+import { FACILITY_CLASSIFICATIONS, getGuarantorRequirement, isRcNumberRequired } from '../utils/creditClassifications';
 
 interface PublicCustomerPortalProps {
   onOpenStaffGate?: () => void;
@@ -70,7 +71,13 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
     existing_monthly_debt: 350000,
     estimated_monthly_expenses: 2500000,
     collateral_value: 25000000,
-    collateral_description: ''
+    collateral_description: '',
+    guarantor_name: '',
+    guarantor_email: '',
+    guarantor_phone: '',
+    guarantor_address: '',
+    guarantor_occupation: '',
+    guarantor_bvn: ''
   });
 
   // BVN Resolution State
@@ -80,6 +87,49 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
     message: string;
     full_name?: string;
   } | null>(null);
+
+  // CAC RC / BN Verification State
+  const [rcResolving, setRcResolving] = useState<boolean>(false);
+  const [rcResolutionFeedback, setRcResolutionFeedback] = useState<{
+    success: boolean;
+    message: string;
+    company_name?: string;
+    cac_status?: string;
+  } | null>(null);
+
+  const handleRcLookup = async (rcToResolve: string) => {
+    const cleaned = (rcToResolve || '').trim();
+    if (!cleaned || cleaned.length < 5) {
+      setRcResolutionFeedback({ success: false, message: 'Enter at least 5 characters (e.g. BN 7049792 or RC 347832) to verify CAC registration.' });
+      return;
+    }
+    setRcResolving(true);
+    setRcResolutionFeedback(null);
+    try {
+      const res = await resolveRCNumber(cleaned);
+      if (res.success) {
+        setFormData(prev => ({
+          ...prev,
+          rc_number: res.rc_number || prev.rc_number,
+          applicant_name: prev.applicant_name || res.company_name || prev.applicant_name,
+          business_address: prev.business_address || res.business_address || prev.business_address
+        }));
+        setRcResolutionFeedback({
+          success: true,
+          message: res.message || `CAC Verified: ${res.company_name}`,
+          company_name: res.company_name,
+          cac_status: res.cac_status
+        });
+      }
+    } catch (err: any) {
+      setRcResolutionFeedback({
+        success: false,
+        message: err.detail || err.message || 'Unable to verify CAC registration number.'
+      });
+    } finally {
+      setRcResolving(false);
+    }
+  };
 
   // Attached files
   const [uploadedFiles, setUploadedFiles] = useState<Array<{ name: string; type: string; size: string }>>([]);
@@ -312,7 +362,13 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
       existing_monthly_debt: 1000000,
       estimated_monthly_expenses: 8593600,
       collateral_value: 108500000,
-      collateral_description: '10 Units of 30-Ton Sino Haulage Trucks (Comprehensive Insured) & Registered Legal Mortgage on Commercial Yard at Ibeju Lekki'
+      collateral_description: '10 Units of 30-Ton Sino Haulage Trucks (Comprehensive Insured) & Registered Legal Mortgage on Commercial Yard at Ibeju Lekki',
+      guarantor_name: 'Chief Olusegun Adewale Martins',
+      guarantor_email: 'segmartins@guarantorcorp.ng',
+      guarantor_phone: '08039876543',
+      guarantor_address: '24 Glover Road, Old Ikoyi, Lagos State',
+      guarantor_occupation: 'Managing Partner, Horizon Logistics Limited',
+      guarantor_bvn: '22112233445'
     });
     setBvnResolutionFeedback({
       success: true,
@@ -980,13 +1036,22 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     <select
                       className="form-select"
                       value={formData.facility_type}
-                      onChange={(e) => setFormData({ ...formData, facility_type: e.target.value })}
+                      onChange={(e) => {
+                        const nextFacility = e.target.value;
+                        const isConsumerOrSalary =
+                          nextFacility === 'Salary Loan / Payroll Advance' ||
+                          nextFacility === 'Personal / Consumer Term Loan';
+                        setFormData(prev => ({
+                          ...prev,
+                          facility_type: nextFacility,
+                          applicant_type: isConsumerOrSalary ? 'INDIVIDUAL' : prev.applicant_type
+                        }));
+                      }}
                       required
                     >
-                      <option value="Working Capital">Working Capital Line</option>
-                      <option value="Purchase Order Execution">Purchase Order / Contract Financing</option>
-                      <option value="Asset Finance">Fleet &amp; Heavy Machinery Lease</option>
-                      <option value="Invoice Discounting">Receivables &amp; Invoice Discounting</option>
+                      {FACILITY_CLASSIFICATIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -1002,7 +1067,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     >
                       <option value="SME">Sole Proprietorship / Registered Enterprise (BN)</option>
                       <option value="CORPORATE">Limited Liability Company (RC)</option>
-                      <option value="INDIVIDUAL">Accredited Professional / HNWI</option>
+                      <option value="INDIVIDUAL">Salaried Employee / Individual / HNWI</option>
                     </select>
                   </div>
                 </div>
@@ -1181,15 +1246,55 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">RC / Business Registration (BN) Number <span style={{ color: '#ef4444' }}>*</span></label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="e.g. BN 7049792 or RC 1234567"
-                      value={formData.rc_number}
-                      onChange={(e) => setFormData({ ...formData, rc_number: e.target.value })}
-                      required
-                    />
+                    <label className="form-label">
+                      {isRcNumberRequired(formData.applicant_type, formData.facility_type) ? (
+                        <>RC / Business Registration (BN) Number <span style={{ color: '#ef4444' }}>*</span></>
+                      ) : (
+                        <>Employer CAC RC / BN Number <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>(Optional for Salaried / Individual)</span></>
+                      )}
+                    </label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. BN 7049792 or RC 347832"
+                        value={formData.rc_number}
+                        onChange={(e) => {
+                          setFormData({ ...formData, rc_number: e.target.value });
+                          if (rcResolutionFeedback) setRcResolutionFeedback(null);
+                        }}
+                        required={isRcNumberRequired(formData.applicant_type, formData.facility_type)}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => handleRcLookup(formData.rc_number)}
+                        disabled={rcResolving || !formData.rc_number.trim()}
+                        style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0 0.9rem' }}
+                      >
+                        <RefreshCw size={13} className={rcResolving ? 'spin' : ''} />
+                        {rcResolving ? 'Verifying...' : 'Verify CAC'}
+                      </button>
+                    </div>
+                    {rcResolutionFeedback && (
+                      <div style={{
+                        marginTop: '0.4rem',
+                        fontSize: '0.73rem',
+                        fontWeight: 600,
+                        padding: '0.35rem 0.6rem',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        background: rcResolutionFeedback.success ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        color: rcResolutionFeedback.success ? '#059669' : '#dc2626',
+                        border: `1px solid ${rcResolutionFeedback.success ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`
+                      }}>
+                        {rcResolutionFeedback.success ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
+                        <span>{rcResolutionFeedback.message}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="form-group">
@@ -1277,24 +1382,38 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
                   <div className="form-group">
                     <label className="form-label">
-                      <Building2 size={13} color="var(--brand-cerulean)" /> Registered Operating Business Address <span style={{ color: '#ef4444' }}>*</span>
+                      <Building2 size={13} color="var(--brand-cerulean)" />{' '}
+                      {formData.applicant_type === 'INDIVIDUAL'
+                        ? 'Employer / Primary Place of Work Address'
+                        : 'Registered Operating Business Address'}{' '}
+                      <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="e.g. NNPC Filling Station, Ide-orogbo, Ibeju Lekki, Lagos State"
+                      placeholder={
+                        formData.applicant_type === 'INDIVIDUAL'
+                          ? 'e.g. 14 Marina Street, Lagos Island, Lagos State'
+                          : 'e.g. NNPC Filling Station, Ide-orogbo, Ibeju Lekki, Lagos State'
+                      }
                       value={formData.business_address}
                       onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
                       required
                     />
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                      Physical commercial premises where borrower operates.
+                      {formData.applicant_type === 'INDIVIDUAL'
+                        ? 'Physical office or workplace address of the loan applicant.'
+                        : 'Physical commercial premises where the borrowing business operates.'}
                     </div>
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">
-                      <Home size={13} color="var(--brand-cerulean)" /> Promoter / Managing Director Residential Address <span style={{ color: '#ef4444' }}>*</span>
+                      <Home size={13} color="var(--brand-cerulean)" />{' '}
+                      {formData.applicant_type === 'INDIVIDUAL'
+                        ? 'Applicant Residential Home Address'
+                        : 'Loan Applicant / Principal Promoter (MD) Residential Address'}{' '}
+                      <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="text"
@@ -1305,10 +1424,119 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       required
                     />
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                      Primary residential domicile of principal promoter / director.
+                      {formData.applicant_type === 'INDIVIDUAL'
+                        ? 'Home domicile of the individual applicant (distinct from Guarantor below).'
+                        : 'Home domicile of the Business Owner / Managing Director taking the loan (NOT the third-party Guarantor).'}
                     </div>
                   </div>
                 </div>
+
+                {/* Mandatory Classification-Aware Guarantor & Contact Details */}
+                {(() => {
+                  const gSpec = getGuarantorRequirement(formData.facility_type, formData.applicant_type);
+                  return (
+                    <div style={{
+                      background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.05) 0%, rgba(16, 185, 129, 0.04) 100%)',
+                      border: '1px solid rgba(14, 165, 233, 0.25)',
+                      borderRadius: 'var(--radius-lg)',
+                      padding: '1.5rem',
+                      marginBottom: '2rem'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-highlight)' }}>
+                            <ShieldCheck size={18} color="var(--brand-cerulean)" />
+                            <span>{gSpec.title}</span>
+                          </div>
+                          <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.35rem 0 0 0', lineHeight: 1.45 }}>
+                            {gSpec.subtitle}
+                          </p>
+                        </div>
+                        <span className="status-pill pill-cyan" style={{ whiteSpace: 'nowrap' }}>
+                          Compulsory Surety
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                        <div className="form-group">
+                          <label className="form-label">Guarantor Full Legal Name <span style={{ color: '#ef4444' }}>*</span></label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder="e.g. Chief Olusegun Adewale Martins"
+                            value={formData.guarantor_name}
+                            onChange={(e) => setFormData({ ...formData, guarantor_name: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label">Guarantor Direct Telephone Number <span style={{ color: '#ef4444' }}>*</span></label>
+                          <input
+                            type="tel"
+                            className="form-input"
+                            placeholder="e.g. 08039876543"
+                            value={formData.guarantor_phone}
+                            onChange={(e) => setFormData({ ...formData, guarantor_phone: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label">Guarantor Official Email Address <span style={{ color: '#ef4444' }}>*</span></label>
+                          <input
+                            type="email"
+                            className="form-input"
+                            placeholder="e.g. segmartins@guarantorcorp.ng"
+                            value={formData.guarantor_email}
+                            onChange={(e) => setFormData({ ...formData, guarantor_email: e.target.value })}
+                            required
+                          />
+                          <div style={{ fontSize: '0.7rem', color: '#0284c7', marginTop: '0.2rem', fontWeight: 600 }}>
+                            Letter of Guarantee (Guarantor Deed) is emailed here upon final approval.
+                          </div>
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label">{gSpec.occupationLabel.replace(' *', '')} <span style={{ color: '#ef4444' }}>*</span></label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder={gSpec.occupationPlaceholder}
+                            value={formData.guarantor_occupation}
+                            onChange={(e) => setFormData({ ...formData, guarantor_occupation: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label">{gSpec.addressLabel.replace(' *', '')} <span style={{ color: '#ef4444' }}>*</span></label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            placeholder="e.g. 24 Glover Road, Old Ikoyi, Lagos State"
+                            value={formData.guarantor_address}
+                            onChange={(e) => setFormData({ ...formData, guarantor_address: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label">Guarantor BVN <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>(Optional / Recommended)</span></label>
+                          <input
+                            type="text"
+                            className="form-input"
+                            maxLength={11}
+                            placeholder="11-digit Guarantor BVN"
+                            value={formData.guarantor_bvn}
+                            onChange={(e) => setFormData({ ...formData, guarantor_bvn: e.target.value.replace(/\D/g, '').slice(0, 11) })}
+                            style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setStep(1)}>
@@ -1318,7 +1546,22 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     type="button"
                     className="btn btn-primary btn-lg"
                     onClick={() => setStep(3)}
-                    disabled={!formData.applicant_name || !formData.email || !formData.bvn || !formData.phone || !formData.business_address || !formData.residential_address}
+                    disabled={
+                      !formData.applicant_name ||
+                      !formData.email ||
+                      !formData.bvn ||
+                      !formData.phone ||
+                      !formData.nin ||
+                      !formData.means_of_id_number ||
+                      !formData.business_address ||
+                      !formData.residential_address ||
+                      (isRcNumberRequired(formData.applicant_type, formData.facility_type) && !formData.rc_number.trim()) ||
+                      !formData.guarantor_name.trim() ||
+                      !formData.guarantor_phone.trim() ||
+                      !formData.guarantor_email.trim() ||
+                      !formData.guarantor_occupation.trim() ||
+                      !formData.guarantor_address.trim()
+                    }
                   >
                     Proceed to Cashflow &amp; Documents <ArrowRight size={18} />
                   </button>

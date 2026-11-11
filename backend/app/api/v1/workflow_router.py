@@ -113,13 +113,17 @@ def submit_approval_decision(
 
     if payload.decision in ["COMMENT", "DELIBERATION_NOTE", "NOTE"]:
         # Record official deliberation comment across review hierarchy without state change
-        NotificationService.create_in_app_notification(
-            title=f"Deliberation Note: {credit_case.case_number}",
-            message=f"{payload.actor} ({payload.role}) recorded review observation: {payload.comments}",
-            notification_type="INFO",
-            category="DELIBERATION_NOTE",
+        obligor_name = (
+            credit_case.application.customer.name
+            if credit_case.application and credit_case.application.customer
+            else credit_case.case_number
+        )
+        NotificationService.notify_deliberation_comment(
             case_number=credit_case.case_number,
-            recipient_role="ALL"
+            obligor_name=obligor_name,
+            actor=payload.actor,
+            role=payload.role,
+            comments=payload.comments
         )
         db.commit()
         return {

@@ -224,85 +224,134 @@ class ConfigManager:
                         val["helpline"] = "0816 181 3538"
                         existing.value = val
 
-        # Seed initial staff directory & ensure new roles exist
-        user_count = db.query(StaffUser).count()
-        if user_count == 0:
-            initial_users = [
-                {
-                    "username": "admin",
-                    "email": "admin@opticomfinance.com",
-                    "name": "Opticom System Administrator",
-                    "role": "ADMIN",
-                    "department": "IT & Infrastructure",
-                    "pin_hash": "1988",
-                    "permissions": ["admin:config", "admin:users", "admin:audit", "*"]
-                },
-                {
-                    "username": "analyst",
-                    "email": "tunde.adebayo@opticomfinance.com",
-                    "name": "Babatunde Adebayo",
-                    "role": "ANALYST",
-                    "department": "Credit Underwriting",
-                    "pin_hash": "1988",
-                    "permissions": ["cam:create", "cam:edit", "case:read", "exception:raise", "statement:analyze"]
-                },
-                {
-                    "username": "hrm",
-                    "email": "chidinma.okafor@opticomfinance.com",
-                    "name": "Chidinma Okafor",
-                    "role": "HRM",
-                    "department": "Risk Management",
-                    "pin_hash": "1988",
-                    "permissions": ["approval:recommend", "approval:risk_review", "exception:coordinate", "case:read"]
-                },
-                {
-                    "username": "bd",
-                    "email": "dapo.adeleke@opticomfinance.com",
-                    "name": "Dapo Adeleke (Head of Business Development)",
-                    "role": "HEAD_OF_BD",
-                    "department": "Business Development",
-                    "pin_hash": "1988",
-                    "permissions": ["approval:recommend", "bd:endorse", "fees:manage", "case:read"]
-                },
-                {
-                    "username": "bcc",
-                    "email": "emeka.nnamdi@opticomfinance.com",
-                    "name": "Emeka Nnamdi (BCC Chair)",
-                    "role": "BCC",
-                    "department": "Board Credit Committee",
-                    "pin_hash": "1988",
-                    "permissions": ["approval:approve_unlimited", "rejection:recommend", "case:read"]
-                },
-                {
-                    "username": "md",
-                    "email": "folashade.tinubu@opticomfinance.com",
-                    "name": "Folashade Tinubu (Managing Director)",
-                    "role": "MD",
-                    "department": "Executive Management",
-                    "pin_hash": "1988",
-                    "permissions": ["admin:config", "admin:users", "admin:audit", "approval:approve_20m", "approval:approve_unlimited", "rejection:final", "disbursement:sanction", "fees:manage", "*"]
-                },
-                {
-                    "username": "treasury",
-                    "email": "ibrahim.musa@opticomfinance.com",
-                    "name": "Ibrahim Musa (Treasury Lead)",
-                    "role": "TREASURY",
-                    "department": "Treasury Operations",
-                    "pin_hash": "1988",
-                    "permissions": ["treasury:nav_confirm", "treasury:loandisc_sync"]
-                },
-                {
-                    "username": "it_owner",
-                    "email": "devops@opticomfinance.com",
-                    "name": "DevOps / IT Integration Owner",
-                    "role": "IT_OWNER",
-                    "department": "IT Operations",
-                    "pin_hash": "1988",
-                    "permissions": ["integration:retry", "exception:technical_restore", "telemetry:admin"]
-                }
-            ]
-            for u in initial_users:
-                staff = StaffUser(
+        # Seed initial staff directory & ensure all required governance roles exist idempotently
+        initial_users = [
+            {
+                "username": "admin",
+                "email": "admin@opticomfinance.com",
+                "name": "Opticom System Administrator",
+                "role": "ADMIN",
+                "department": "IT & Infrastructure",
+                "pin_hash": "1988",
+                "permissions": ["admin:config", "admin:users", "admin:audit", "*"]
+            },
+            {
+                "username": "analyst",
+                "email": "tunde.adebayo@opticomfinance.com",
+                "name": "Babatunde Adebayo",
+                "role": "ANALYST",
+                "department": "Credit Underwriting",
+                "pin_hash": "1988",
+                "permissions": ["cam:create", "cam:edit", "case:read", "exception:raise", "statement:analyze"]
+            },
+            {
+                "username": "hrm",
+                "email": "chidinma.okafor@opticomfinance.com",
+                "name": "Chidinma Okafor",
+                "role": "HRM",
+                "department": "Risk Management",
+                "pin_hash": "1988",
+                "permissions": ["approval:recommend", "approval:risk_review", "exception:coordinate", "case:read"]
+            },
+            {
+                "username": "bd",
+                "email": "dapo.adeleke@opticomfinance.com",
+                "name": "Dapo Adeleke (Head of Business Development)",
+                "role": "HEAD_OF_BD",
+                "department": "Business Development",
+                "pin_hash": "1988",
+                "permissions": ["approval:recommend", "bd:endorse", "fees:manage", "case:read"]
+            },
+            {
+                "username": "bcc",
+                "email": "emeka.nnamdi@opticomfinance.com",
+                "name": "Emeka Nnamdi (BCC Chair)",
+                "role": "BCC",
+                "department": "Board Credit Committee",
+                "pin_hash": "1988",
+                "permissions": ["approval:approve_unlimited", "rejection:recommend", "case:read"]
+            },
+            {
+                "username": "bcc_aliyu",
+                "email": "aliyu.dangote@opticomfinance.com",
+                "name": "Alhaji Aliyu Dangote (BCC Member - Risk Trustee)",
+                "role": "BCC",
+                "department": "Board Credit Committee",
+                "pin_hash": "1988",
+                "permissions": ["approval:approve_unlimited", "rejection:recommend", "case:read"]
+            },
+            {
+                "username": "bcc_zainab",
+                "email": "zainab.ahmed@opticomfinance.com",
+                "name": "Mrs. Zainab Ahmed (BCC Member - Legal Trustee)",
+                "role": "BCC",
+                "department": "Board Credit Committee",
+                "pin_hash": "1988",
+                "permissions": ["approval:approve_unlimited", "rejection:recommend", "case:read"]
+            },
+            {
+                "username": "md",
+                "email": "folashade.tinubu@opticomfinance.com",
+                "name": "Folashade Tinubu (Managing Director)",
+                "role": "MD",
+                "department": "Executive Management",
+                "pin_hash": "1988",
+                "permissions": ["admin:config", "admin:users", "admin:audit", "approval:approve_20m", "approval:approve_unlimited", "rejection:final", "disbursement:sanction", "fees:manage", "*"]
+            },
+            {
+                "username": "bdo",
+                "email": "segun.adeleke@opticomfinance.com",
+                "name": "Segun Adeleke (Business Dev Officer)",
+                "role": "BDO",
+                "department": "Direct Commercial Origination",
+                "pin_hash": "1988",
+                "permissions": ["intake:assisted", "case:read", "intake:originate"]
+            },
+            {
+                "username": "operations",
+                "email": "kemi.balogun@opticomfinance.com",
+                "name": "Kemi Balogun (Credit Operations)",
+                "role": "OPERATIONS",
+                "department": "Credit Operations",
+                "pin_hash": "1988",
+                "permissions": ["offer:generate", "conditions:verify", "case:read"]
+            },
+            {
+                "username": "treasury",
+                "email": "ibrahim.musa@opticomfinance.com",
+                "name": "Ibrahim Musa (Treasury Lead)",
+                "role": "TREASURY",
+                "department": "Treasury Operations",
+                "pin_hash": "1988",
+                "permissions": ["treasury:nav_confirm", "treasury:loandisc_sync"]
+            },
+            {
+                "username": "auditor",
+                "email": "farooq.mohammed@opticomfinance.com",
+                "name": "Farooq Mohammed (Compliance Auditor)",
+                "role": "AUDITOR",
+                "department": "Internal Audit & Compliance",
+                "pin_hash": "1988",
+                "permissions": ["audit:read", "audit:export", "case:read"]
+            },
+            {
+                "username": "it_owner",
+                "email": "devops@opticomfinance.com",
+                "name": "DevOps / IT Integration Owner",
+                "role": "IT_OWNER",
+                "department": "IT Operations",
+                "pin_hash": "1988",
+                "permissions": ["integration:retry", "exception:technical_restore", "telemetry:admin"]
+            }
+        ]
+
+        existing_staff = db.query(StaffUser).all()
+        existing_usernames = {s.username for s in existing_staff}
+        existing_emails = {s.email.lower() for s in existing_staff if s.email}
+
+        for u in initial_users:
+            if u["username"] not in existing_usernames and u["email"].lower() not in existing_emails:
+                db.add(StaffUser(
                     username=u["username"],
                     email=u["email"],
                     name=u["name"],
@@ -311,29 +360,14 @@ class ConfigManager:
                     pin_hash=u["pin_hash"],
                     is_active=True,
                     permissions=u["permissions"]
-                )
-                db.add(staff)
-        else:
-            # Ensure HEAD_OF_BD is in staff directory
-            bd_exists = db.query(StaffUser).filter(StaffUser.role == "HEAD_OF_BD").first()
-            if not bd_exists:
-                db.add(StaffUser(
-                    username="bd",
-                    email="dapo.adeleke@opticomfinance.com",
-                    name="Dapo Adeleke (Head of Business Development)",
-                    role="HEAD_OF_BD",
-                    department="Business Development",
-                    pin_hash="1988",
-                    is_active=True,
-                    permissions=["approval:recommend", "bd:endorse", "fees:manage", "case:read"]
                 ))
-            # Migrate any @opticom.ng emails to @opticomfinance.com and grant highest privileges to MD & ADMIN
-            staff_list = db.query(StaffUser).all()
-            for s in staff_list:
-                if s.email and "@opticom.ng" in s.email:
-                    s.email = s.email.replace("@opticom.ng", "@opticomfinance.com")
-                if s.role in ["MD", "ADMIN"]:
-                    s.permissions = ["admin:config", "admin:users", "admin:audit", "approval:approve_20m", "approval:approve_unlimited", "rejection:final", "disbursement:sanction", "fees:manage", "*"]
+
+        # Migrate any @opticom.ng emails to @opticomfinance.com and grant highest privileges to MD & ADMIN
+        for s in existing_staff:
+            if s.email and "@opticom.ng" in s.email:
+                s.email = s.email.replace("@opticom.ng", "@opticomfinance.com")
+            if s.role in ["MD", "ADMIN"]:
+                s.permissions = ["admin:config", "admin:users", "admin:audit", "approval:approve_20m", "approval:approve_unlimited", "rejection:final", "disbursement:sanction", "fees:manage", "*"]
 
         try:
             db.commit()

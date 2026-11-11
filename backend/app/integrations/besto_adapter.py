@@ -14,7 +14,7 @@ from ..models import (
     IntakeChannel, CaseState
 )
 from ..config import settings
-from ..database import utc_now, generate_uuid
+from ..database import utc_now, generate_uuid, generate_next_case_number
 from ..core.financial_engine import FinancialEngine
 
 class BestoAdapter:
@@ -123,9 +123,8 @@ class BestoAdapter:
         db.add(application)
         db.flush()
         
-        # Generate immutable Case Number
-        case_count = db.query(CreditCase).count() + 1
-        case_number = f"OFL-{utc_now().year}-{case_count:05d}"
+        # Generate immutable sequential Case Number
+        case_number = generate_next_case_number(db)
         
         # CreditCase creation (FR-21)
         credit_case = CreditCase(

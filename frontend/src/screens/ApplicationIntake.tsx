@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Send, AlertTriangle, CheckCircle, CheckCircle2, Calculator, FileText, ArrowRight, ShieldCheck, RefreshCw, Building2, Home } from 'lucide-react';
-import { submitDirectApplication, fetchPricingPolicy, resolveBVNIdentity, PricingPolicy } from '../services/api';
+import { submitDirectApplication, fetchPricingPolicy, resolveBVNIdentity, resolveRCNumber, PricingPolicy } from '../services/api';
+import { FACILITY_CLASSIFICATIONS, getGuarantorRequirement, isRcNumberRequired } from '../utils/creditClassifications';
 
 interface ApplicationIntakeProps {
   onSuccess: (caseNumber: string) => void;
@@ -16,6 +17,13 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
     bvn: '',
     nin: '',
     rc_number: '',
+    facility_type: 'Working Capital',
+    guarantor_name: '',
+    guarantor_email: '',
+    guarantor_phone: '',
+    guarantor_address: '',
+    guarantor_occupation: '',
+    guarantor_bvn: '',
     business_address: '',
     residential_address: '',
     means_of_id_type: 'NATIONAL_ID',
@@ -128,6 +136,44 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
       collateralRatio: Math.round(collateralRatio)
     };
   }, [formData, pricingPolicy]);
+
+  const [rcResolving, setRcResolving] = useState(false);
+  const [rcResolutionFeedback, setRcResolutionFeedback] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+
+  const handleRcLookup = async (rcToResolve: string) => {
+    const cleaned = (rcToResolve || '').trim();
+    if (!cleaned || cleaned.length < 5) {
+      setRcResolutionFeedback({ success: false, message: 'Enter at least 5 characters (e.g. RC 347832 or BN 7049792) to verify CAC record.' });
+      return;
+    }
+    setRcResolving(true);
+    setRcResolutionFeedback(null);
+    try {
+      const res = await resolveRCNumber(cleaned);
+      if (res.success) {
+        setFormData(prev => ({
+          ...prev,
+          rc_number: res.rc_number || prev.rc_number,
+          applicant_name: prev.applicant_name || res.company_name || prev.applicant_name,
+          business_address: prev.business_address || res.business_address || prev.business_address
+        }));
+        setRcResolutionFeedback({
+          success: true,
+          message: res.message || `CAC Verified: ${res.company_name}`
+        });
+      }
+    } catch (err: any) {
+      setRcResolutionFeedback({
+        success: false,
+        message: err.detail || err.message || 'Unable to verify CAC RC/BN number.'
+      });
+    } finally {
+      setRcResolving(false);
+    }
+  };
 
   const isBelowBoundary = formData.amount <= 2000000;
 
@@ -310,15 +356,51 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
 
             <div className="split-view" style={{ gap: '0.75rem' }}>
               <div className="form-group">
-                <label className="form-label">CAC RC / BN Number *</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  required
-                  value={formData.rc_number}
-                  onChange={(e) => setFormData({ ...formData, rc_number: e.target.value })}
-                  placeholder="RC-123456 or BN-765432"
-                />
+                <label className="form-label">
+                  {isRcNumberRequired(formData.applicant_type, formData.facility_type)
+                    ? 'CAC RC / BN Number *'
+                    : 'Employer CAC RC / BN Number (Optional)'}
+                </label>
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required={isRcNumberRequired(formData.applicant_type, formData.facility_type)}
+                    value={formData.rc_number}
+                    onChange={(e) => {
+                      setFormData({ ...formData, rc_number: e.target.value });
+                      if (rcResolutionFeedback) setRcResolutionFeedback(null);
+                    }}
+                    placeholder="RC 347832 or BN 7049792"
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleRcLookup(formData.rc_number)}
+                    disabled={rcResolving || !formData.rc_number.trim()}
+                    style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <RefreshCw size={12} className={rcResolving ? 'spin' : ''} />
+                    {rcResolving ? 'Verifying...' : 'Verify CAC'}
+                  </button>
+                </div>
+                {rcResolutionFeedback && (
+                  <div style={{
+                    marginTop: '0.4rem',
+                    fontSize: '0.75rem',
+                    padding: '0.35rem 0.6rem',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: rcResolutionFeedback.success ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                    color: rcResolutionFeedback.success ? '#10b981' : '#ef4444'
+                  }}>
+                    {rcResolutionFeedback.success ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
+                    <span>{rcResolutionFeedback.message}</span>
+                  </div>
+                )}
               </div>
 
               <div className="form-group">
@@ -367,26 +449,34 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
             </div>
 
             <div className="form-group">
-              <label className="form-label">Registered Operating Business Address *</label>
+              <label className="form-label">
+                {formData.applicant_type === 'INDIVIDUAL'
+                  ? 'Employer / Primary Workplace Address *'
+                  : 'Registered Operating Business Address *'}
+              </label>
               <input
                 type="text"
                 className="form-input"
                 required
                 value={formData.business_address}
                 onChange={(e) => setFormData({ ...formData, business_address: e.target.value })}
-                placeholder="Physical commercial premises where business operates"
+                placeholder="Physical commercial premises where applicant or business operates"
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Promoter / Director Residential Address *</label>
+              <label className="form-label">
+                {formData.applicant_type === 'INDIVIDUAL'
+                  ? 'Applicant Residential Home Address *'
+                  : 'Loan Applicant / Principal Promoter (MD) Residential Address *'}
+              </label>
               <input
                 type="text"
                 className="form-input"
                 required
                 value={formData.residential_address}
                 onChange={(e) => setFormData({ ...formData, residential_address: e.target.value })}
-                placeholder="Residential domicile address of managing director"
+                placeholder="Home address of borrower / principal director (not the third-party Guarantor)"
               />
             </div>
 
@@ -408,6 +498,30 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
             <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--brand-teal-light)' }}>
               2. Facility Structure & Deterministic Appraisal
             </h3>
+
+            <div className="form-group">
+              <label className="form-label">Facility Classification *</label>
+              <select
+                className="form-select"
+                required
+                value={formData.facility_type}
+                onChange={(e) => {
+                  const nextFacility = e.target.value;
+                  const isConsumerOrSalary =
+                    nextFacility === 'Salary Loan / Payroll Advance' ||
+                    nextFacility === 'Personal / Consumer Term Loan';
+                  setFormData(prev => ({
+                    ...prev,
+                    facility_type: nextFacility,
+                    applicant_type: isConsumerOrSalary ? 'INDIVIDUAL' : prev.applicant_type
+                  }));
+                }}
+              >
+                {FACILITY_CLASSIFICATIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
 
             <div className="split-view" style={{ gap: '0.75rem' }}>
               <div className="form-group">
@@ -533,6 +647,104 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
                 </div>
               </div>
             </div>
+
+            {/* Mandatory Guarantor & Surety Section (Classification-Aware) */}
+            {(() => {
+              const gSpec = getGuarantorRequirement(formData.facility_type, formData.applicant_type);
+              return (
+                <div style={{
+                  marginTop: '1rem',
+                  padding: '1rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'rgba(14, 165, 233, 0.06)',
+                  border: '1px solid rgba(14, 165, 233, 0.25)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--brand-teal-light)', marginBottom: '0.25rem' }}>
+                    <ShieldCheck size={16} />
+                    <span>{gSpec.title}</span>
+                  </div>
+                  <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', margin: '0 0 0.75rem 0', lineHeight: 1.4 }}>
+                    {gSpec.subtitle}
+                  </p>
+
+                  <div className="split-view" style={{ gap: '0.75rem' }}>
+                    <div className="form-group">
+                      <label className="form-label">Guarantor Full Name *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        required
+                        value={formData.guarantor_name}
+                        onChange={(e) => setFormData({ ...formData, guarantor_name: e.target.value })}
+                        placeholder="Independent third-party guarantor name"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Guarantor Phone Number *</label>
+                      <input
+                        type="tel"
+                        className="form-input"
+                        required
+                        value={formData.guarantor_phone}
+                        onChange={(e) => setFormData({ ...formData, guarantor_phone: e.target.value })}
+                        placeholder="+234 803 XXX XXXX"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="split-view" style={{ gap: '0.75rem' }}>
+                    <div className="form-group">
+                      <label className="form-label">Guarantor Email Address *</label>
+                      <input
+                        type="email"
+                        className="form-input"
+                        required
+                        value={formData.guarantor_email}
+                        onChange={(e) => setFormData({ ...formData, guarantor_email: e.target.value })}
+                        placeholder="guarantor@domain.ng"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">{gSpec.occupationLabel}</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        required
+                        value={formData.guarantor_occupation}
+                        onChange={(e) => setFormData({ ...formData, guarantor_occupation: e.target.value })}
+                        placeholder={gSpec.occupationPlaceholder}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="split-view" style={{ gap: '0.75rem' }}>
+                    <div className="form-group">
+                      <label className="form-label">{gSpec.addressLabel}</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        required
+                        value={formData.guarantor_address}
+                        onChange={(e) => setFormData({ ...formData, guarantor_address: e.target.value })}
+                        placeholder="Guarantor verified residential address"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Guarantor BVN (Optional)</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        maxLength={11}
+                        value={formData.guarantor_bvn}
+                        onChange={(e) => setFormData({ ...formData, guarantor_bvn: e.target.value.replace(/\D/g, '').slice(0, 11) })}
+                        placeholder="11-digit Guarantor BVN"
+                        style={{ fontFamily: 'var(--font-mono)' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
               <button
