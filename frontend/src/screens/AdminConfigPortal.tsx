@@ -399,7 +399,7 @@ export const AdminConfigPortal: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', paddingBottom: '3rem' }}>
+    <div style={{ width: '100%', paddingBottom: '3rem' }}>
       {/* Toast Notification */}
       {toastMessage && (
         <div style={{
@@ -808,7 +808,7 @@ export const AdminConfigPortal: React.FC = () => {
 
       {/* TAB 2: CUSTOM OUTBOUND EMAIL & SMTP CLIENT */}
       {activeTab === 'EMAIL' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(460px, 1fr))', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(440px, 100%), 1fr))', gap: '1.5rem' }}>
           {/* Email Server Configuration Form */}
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
@@ -923,7 +923,7 @@ export const AdminConfigPortal: React.FC = () => {
               </div>
             ) : (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                   <div className="form-group">
                     <label className="form-label">SMTP Server Host</label>
                     <input
@@ -964,7 +964,7 @@ export const AdminConfigPortal: React.FC = () => {
                   </select>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                   <div className="form-group">
                     <label className="form-label">SMTP Username / Account ID</label>
                     <input
@@ -994,7 +994,7 @@ export const AdminConfigPortal: React.FC = () => {
               </>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '1rem', marginBottom: '1rem' }}>
               <div className="form-group">
                 <label className="form-label">Sender Display Name</label>
                 <input
@@ -1084,7 +1084,7 @@ export const AdminConfigPortal: React.FC = () => {
 
             <div className="form-group" style={{ marginBottom: '1.25rem' }}>
               <label className="form-label">Destination Test Recipient</label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div className="input-action-row">
                 <input
                   type="email"
                   className="form-input"
@@ -1096,7 +1096,7 @@ export const AdminConfigPortal: React.FC = () => {
                   className="btn btn-primary"
                   onClick={handleTestEmail}
                   disabled={testingEmail}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap', flexShrink: 0 }}
                 >
                   <Send size={15} />
                   <span>{testingEmail ? 'Testing...' : 'Send Test'}</span>
@@ -1145,7 +1145,7 @@ export const AdminConfigPortal: React.FC = () => {
               <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-highlight)', marginBottom: '0.75rem' }}>
                 Transactional SMS Gateway (Termii Nigeria / Twilio)
               </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '0.75rem', marginBottom: '0.75rem' }}>
                 <div className="form-group">
                   <label className="form-label">SMS Provider</label>
                   <select
@@ -1186,7 +1186,7 @@ export const AdminConfigPortal: React.FC = () => {
 
       {/* TAB 3: SSO & IDENTITY FEDERATION */}
       {activeTab === 'SSO' && (
-        <div className="card" style={{ maxWidth: '850px' }}>
+        <div className="card" style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
             <div style={{
               width: '40px',
@@ -1310,7 +1310,7 @@ export const AdminConfigPortal: React.FC = () => {
 
       {/* TAB 4: MFA & ACCESS CONTROL */}
       {activeTab === 'MFA' && (
-        <div className="card" style={{ maxWidth: '850px' }}>
+        <div className="card" style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
             <div style={{
               width: '40px',
@@ -1386,7 +1386,7 @@ export const AdminConfigPortal: React.FC = () => {
 
       {/* TAB 5: POLICY THRESHOLDS & WEBHOOKS */}
       {activeTab === 'POLICY' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '1050px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
 
           {/* Pricing Hub Reference Notice */}
           <div style={{
@@ -1634,7 +1634,7 @@ export const AdminConfigPortal: React.FC = () => {
 
       {/* TAB 6: MASTER & BESPOKE FACILITY FEES WITH CENTRALIZED MPR / APR PRICING */}
       {activeTab === 'FEES' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '1050px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
 
           {/* SECTION 1: CBN BENCHMARK & COMMERCIAL PRICING POLICY (MPR / APR) */}
           <div className="card">
@@ -1724,7 +1724,7 @@ export const AdminConfigPortal: React.FC = () => {
               </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '1rem' }}>
               <div className="form-group">
                 <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                   <span>CBN MPR Benchmark (%)</span>

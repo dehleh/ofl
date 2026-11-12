@@ -275,7 +275,7 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
   };
 
   return (
-    <div style={{ maxWidth: '1380px', margin: '0 auto', paddingBottom: '3rem' }}>
+    <div style={{ width: '100%', paddingBottom: '3rem' }}>
       {/* Platform Title & Refresh */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
         <div>

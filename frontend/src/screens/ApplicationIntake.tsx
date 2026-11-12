@@ -198,7 +198,7 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
   };
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div style={{ width: '100%' }}>
       <div style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-highlight)' }}>Direct OFL Loan Origination Portal</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
@@ -216,6 +216,8 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
           color: '#fbbf24'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -301,11 +303,11 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
               </div>
 
               <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.35rem' }}>
                   <label className="form-label">Bank Verification Number (BVN) *</label>
                   <span style={{ fontSize: '0.7rem', color: 'var(--brand-teal-light)' }}>11 Digits</span>
                 </div>
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <div className="input-action-row">
                   <input
                     type="text"
                     className="form-input"
@@ -322,14 +324,14 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
                       }
                     }}
                     placeholder="22XXXXXXXXX"
-                    style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, flex: 1 }}
+                    style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}
                   />
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
                     onClick={() => handleBvnLookup(formData.bvn)}
                     disabled={bvnResolving || formData.bvn.length !== 11}
-                    style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
                   >
                     <RefreshCw size={12} className={bvnResolving ? 'spin' : ''} />
                     {bvnResolving ? 'Resolving...' : 'Auto-Fill'}
@@ -361,7 +363,7 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
                     ? 'CAC RC / BN Number *'
                     : 'Employer CAC RC / BN Number (Optional)'}
                 </label>
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <div className="input-action-row">
                   <input
                     type="text"
                     className="form-input"
@@ -372,14 +374,13 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
                       if (rcResolutionFeedback) setRcResolutionFeedback(null);
                     }}
                     placeholder="RC 347832 or BN 7049792"
-                    style={{ flex: 1 }}
                   />
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
                     onClick={() => handleRcLookup(formData.rc_number)}
                     disabled={rcResolving || !formData.rc_number.trim()}
-                    style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
                   >
                     <RefreshCw size={12} className={rcResolving ? 'spin' : ''} />
                     {rcResolving ? 'Verifying...' : 'Verify CAC'}
@@ -612,7 +613,7 @@ export const ApplicationIntake: React.FC<ApplicationIntakeProps> = ({ onSuccess,
                 <span>REAL-TIME DETERMINISTIC ENGINE METRICS</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '0.75rem', fontSize: '0.85rem' }}>
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Estimated Installment:</span>
                   <div style={{ fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--text-highlight)' }}>

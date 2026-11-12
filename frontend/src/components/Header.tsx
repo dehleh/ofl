@@ -147,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
         {onExitToPublicClient && (
           <button
             className="btn btn-secondary btn-sm"

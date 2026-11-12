@@ -427,7 +427,10 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '1rem 2.5rem',
+        flexWrap: 'wrap',
+        gap: '0.75rem 1.25rem',
+        width: '100%',
+        padding: '0.85rem clamp(1rem, 2.5vw, 2.5rem)',
         background: 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
@@ -474,7 +477,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
           <button
             className={`btn btn-sm ${activeTab === 'APPLY' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setActiveTab('APPLY')}
@@ -576,13 +579,14 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
 
         {/* Hero Content Grid Aligned With Page */}
         <div style={{
-          maxWidth: '1240px',
-          margin: '0 auto',
-          padding: '4rem 2rem 3rem 2rem',
+          width: '100%',
+          maxWidth: '100%',
+          margin: 0,
+          padding: 'clamp(2rem, 4vw, 4rem) clamp(1rem, 3vw, 3rem) 3rem clamp(1rem, 3vw, 3rem)',
           position: 'relative',
           zIndex: 2,
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
           alignItems: 'center',
           gap: '2.5rem'
         }}>
@@ -728,13 +732,14 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
           background: 'rgba(3, 15, 30, 0.88)',
           borderTop: '1px solid rgba(255, 255, 255, 0.08)',
           backdropFilter: 'blur(12px)',
-          padding: '1.35rem 2rem'
+          padding: '1.35rem clamp(1rem, 3vw, 3rem)'
         }}>
           <div style={{
-            maxWidth: '1240px',
-            margin: '0 auto',
+            width: '100%',
+            maxWidth: '100%',
+            margin: 0,
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))',
             gap: '1.5rem'
           }}>
             <div>
@@ -789,7 +794,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
       </section>
 
       {/* Main Container */}
-      <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '2.5rem 1.5rem', position: 'relative', zIndex: 1 }}>
+      <div style={{ width: '100%', maxWidth: '100%', margin: 0, padding: 'clamp(1.25rem, 2.5vw, 2.5rem)', position: 'relative', zIndex: 1 }}>
 
         {/* ================================================================= */}
         {/* TAB 1: APPLY FOR LOAN */}
@@ -988,7 +993,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   <span className="status-pill pill-cyan">Step 1 of 3</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
                   <div className="form-group">
                     <label className="form-label">
                       <DollarSign size={14} color="var(--brand-cyan)" /> Requested Facility Amount (₦) <span style={{ color: '#ef4444' }}>*</span>
@@ -1176,7 +1181,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                     <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Automated NIBSS / Youverify Resolution</span>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <div className="input-action-row">
                     <input
                       type="text"
                       className="form-input"
@@ -1197,8 +1202,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                         fontFamily: 'var(--font-mono)',
                         letterSpacing: '0.1em',
                         fontSize: '1.05rem',
-                        fontWeight: 700,
-                        flex: 1
+                        fontWeight: 700
                       }}
                     />
                     <button
@@ -1206,7 +1210,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       className="btn btn-primary"
                       onClick={() => handleBvnLookup(formData.bvn)}
                       disabled={bvnResolving || formData.bvn.length !== 11}
-                      style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', padding: '0.65rem 1.25rem' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', padding: '0.65rem 1.25rem', flexShrink: 0 }}
                     >
                       <RefreshCw size={15} className={bvnResolving ? 'spin' : ''} />
                       {bvnResolving ? 'Resolving NIBSS...' : 'Auto-Fill Details'}
@@ -1232,7 +1236,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   )}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
                   <div className="form-group">
                     <label className="form-label">Full Legal Name / Registered Business Name <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
@@ -1253,7 +1257,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                         <>Employer CAC RC / BN Number <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>(Optional for Salaried / Individual)</span></>
                       )}
                     </label>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div className="input-action-row">
                       <input
                         type="text"
                         className="form-input"
@@ -1264,14 +1268,13 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                           if (rcResolutionFeedback) setRcResolutionFeedback(null);
                         }}
                         required={isRcNumberRequired(formData.applicant_type, formData.facility_type)}
-                        style={{ flex: 1 }}
                       />
                       <button
                         type="button"
                         className="btn btn-secondary"
                         onClick={() => handleRcLookup(formData.rc_number)}
                         disabled={rcResolving || !formData.rc_number.trim()}
-                        style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0 0.9rem' }}
+                        style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0 0.9rem', flexShrink: 0 }}
                       >
                         <RefreshCw size={13} className={rcResolving ? 'spin' : ''} />
                         {rcResolving ? 'Verifying...' : 'Verify CAC'}
@@ -1379,7 +1382,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                 </div>
 
                 {/* Mandatory Address Fields Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
                   <div className="form-group">
                     <label className="form-label">
                       <Building2 size={13} color="var(--brand-cerulean)" />{' '}
@@ -1457,7 +1460,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                         </span>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '1.25rem' }}>
                         <div className="form-group">
                           <label className="form-label">Guarantor Full Legal Name <span style={{ color: '#ef4444' }}>*</span></label>
                           <input
@@ -1584,7 +1587,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   <span className="status-pill pill-cyan">Step 3 of 3</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
                   <div className="form-group">
                     <label className="form-label">Average Monthly Inflow / Turnover (₦) <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
@@ -1793,14 +1796,14 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                             fontSize: '0.85rem',
                             boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
                           }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
                               <FileText size={18} color="var(--brand-cerulean)" />
                               <div style={{ textAlign: 'left' }}>
                                 <span style={{ fontWeight: 700, color: 'var(--text-highlight)' }}>{f.name}</span>
                                 <div style={{ fontSize: '0.72rem', color: 'var(--brand-cerulean)', fontWeight: 600 }}>{typeLabel} &bull; {f.size}</div>
                               </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
                               <span className="status-pill pill-emerald" style={{ fontSize: '0.72rem' }}>Attached ✓</span>
                               <button
                                 type="button"
@@ -1950,7 +1953,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
               </p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '2.5rem', marginBottom: '2.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: '2.5rem', marginBottom: '2.5rem' }}>
               {/* Controls */}
               <div>
                 <div className="form-group" style={{ marginBottom: '2rem' }}>
@@ -2004,7 +2007,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                       {formData.tenor_months} Months
                     </span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.65rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(84px, 1fr))', gap: '0.65rem' }}>
                     {[3, 6, 12, 18, 24].map((t) => (
                       <button
                         key={t}
@@ -2086,7 +2089,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
         {/* TAB 3: TRACK EXISTING APPLICATION STATUS */}
         {/* ================================================================= */}
         {activeTab === 'TRACK' && (
-          <div className="glass-panel cyber-top-edge" style={{ padding: '2.75rem', maxWidth: '820px', margin: '0 auto' }}>
+          <div className="glass-panel cyber-top-edge" style={{ padding: 'clamp(1.5rem, 3vw, 2.75rem)', width: '100%' }}>
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
               <span className="status-pill pill-cyan" style={{ marginBottom: '0.75rem' }}>
                 UNDERWRITING RADAR &bull; LIVE TRACKING
@@ -2099,7 +2102,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
               </p>
             </div>
 
-            <form onSubmit={handleTrackSubmit} style={{ display: 'flex', gap: '0.85rem', marginBottom: '2rem' }}>
+            <form onSubmit={handleTrackSubmit} className="input-action-row" style={{ gap: '0.85rem', marginBottom: '2rem' }}>
               <input
                 type="text"
                 className="form-input"
@@ -2109,7 +2112,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.05rem', fontWeight: 700 }}
                 required
               />
-              <button type="submit" className="btn btn-primary" disabled={trackLoading} style={{ whiteSpace: 'nowrap', padding: '0 1.8rem' }}>
+              <button type="submit" className="btn btn-primary" disabled={trackLoading} style={{ whiteSpace: 'nowrap', padding: '0 1.8rem', flexShrink: 0 }}>
                 <Search size={16} /> {trackLoading ? 'Querying...' : 'Track Dossier'}
               </button>
             </form>
@@ -2143,7 +2146,7 @@ export const PublicCustomerPortal: React.FC<PublicCustomerPortalProps> = ({
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.88rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '1rem', fontSize: '0.88rem', marginBottom: '1.5rem' }}>
                   <div><span style={{ color: 'var(--text-muted)' }}>Facility Amount:</span> <strong style={{ color: 'var(--text-highlight)', fontFamily: 'var(--font-mono)' }}>₦{trackResult.amount?.toLocaleString()}</strong></div>
                   <div><span style={{ color: 'var(--text-muted)' }}>Tenor:</span> <strong style={{ color: 'var(--text-highlight)' }}>{trackResult.tenor} Months</strong></div>
                   <div><span style={{ color: 'var(--text-muted)' }}>Purpose:</span> <span style={{ color: 'var(--text-highlight)' }}>{trackResult.purpose}</span></div>

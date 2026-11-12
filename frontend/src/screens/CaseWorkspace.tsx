@@ -478,7 +478,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
   };
 
   return (
-    <div style={{ maxWidth: '1360px', margin: '0 auto' }}>
+    <div style={{ width: '100%' }}>
       {/* Top Header Card */}
       <div className="glass-panel" style={{ padding: '1.25rem 1.75rem', marginBottom: '1.25rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
@@ -796,7 +796,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
               Borrower Profile & Identity Verification
             </h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', fontSize: '0.85rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '0.85rem', fontSize: '0.85rem' }}>
               <div><span style={{ color: 'var(--text-muted)' }}>Customer Name:</span> <strong style={{ color: 'var(--text-highlight)' }}>{customer.name}</strong></div>
               <div><span style={{ color: 'var(--text-muted)' }}>Classification:</span> {customer.customer_type}</div>
               <div><span style={{ color: 'var(--text-muted)' }}>BVN:</span> <span style={{ fontFamily: 'var(--font-mono)' }}>{customer.bvn || 'Not Supplied'}</span></div>
@@ -1098,7 +1098,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
             </p>
 
             {/* Visual Step-by-Step Sequence */}
-            <div style={{ display: 'grid', gridTemplateColumns: application.amount > 20000000 ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(130px, 100%), 1fr))', gap: '0.5rem', textAlign: 'center' }}>
               <div style={{
                 padding: '0.65rem 0.4rem',
                 borderRadius: '6px',
@@ -2049,7 +2049,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
 
       {/* TAB 6: TREASURY & LOAN-DISC */}
       {activeTab === 'TREASURY' && (
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <div style={{ width: '100%' }}>
           <div className="glass-panel" style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '1rem' }}>
               <div>
@@ -2521,7 +2521,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                 </select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '0.75rem' }}>
                 <div className="form-group">
                   <label className="form-label">Originator Persona</label>
                   <input

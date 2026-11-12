@@ -307,7 +307,7 @@ export const ExceptionManager: React.FC<ExceptionManagerProps> = ({ onOpenCase }
   };
 
   return (
-    <div style={{ maxWidth: '1360px', margin: '0 auto' }}>
+    <div style={{ width: '100%' }}>
       {/* Top Header & Metrics */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>

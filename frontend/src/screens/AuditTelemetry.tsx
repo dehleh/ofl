@@ -38,7 +38,7 @@ export const AuditTelemetry: React.FC = () => {
   const { overview, aiCost, infrastructure } = telemetry || {};
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+    <div style={{ width: '100%' }}>
       <div style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-highlight)' }}>Platform Telemetry & GCP Governance</h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>

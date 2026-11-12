@@ -305,7 +305,7 @@ export const BankStatementAnalyzerCard: React.FC<BankStatementAnalyzerProps> = (
               </div>
 
               {/* Risk Signals & Credit Inferences */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div>
                   <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-highlight)', marginBottom: '0.5rem' }}>
                     Behavioral Inflow Signals & Risk Checks

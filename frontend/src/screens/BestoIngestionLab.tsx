@@ -127,7 +127,7 @@ export const BestoIngestionLab: React.FC<BestoIngestionLabProps> = ({ onCaseCrea
   };
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ width: '100%' }}>
       <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-highlight)' }}>BESTO Ingestion Simulator & Quarantine Lab</h2>
@@ -194,7 +194,7 @@ export const BestoIngestionLab: React.FC<BestoIngestionLabProps> = ({ onCaseCrea
             onChange={(e) => {
               try {
                 setRawPayload(JSON.parse(e.target.value));
-              } catch (_) {}
+              } catch (_) { }
             }}
           />
 
