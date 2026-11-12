@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  Printer, 
-  Download, 
-  ExternalLink, 
-  CheckCircle2, 
-  AlertTriangle, 
-  TrendingUp, 
-  ShieldCheck, 
-  Building2, 
+import {
+  Printer,
+  Download,
+  ExternalLink,
+  CheckCircle2,
+  AlertTriangle,
+  TrendingUp,
+  ShieldCheck,
+  Building2,
   CreditCard,
   FileText,
   UserCheck
@@ -70,49 +70,49 @@ export const OpticomCamDocument: React.FC<OpticomCamProps> = ({ cam, onAnalystSi
 
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <div className="cam-section-nav">
-            <button 
+            <button
               className={`section-tab-btn ${activeSection === 'ALL' ? 'active' : ''}`}
               onClick={() => setActiveSection('ALL')}
             >
               Full Document
             </button>
-            <button 
+            <button
               className={`section-tab-btn ${activeSection === 'SUMMARY' ? 'active' : ''}`}
               onClick={() => setActiveSection('SUMMARY')}
             >
               Facility & Profile
             </button>
-            <button 
+            <button
               className={`section-tab-btn ${activeSection === 'FINANCIALS' ? 'active' : ''}`}
               onClick={() => setActiveSection('FINANCIALS')}
             >
               Financials & OPEX
             </button>
-            <button 
+            <button
               className={`section-tab-btn ${activeSection === 'STRESS' ? 'active' : ''}`}
               onClick={() => setActiveSection('STRESS')}
             >
               Stress & Capacity
             </button>
-            <button 
+            <button
               className={`section-tab-btn ${activeSection === 'COLLATERAL' ? 'active' : ''}`}
               onClick={() => setActiveSection('COLLATERAL')}
             >
               Collateral & 5Cs
             </button>
-            <button 
+            <button
               className={`section-tab-btn ${activeSection === 'RISK' ? 'active' : ''}`}
               onClick={() => setActiveSection('RISK')}
             >
               Risk Matrix
             </button>
-            <button 
+            <button
               className={`section-tab-btn ${activeSection === 'AMORTIZATION' ? 'active' : ''}`}
               onClick={() => setActiveSection('AMORTIZATION')}
             >
               Repayment Schedule
             </button>
-            <button 
+            <button
               className={`section-tab-btn ${activeSection === 'COMMITTEE' ? 'active' : ''}`}
               onClick={() => setActiveSection('COMMITTEE')}
             >
@@ -125,8 +125,8 @@ export const OpticomCamDocument: React.FC<OpticomCamProps> = ({ cam, onAnalystSi
           </button>
 
           {!cam.analyst_sign_off && onAnalystSignOff && (
-            <button 
-              className="btn btn-primary btn-sm" 
+            <button
+              className="btn btn-primary btn-sm"
               onClick={onAnalystSignOff}
               disabled={actionLoading}
             >
@@ -141,9 +141,9 @@ export const OpticomCamDocument: React.FC<OpticomCamProps> = ({ cam, onAnalystSi
         {/* Document Header */}
         <div className="cam-page-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <img 
-              src="/opticom_logo.jpg" 
-              alt="Opticom Finance Limited" 
+            <img
+              src="/opticom_logo.jpg"
+              alt="Opticom Finance Limited"
               style={{ height: '48px', objectFit: 'contain' }}
             />
             <div style={{ textAlign: 'right' }}>
@@ -237,12 +237,12 @@ export const OpticomCamDocument: React.FC<OpticomCamProps> = ({ cam, onAnalystSi
               {mission?.map((m: string, i: number) => (
                 <li key={i}>{m}</li>
               )) || (
-                <>
-                  <li>To offer innovative and cost-effective solutions to our clients, including conceptual ideas, procurement, and logistics execution.</li>
-                  <li>To sustain our reputation for extremely short construction schedules and quality performance in accordance with international standards.</li>
-                  <li>To develop an offshore economic growth zone, attract investments, promote exports, create job opportunities, and establish a new global business haven.</li>
-                </>
-              )}
+                  <>
+                    <li>To offer innovative and cost-effective solutions to our clients, including conceptual ideas, procurement, and logistics execution.</li>
+                    <li>To sustain our reputation for extremely short construction schedules and quality performance in accordance with international standards.</li>
+                    <li>To develop an offshore economic growth zone, attract investments, promote exports, create job opportunities, and establish a new global business haven.</li>
+                  </>
+                )}
             </ul>
 
             {/* Vision Statement */}
@@ -320,43 +320,52 @@ export const OpticomCamDocument: React.FC<OpticomCamProps> = ({ cam, onAnalystSi
             </table>
 
             {/* Credit Check Report */}
-            <div className="cam-subhead" style={{ marginTop: '1.25rem' }}>CREDIT CHECK REPORT</div>
-            <table className="cam-table">
-              <thead>
-                <tr>
-                  <th>Financial Institution</th>
-                  <th>Facility Type</th>
-                  <th>Loan Amount</th>
-                  <th>Effective Date</th>
-                  <th>Repayment</th>
-                  <th>Outstanding Balance</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {credit_checks?.external_report?.map((r: any, i: number) => (
-                  <tr key={i}>
-                    <td className="bold-cell">{r.institution}</td>
-                    <td>{r.facility_type}</td>
-                    <td>₦{r.loan_amount?.toLocaleString()}</td>
-                    <td>{r.effective_date}</td>
-                    <td>₦{r.repayment_amount?.toLocaleString()}</td>
-                    <td style={{ color: 'var(--color-warning)', fontWeight: 600 }}>₦{r.outstanding_balance?.toLocaleString()}</td>
-                    <td><span className="badge-active">{r.status}</span></td>
-                  </tr>
-                )) || (
+            <div className="cam-subhead" style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+              <span>CREDIT CHECK REPORT</span>
+              {credit_checks?.bureau_score !== undefined && credit_checks?.bureau_score !== null && (
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: credit_checks.bureau_score >= 600 ? '#059669' : '#dc2626' }}>
+                  {credit_checks.bureau_provider || 'CRC Credit Bureau'}: Score {credit_checks.bureau_score}/850 ({credit_checks.bureau_score_band || 'VERIFIED'})
+                </span>
+              )}
+            </div>
+            <div className="table-wrapper" tabIndex={0} role="region" aria-label="CAM Credit Bureau Tradelines">
+              <table className="cam-table">
+                <thead>
                   <tr>
-                    <td>UBA</td>
-                    <td>Overdraft</td>
-                    <td>₦0.00</td>
-                    <td>01/01/2020</td>
-                    <td>₦0.00</td>
-                    <td>₦8,576,374.79</td>
-                    <td>Performing</td>
+                    <th>Financial Institution</th>
+                    <th>Facility Type</th>
+                    <th>Loan Amount</th>
+                    <th>Effective Date</th>
+                    <th>Repayment</th>
+                    <th>Outstanding Balance</th>
+                    <th>Status</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {credit_checks?.external_report?.map((r: any, i: number) => (
+                    <tr key={i}>
+                      <td className="bold-cell">{r.institution}</td>
+                      <td>{r.facility_type}</td>
+                      <td>₦{r.loan_amount?.toLocaleString()}</td>
+                      <td>{r.effective_date}</td>
+                      <td>₦{r.repayment_amount?.toLocaleString()}</td>
+                      <td style={{ color: 'var(--color-warning)', fontWeight: 600 }}>₦{r.outstanding_balance?.toLocaleString()}</td>
+                      <td><span className="badge-active">{r.status}</span></td>
+                    </tr>
+                  )) || (
+                      <tr>
+                        <td>UBA</td>
+                        <td>Overdraft</td>
+                        <td>₦0.00</td>
+                        <td>01/01/2020</td>
+                        <td>₦0.00</td>
+                        <td>₦8,576,374.79</td>
+                        <td>Performing</td>
+                      </tr>
+                    )}
+                </tbody>
+              </table>
+            </div>
 
             {/* Client History with Opticom */}
             <div className="cam-subhead" style={{ marginTop: '1rem' }}>CLIENT CREDIT HISTORY WITH OPTICOM</div>
@@ -404,13 +413,13 @@ export const OpticomCamDocument: React.FC<OpticomCamProps> = ({ cam, onAnalystSi
                 {purpose_of_request?.recommendation_bullets?.map((b: string, i: number) => (
                   <li key={i}>{b}</li>
                 )) || (
-                  <>
-                    <li>Collateral coverage limited to 189.88% FSV</li>
-                    <li>Repayment capacity demonstrated from operating cash flow</li>
-                    <li>Satisfactory historical credit track record with other financial institutions</li>
-                    <li>Steady valid monthly cash inflows</li>
-                  </>
-                )}
+                    <>
+                      <li>Collateral coverage limited to 189.88% FSV</li>
+                      <li>Repayment capacity demonstrated from operating cash flow</li>
+                      <li>Satisfactory historical credit track record with other financial institutions</li>
+                      <li>Steady valid monthly cash inflows</li>
+                    </>
+                  )}
               </ul>
             </div>
 
@@ -436,11 +445,11 @@ export const OpticomCamDocument: React.FC<OpticomCamProps> = ({ cam, onAnalystSi
                     <td className="bold-cell">₦{acc.total_inflow?.toLocaleString('en-NG', { minimumFractionDigits: 2 })}</td>
                   </tr>
                 )) || (
-                  <>
-                    <tr><td>1</td><td>UBA</td><td>1027034047</td><td>6</td><td>₦576,487,461.08</td></tr>
-                    <tr><td>2</td><td>FIRST BANK</td><td>3069860095</td><td>6</td><td>₦449,847,268.00</td></tr>
-                  </>
-                )}
+                    <>
+                      <tr><td>1</td><td>UBA</td><td>1027034047</td><td>6</td><td>₦576,487,461.08</td></tr>
+                      <tr><td>2</td><td>FIRST BANK</td><td>3069860095</td><td>6</td><td>₦449,847,268.00</td></tr>
+                    </>
+                  )}
                 <tr className="table-total-row">
                   <td colSpan={4} style={{ textAlign: 'right', fontWeight: 800 }}>TOTAL 6-MONTH INFLOW:</td>
                   <td style={{ fontWeight: 800, color: 'var(--brand-teal)' }}>
@@ -677,12 +686,12 @@ export const OpticomCamDocument: React.FC<OpticomCamProps> = ({ cam, onAnalystSi
                     <td style={{ fontSize: '0.72rem' }}>{st.interpretation}</td>
                   </tr>
                 )) || (
-                  <>
-                    <tr><td>Base Case</td><td>CAM Baseline</td><td>₦142,222,475</td><td>₦20,861,292</td><td>₦7,880,698</td><td>2.65x</td><td>37.78%</td><td>Strong coverage</td></tr>
-                    <tr><td>Mild Stress</td><td>10% Revenue Drop</td><td>₦128,000,227</td><td>₦18,775,163</td><td>₦7,880,698</td><td>2.38x</td><td>41.97%</td><td>Resilient buffer</td></tr>
-                    <tr><td>Moderate Stress</td><td>20% Revenue Drop</td><td>₦113,777,980</td><td>₦16,689,034</td><td>₦7,880,698</td><td>2.12x</td><td>47.22%</td><td>Satisfies &gt; 2.0x coverage</td></tr>
-                  </>
-                )}
+                    <>
+                      <tr><td>Base Case</td><td>CAM Baseline</td><td>₦142,222,475</td><td>₦20,861,292</td><td>₦7,880,698</td><td>2.65x</td><td>37.78%</td><td>Strong coverage</td></tr>
+                      <tr><td>Mild Stress</td><td>10% Revenue Drop</td><td>₦128,000,227</td><td>₦18,775,163</td><td>₦7,880,698</td><td>2.38x</td><td>41.97%</td><td>Resilient buffer</td></tr>
+                      <tr><td>Moderate Stress</td><td>20% Revenue Drop</td><td>₦113,777,980</td><td>₦16,689,034</td><td>₦7,880,698</td><td>2.12x</td><td>47.22%</td><td>Satisfies &gt; 2.0x coverage</td></tr>
+                    </>
+                  )}
               </tbody>
             </table>
           </section>

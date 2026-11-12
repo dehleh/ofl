@@ -22,7 +22,12 @@ import {
   Download,
   Printer,
   Eye,
-  X
+  X,
+  Mail,
+  MessageSquare,
+  Award,
+  Shield,
+  Bell
 } from 'lucide-react';
 import { 
   fetchLoanPortfolioPerformance, 
@@ -30,7 +35,11 @@ import {
   recordLoanRepayment, 
   simulateLoanPerformanceStatus,
   fetchTelemetryReportData,
-  getTelemetryExportUrl
+  getTelemetryExportUrl,
+  waiveLoanPenalty,
+  sendLoanReminder,
+  addLoanMonitoringNote,
+  getLoanStatementExportUrl
 } from '../services/api';
 
 interface LoanPerformanceTelemetryProps {
@@ -57,6 +66,20 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
   const [paymentNote, setPaymentNote] = useState<string>('');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState<boolean>(false);
   const [paymentFeedback, setPaymentFeedback] = useState<string | null>(null);
+
+  // Individual Dossier Tabs & Post-Disbursement Servicing Tools
+  const [activeDossierTab, setActiveDossierTab] = useState<'overview' | 'statement' | 'schedule' | 'servicing'>('overview');
+  const [showWaiverBox, setShowWaiverBox] = useState<boolean>(false);
+  const [waiverReason, setWaiverReason] = useState<string>('');
+  const [isWaiving, setIsWaiving] = useState<boolean>(false);
+  const [showReminderBox, setShowReminderBox] = useState<boolean>(false);
+  const [includeGuarantor, setIncludeGuarantor] = useState<boolean>(false);
+  const [reminderNote, setReminderNote] = useState<string>('');
+  const [isSendingReminder, setIsSendingReminder] = useState<boolean>(false);
+  const [noteType, setNoteType] = useState<string>('CALL_LOG');
+  const [monitoringNoteText, setMonitoringNoteText] = useState<string>('');
+  const [promiseToPayDate, setPromiseToPayDate] = useState<string>('');
+  const [isAddingNote, setIsAddingNote] = useState<boolean>(false);
 
   // Periodic Telemetry Reports (Monthly, Quarterly, Biannual, Annual) State
   const [selectedPeriod, setSelectedPeriod] = useState<'monthly' | 'quarterly' | 'biannual' | 'annual'>('quarterly');
@@ -108,8 +131,12 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
     loadData();
   }, []);
 
-  const handleOpenDossier = async (caseId: string) => {
+  const handleOpenDossier = async (caseId: string, initialTab: 'overview' | 'statement' | 'schedule' | 'servicing' = 'overview') => {
     setLoadingDossier(true);
+    setActiveDossierTab(initialTab);
+    setShowWaiverBox(false);
+    setShowReminderBox(false);
+    setPaymentFeedback(null);
     try {
       const dossier = await fetchSingleLoanPerformance(caseId);
       setSelectedLoan(dossier);
@@ -117,6 +144,81 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
       console.error('Failed to load loan dossier', err);
     } finally {
       setLoadingDossier(false);
+    }
+  };
+
+  const handleDownloadLoanStatementCsv = (caseId: string) => {
+    window.open(getLoanStatementExportUrl(caseId, 'csv'), '_blank');
+  };
+
+  const handlePrintLoanStatementPdf = (caseId: string) => {
+    window.open(getLoanStatementExportUrl(caseId, 'html'), '_blank');
+  };
+
+  const handleWaivePenalty = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLoan || !waiverReason.trim()) return;
+    setIsWaiving(true);
+    try {
+      const res = await waiveLoanPenalty(selectedLoan.case_id, waiverReason.trim(), currentPersona || 'Head of Risk Management');
+      setPaymentFeedback(res.message || 'Default penalty waived.');
+      setShowWaiverBox(false);
+      setWaiverReason('');
+      await loadData();
+      const updatedDossier = await fetchSingleLoanPerformance(selectedLoan.case_id);
+      setSelectedLoan(updatedDossier);
+    } catch (err: any) {
+      setPaymentFeedback(err.detail || err.message || 'Penalty waiver failed.');
+    } finally {
+      setIsWaiving(false);
+    }
+  };
+
+  const handleSendReminder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLoan) return;
+    setIsSendingReminder(true);
+    try {
+      const res = await sendLoanReminder(
+        selectedLoan.case_id,
+        includeGuarantor,
+        reminderNote.trim() || undefined,
+        currentPersona || 'Credit Monitoring Desk'
+      );
+      setPaymentFeedback(res.message || 'Repayment reminder dispatched via email & in-app alert.');
+      setShowReminderBox(false);
+      setReminderNote('');
+      const updatedDossier = await fetchSingleLoanPerformance(selectedLoan.case_id);
+      setSelectedLoan(updatedDossier);
+    } catch (err: any) {
+      setPaymentFeedback(err.detail || err.message || 'Reminder dispatch failed.');
+    } finally {
+      setIsSendingReminder(false);
+    }
+  };
+
+  const handleAddMonitoringNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLoan || !monitoringNoteText.trim()) return;
+    setIsAddingNote(true);
+    try {
+      await addLoanMonitoringNote(
+        selectedLoan.case_id,
+        noteType,
+        monitoringNoteText.trim(),
+        promiseToPayDate || undefined,
+        currentPersona || 'Credit Monitoring Officer',
+        currentPersona || 'ANALYST'
+      );
+      setPaymentFeedback('Surveillance log saved to facility dossier.');
+      setMonitoringNoteText('');
+      setPromiseToPayDate('');
+      const updatedDossier = await fetchSingleLoanPerformance(selectedLoan.case_id);
+      setSelectedLoan(updatedDossier);
+    } catch (err: any) {
+      setPaymentFeedback(err.detail || err.message || 'Failed to record monitoring note.');
+    } finally {
+      setIsAddingNote(false);
     }
   };
 
@@ -605,7 +707,7 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
       </div>
 
       {/* Accounts Portfolio Table */}
-      <div className="glass-panel" style={{ padding: '0', overflow: 'hidden', marginBottom: '2rem' }}>
+      <div className="glass-panel table-wrapper" tabIndex={0} role="region" aria-label="Post-Disbursement Loan Portfolio" style={{ padding: '0', marginBottom: '2rem' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
           <thead>
             <tr style={{ background: 'rgba(255, 255, 255, 0.03)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
@@ -622,14 +724,33 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
             {filteredAccounts.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  No loan accounts match the current filter or search criteria.
+                  {accounts.length > 0 ? (
+                    <div>
+                      <div>No loan accounts match the active filter or search criteria ({accounts.length} disbursed facilities exist in total).</div>
+                      {statusFilter !== 'ALL' && (
+                        <button
+                          onClick={() => setStatusFilter('ALL')}
+                          className="btn-secondary"
+                          style={{ marginTop: '0.75rem', fontSize: '0.78rem', padding: '5px 12px' }}
+                        >
+                          Show All {accounts.length} Facilities
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div>No funded facilities in Disbursed / Monitoring state yet. Facilities automatically initialize here upon Treasury LOAN-DISC disbursement.</div>
+                  )}
                 </td>
               </tr>
             ) : (
               filteredAccounts.map((acc: any) => {
-                const servicedPct = acc.disbursed_principal > 0 
-                  ? Math.min(100, Math.round((acc.principal_serviced / acc.disbursed_principal) * 100))
-                  : 0;
+                const servicedPct = acc.principal_completion_pct !== undefined
+                  ? acc.principal_completion_pct
+                  : (acc.disbursed_principal > 0
+                    ? Math.min(100, Math.round((acc.principal_serviced / acc.disbursed_principal) * 100))
+                    : 0);
+                const perfScore = acc.performance_score ?? (acc.days_overdue > 7 ? 55 : acc.days_overdue > 0 ? 80 : 98);
+                const perfGrade = acc.health_grade || (perfScore >= 85 ? 'A' : perfScore >= 70 ? 'B' : perfScore >= 50 ? 'C' : 'D');
 
                 return (
                   <tr 
@@ -645,10 +766,17 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
                       <div style={{ fontWeight: 700, color: 'var(--text-highlight)' }}>
                         {acc.borrower_name}
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         <span>{acc.facility_number}</span>
                         <span>•</span>
-                        <span>{acc.tenor_months}M Tenor</span>
+                        <span>{acc.tenor_months}M</span>
+                        <span>•</span>
+                        <span style={{
+                          color: perfScore >= 85 ? '#059669' : perfScore >= 70 ? '#d97706' : '#dc2626',
+                          fontWeight: 700
+                        }}>
+                          Score {perfScore}/100 ({perfGrade})
+                        </span>
                       </div>
                     </td>
 
@@ -702,14 +830,22 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
 
                     {/* Actions & Simulation */}
                     <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'wrap' }}>
                         <button
-                          onClick={() => handleOpenDossier(acc.case_id)}
+                          onClick={() => handleOpenDossier(acc.case_id, 'overview')}
                           className="btn-secondary"
                           style={{ fontSize: '0.75rem', padding: '5px 9px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          title="View Full Schedule & Record Payments"
+                          title="View Individual Performance, Surveillance & Schedule"
                         >
-                          <FileText size={13} /> Dossier
+                          <Activity size={13} /> Performance
+                        </button>
+                        <button
+                          onClick={() => handleOpenDossier(acc.case_id, 'statement')}
+                          className="btn-secondary"
+                          style={{ fontSize: '0.75rem', padding: '5px 9px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          title="Open Running Loan Statement & Export CSV/PDF"
+                        >
+                          <FileText size={13} /> Statement
                         </button>
 
                         {/* Interactive Scenario Simulation Dropdown / Quick Pills for Management Demo */}
@@ -785,15 +921,15 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
           justifyContent: 'center',
           alignItems: 'center',
           zIndex: 1000,
-          padding: '1.5rem'
+          padding: '1.25rem'
         }}>
           <div style={{
             background: 'var(--panel-bg)',
             border: '1px solid var(--border-color)',
             borderRadius: '12px',
             width: '100%',
-            maxWidth: '1000px',
-            maxHeight: '90vh',
+            maxWidth: '1120px',
+            maxHeight: '92vh',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -801,30 +937,58 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
           }}>
             {/* Modal Header */}
             <div style={{
-              padding: '1.25rem 1.5rem',
+              padding: '1.1rem 1.5rem',
               borderBottom: '1px solid var(--border-color)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
               background: 'rgba(255, 255, 255, 0.02)'
             }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: 'var(--text-highlight)' }}>
-                    Loan Dossier: {selectedLoan.borrower_name}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: 'var(--text-highlight)' }}>
+                    {selectedLoan.borrower_name}
                   </h3>
                   {getStatusBadge(selectedLoan.performance_status, selectedLoan.days_overdue, selectedLoan.penalty_accrued)}
+                  <span style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    padding: '3px 9px',
+                    borderRadius: '12px',
+                    background: (selectedLoan.performance_score ?? 95) >= 85 ? 'rgba(16,185,129,0.14)' : (selectedLoan.performance_score ?? 95) >= 70 ? 'rgba(245,158,11,0.15)' : 'rgba(220,38,38,0.14)',
+                    color: (selectedLoan.performance_score ?? 95) >= 85 ? '#059669' : (selectedLoan.performance_score ?? 95) >= 70 ? '#d97706' : '#dc2626'
+                  }}>
+                    Health Score: {selectedLoan.performance_score ?? 95}/100 ({selectedLoan.health_grade || 'A'})
+                  </span>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  Facility: <strong>{selectedLoan.facility_number}</strong> • Case Ref: {selectedLoan.case_id}
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Facility: <strong>{selectedLoan.facility_number}</strong> • Classification: {selectedLoan.facility_classification || 'Working Capital'} • Disbursed: {selectedLoan.disbursed_at || 'Active'}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => handleDownloadLoanStatementCsv(selectedLoan.case_id)}
+                  className="btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.76rem', padding: '6px 10px' }}
+                  title="Download CSV Loan Statement of Account"
+                >
+                  <Download size={13} /> Statement CSV
+                </button>
+                <button
+                  onClick={() => handlePrintLoanStatementPdf(selectedLoan.case_id)}
+                  className="btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.76rem', padding: '6px 10px' }}
+                  title="Open Printable / PDF Statement of Account"
+                >
+                  <Printer size={13} /> Print Statement
+                </button>
                 <button
                   onClick={() => setShowPaymentModal(true)}
                   className="btn-primary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '6px 14px' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', padding: '6px 12px' }}
                 >
                   <CreditCard size={14} /> Record Repayment
                 </button>
@@ -832,9 +996,9 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
                   <button
                     onClick={() => onSelectCase(selectedLoan.case_id)}
                     className="btn-secondary"
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '6px 12px' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.76rem', padding: '6px 10px' }}
                   >
-                    <ExternalLink size={14} /> Full Case
+                    <ExternalLink size={13} /> Full Case
                   </button>
                 )}
                 <button
@@ -853,8 +1017,45 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
               </div>
             </div>
 
+            {/* Individual Dossier Navigation Tabs */}
+            <div style={{
+              display: 'flex',
+              gap: '6px',
+              padding: '0.65rem 1.5rem',
+              borderBottom: '1px solid var(--border-color)',
+              background: 'var(--bg-card)',
+              flexWrap: 'wrap'
+            }}>
+              {[
+                { id: 'overview', label: 'Overview & Performance', icon: <Activity size={13} /> },
+                { id: 'statement', label: `Loan Statement (${selectedLoan.statement_entries?.length || 0})`, icon: <FileText size={13} /> },
+                { id: 'schedule', label: `Amortization Schedule (${selectedLoan.repayment_schedule?.length || 0})`, icon: <Calendar size={13} /> },
+                { id: 'servicing', label: `Repayments & Surveillance (${(selectedLoan.repayment_history?.length || 0) + (selectedLoan.monitoring_logs?.length || 0)})`, icon: <MessageSquare size={13} /> }
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveDossierTab(t.id as any)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontSize: '0.78rem',
+                    fontWeight: activeDossierTab === t.id ? 700 : 500,
+                    border: activeDossierTab === t.id ? '1px solid #0096cc' : '1px solid var(--border-color)',
+                    background: activeDossierTab === t.id ? 'rgba(0, 150, 204, 0.14)' : 'transparent',
+                    color: activeDossierTab === t.id ? '#0096cc' : 'var(--text-secondary)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {t.icon} {t.label}
+                </button>
+              ))}
+            </div>
+
             {/* Modal Body */}
-            <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+            <div style={{ padding: '1.4rem 1.5rem', overflowY: 'auto', flex: 1 }}>
               {/* Feedback Alert if any */}
               {paymentFeedback && (
                 <div style={{
@@ -862,7 +1063,7 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
                   borderRadius: '6px',
                   background: 'rgba(16, 185, 129, 0.15)',
                   border: '1px solid rgba(16, 185, 129, 0.3)',
-                  color: '#10b981',
+                  color: '#059669',
                   fontSize: '0.85rem',
                   fontWeight: 600,
                   marginBottom: '1rem',
@@ -871,146 +1072,509 @@ export const LoanPerformanceTelemetry: React.FC<LoanPerformanceTelemetryProps> =
                   alignItems: 'center'
                 }}>
                   <span>{paymentFeedback}</span>
-                  <button onClick={() => setPaymentFeedback(null)} style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer' }}>&times;</button>
+                  <button onClick={() => setPaymentFeedback(null)} style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer' }}>&times;</button>
                 </div>
               )}
 
-              {/* Financial Dossier Summary Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Disbursed Principal</div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-highlight)' }}>{formatNaira(selectedLoan.disbursed_principal)}</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Tenor: {selectedLoan.tenor_months} months @ {selectedLoan.interest_rate_apr}% APR</div>
-                </div>
+              {/* TAB 1: OVERVIEW & INDIVIDUAL PERFORMANCE */}
+              {activeDossierTab === 'overview' && (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(185px, 1fr))', gap: '0.9rem', marginBottom: '1.25rem' }}>
+                    <div style={{ background: 'var(--bg-card)', padding: '0.95rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Disbursed Principal</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-highlight)' }}>{formatNaira(selectedLoan.disbursed_principal)}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Tenor: {selectedLoan.tenor_months}m @ {selectedLoan.interest_rate_apr}% APR</div>
+                    </div>
 
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Monthly Installment</div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0096cc' }}>{formatNaira(selectedLoan.monthly_installment)}</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Next Due: {selectedLoan.next_due_date ? new Date(selectedLoan.next_due_date).toLocaleDateString() : 'None'}</div>
-                </div>
+                    <div style={{ background: 'var(--bg-card)', padding: '0.95rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Monthly Installment</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0096cc' }}>{formatNaira(selectedLoan.monthly_installment)}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        Next Due: {selectedLoan.next_due_date || 'Settled'}
+                        {selectedLoan.days_to_next_due !== null && selectedLoan.days_to_next_due !== undefined ? ` (${selectedLoan.days_to_next_due >= 0 ? `in ${selectedLoan.days_to_next_due}d` : `${Math.abs(selectedLoan.days_to_next_due)}d past`})` : ''}
+                      </div>
+                    </div>
 
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Serviced So Far</div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#10b981' }}>{formatNaira(selectedLoan.total_amount_serviced)}</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Principal: {formatNaira(selectedLoan.principal_serviced)} • Int: {formatNaira(selectedLoan.interest_serviced)}</div>
-                </div>
+                    <div style={{ background: 'var(--bg-card)', padding: '0.95rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Serviced So Far</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#10b981' }}>{formatNaira(selectedLoan.total_amount_serviced)}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Prin: {formatNaira(selectedLoan.principal_serviced)} • Int: {formatNaira(selectedLoan.interest_serviced)}</div>
+                    </div>
 
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Remaining Debt</div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f59e0b' }}>{formatNaira(selectedLoan.outstanding_total)}</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Outstanding Principal: {formatNaira(selectedLoan.outstanding_principal)}</div>
-                </div>
+                    <div style={{ background: 'var(--bg-card)', padding: '0.95rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Remaining Exposure</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#d97706' }}>{formatNaira(selectedLoan.outstanding_total)}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Out. Principal: {formatNaira(selectedLoan.outstanding_principal)}</div>
+                    </div>
 
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Penalty Accrual (5%)</div>
-                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: selectedLoan.penalty_accrued > 0 ? '#dc2626' : 'var(--text-muted)' }}>
-                    {formatNaira(selectedLoan.penalty_accrued)}
+                    <div style={{ background: 'var(--bg-card)', padding: '0.95rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Penalty Accrual (5%)</div>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 800, color: selectedLoan.penalty_accrued > 0 ? '#dc2626' : 'var(--text-muted)' }}>
+                        {formatNaira(selectedLoan.penalty_accrued)}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Overdue: {selectedLoan.days_overdue}d (Grace: {selectedLoan.grace_period_days}d)</div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Overdue: {selectedLoan.days_overdue} days (Grace: {selectedLoan.grace_period_days}d)</div>
-                </div>
-              </div>
 
-              {/* Amortization Schedule Table */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
-                    Loan Amortization &amp; Servicing Schedule ({selectedLoan.repayment_schedule?.length || 0} Periods)
-                  </h4>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Serviced: {selectedLoan.installments_serviced} / {selectedLoan.total_installments_count}
-                  </span>
-                </div>
-
-                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
-                    <thead>
-                      <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
-                        <th style={{ padding: '8px 12px' }}>Inst. #</th>
-                        <th style={{ padding: '8px 12px' }}>Due Date</th>
-                        <th style={{ padding: '8px 12px' }}>Principal Due</th>
-                        <th style={{ padding: '8px 12px' }}>Interest Due</th>
-                        <th style={{ padding: '8px 12px' }}>Total Installment</th>
-                        <th style={{ padding: '8px 12px' }}>Status</th>
-                        <th style={{ padding: '8px 12px' }}>Serviced At</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(selectedLoan.repayment_schedule || []).map((item: any, idx: number) => (
-                        <tr 
-                          key={idx} 
-                          style={{ 
-                            borderBottom: '1px solid var(--border-color)',
-                            background: item.status === 'SERVICED' ? 'rgba(16, 185, 129, 0.04)' : 'transparent'
-                          }}
-                        >
-                          <td style={{ padding: '8px 12px', fontWeight: 600 }}>Period {item.installment_no}</td>
-                          <td style={{ padding: '8px 12px' }}>{item.due_date}</td>
-                          <td style={{ padding: '8px 12px' }}>{formatNaira(item.principal_due)}</td>
-                          <td style={{ padding: '8px 12px' }}>{formatNaira(item.interest_due)}</td>
-                          <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-highlight)' }}>{formatNaira(item.total_installment)}</td>
-                          <td style={{ padding: '8px 12px' }}>
-                            {item.status === 'SERVICED' ? (
-                              <span style={{ color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <CheckCircle2 size={12} /> Serviced
-                              </span>
-                            ) : item.status === 'OVERDUE' ? (
-                              <span style={{ color: '#dc2626', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <AlertTriangle size={12} /> Overdue
-                              </span>
-                            ) : (
-                              <span style={{ color: 'var(--text-muted)' }}>Pending</span>
-                            )}
-                          </td>
-                          <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>
-                            {item.serviced_at ? new Date(item.serviced_at).toLocaleDateString() : '—'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Repayment History Ledger */}
-              <div>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 0.75rem', color: 'var(--text-highlight)' }}>
-                  Audit Trail &amp; Repayment History Ledger
-                </h4>
-                {(!selectedLoan.repayment_history || selectedLoan.repayment_history.length === 0) ? (
-                  <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
-                    No payment transactions recorded yet. Use the "Record Repayment" button above to credit an installment.
+                  {/* Individual Performance Progress & Analytics Bar */}
+                  <div style={{
+                    background: 'rgba(0, 150, 204, 0.05)',
+                    border: '1px solid rgba(0, 150, 204, 0.2)',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    marginBottom: '1.25rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '0.6rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-highlight)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Award size={16} color="#0096cc" /> Individual Servicing Telemetry &amp; Amortization Progress
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                        <strong>{selectedLoan.health_label || 'Active Servicing'}</strong> • On-Time Payment Rate: <strong>{selectedLoan.on_time_rate_pct ?? 100}%</strong> • Scheduled Yield Realized: <strong>{selectedLoan.interest_earned_pct ?? 0}%</strong> ({formatNaira(selectedLoan.interest_serviced)} / {formatNaira(selectedLoan.total_scheduled_interest)})
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '4px' }}>
+                          <span>Principal Amortization Completed</span>
+                          <strong>{selectedLoan.principal_completion_pct ?? 0}%</strong>
+                        </div>
+                        <div style={{ height: '8px', background: 'rgba(15, 23, 42, 0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${selectedLoan.principal_completion_pct ?? 0}%`, height: '100%', background: '#10b981' }} />
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '4px' }}>
+                          <span>Installments Serviced</span>
+                          <strong>{selectedLoan.installments_serviced} / {selectedLoan.total_installments_count} Periods</strong>
+                        </div>
+                        <div style={{ height: '8px', background: 'rgba(15, 23, 42, 0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{
+                            width: `${selectedLoan.total_installments_count > 0 ? Math.min(100, Math.round((selectedLoan.installments_serviced / selectedLoan.total_installments_count) * 100)) : 0}%`,
+                            height: '100%',
+                            background: '#0096cc'
+                          }} />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+
+                  {/* Obligor, Guarantor & Collateral Profile */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                    <div style={{ background: 'var(--bg-card)', padding: '0.95rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.8rem' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-highlight)', marginBottom: '6px' }}>Obligor &amp; Booking Details</div>
+                      <div><strong>Applicant:</strong> {selectedLoan.borrower_name}</div>
+                      <div><strong>Email:</strong> {selectedLoan.borrower_email || 'N/A'}</div>
+                      <div><strong>Phone:</strong> {selectedLoan.borrower_phone || 'N/A'}</div>
+                      <div><strong>LOAN-DISC / Disb. Ref:</strong> <span style={{ fontFamily: 'monospace' }}>{selectedLoan.disbursement_reference || selectedLoan.facility_number}</span></div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-card)', padding: '0.95rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.8rem' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-highlight)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Shield size={14} color="#0096cc" /> Facility Guarantor &amp; Surety
+                      </div>
+                      <div><strong>Name:</strong> {selectedLoan.guarantor?.name || 'Not Specified'}</div>
+                      <div><strong>Phone:</strong> {selectedLoan.guarantor?.phone || 'N/A'}</div>
+                      <div><strong>Email:</strong> {selectedLoan.guarantor?.email || 'N/A'}</div>
+                      <div><strong>Relationship:</strong> {selectedLoan.guarantor?.relationship || 'Third-Party Guarantor'}</div>
+                    </div>
+
+                    <div style={{ background: 'var(--bg-card)', padding: '0.95rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.8rem' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-highlight)', marginBottom: '6px' }}>Pledged Security / Collateral</div>
+                      <div><strong>Security Type:</strong> {selectedLoan.collateral?.type || 'Commercial Security'}</div>
+                      <div><strong>Open Market Value:</strong> {selectedLoan.collateral?.omv > 0 ? formatNaira(selectedLoan.collateral.omv) : 'Cashflow Backed'}</div>
+                      <div style={{ color: 'var(--text-muted)', marginTop: '4px' }}>{selectedLoan.collateral?.description}</div>
+                    </div>
+                  </div>
+
+                  {/* Operational Actions Bar (Reminder & Penalty Waiver) */}
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
+                    <button
+                      onClick={() => { setShowReminderBox(!showReminderBox); setShowWaiverBox(false); }}
+                      className="btn-secondary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '7px 14px' }}
+                    >
+                      <Mail size={14} color="#0096cc" /> Send Repayment / Demand Reminder
+                    </button>
+
+                    {selectedLoan.penalty_accrued > 0 && (
+                      <button
+                        onClick={() => { setShowWaiverBox(!showWaiverBox); setShowReminderBox(false); }}
+                        className="btn-warning"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '7px 14px' }}
+                      >
+                        <ShieldAlert size={14} /> Waive Accrued 5% Penalty ({formatNaira(selectedLoan.penalty_accrued)})
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => setActiveDossierTab('statement')}
+                      className="btn-secondary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '7px 14px' }}
+                    >
+                      <FileText size={14} /> Open Full Statement of Account
+                    </button>
+                  </div>
+
+                  {/* Send Reminder Form */}
+                  {showReminderBox && (
+                    <form onSubmit={handleSendReminder} style={{
+                      background: 'rgba(0, 150, 204, 0.06)',
+                      border: '1px solid rgba(0, 150, 204, 0.25)',
+                      borderRadius: '8px',
+                      padding: '1rem',
+                      marginBottom: '1rem'
+                    }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.6rem' }}>
+                        Dispatch Post-Disbursement Notice (Email + In-App Alert)
+                      </div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', marginBottom: '0.6rem', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={includeGuarantor} onChange={(e) => setIncludeGuarantor(e.target.checked)} />
+                        Copy Facility Guarantor ({selectedLoan.guarantor?.name} • {selectedLoan.guarantor?.email || 'No email on file'})
+                      </label>
+                      <input
+                        type="text"
+                        value={reminderNote}
+                        onChange={(e) => setReminderNote(e.target.value)}
+                        placeholder="Optional monitoring officer note to include in email notice..."
+                        className="form-input"
+                        style={{ width: '100%', marginBottom: '0.75rem', fontSize: '0.82rem' }}
+                      />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button type="submit" disabled={isSendingReminder} className="btn-primary" style={{ fontSize: '0.8rem', padding: '6px 14px' }}>
+                          {isSendingReminder ? 'Dispatching...' : 'Send Notice Now'}
+                        </button>
+                        <button type="button" onClick={() => setShowReminderBox(false)} className="btn-secondary" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* Penalty Waiver Form */}
+                  {showWaiverBox && (
+                    <form onSubmit={handleWaivePenalty} style={{
+                      background: 'rgba(245, 158, 11, 0.08)',
+                      border: '1px solid rgba(245, 158, 11, 0.35)',
+                      borderRadius: '8px',
+                      padding: '1rem',
+                      marginBottom: '1rem'
+                    }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.5rem', color: '#b45309' }}>
+                        Authorize 5% Default Penalty Waiver ({formatNaira(selectedLoan.penalty_accrued)})
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={waiverReason}
+                        onChange={(e) => setWaiverReason(e.target.value)}
+                        placeholder="Required audit justification (e.g., Bank NIBSS outage verified, MD/HRM concession approved)"
+                        className="form-input"
+                        style={{ width: '100%', marginBottom: '0.75rem', fontSize: '0.82rem' }}
+                      />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button type="submit" disabled={isWaiving} className="btn-primary" style={{ fontSize: '0.8rem', padding: '6px 14px' }}>
+                          {isWaiving ? 'Applying Waiver...' : 'Confirm Waiver & Update Statement'}
+                        </button>
+                        <button type="button" onClick={() => setShowWaiverBox(false)} className="btn-secondary" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 2: INDIVIDUAL LOAN STATEMENT OF ACCOUNT */}
+              {activeDossierTab === 'statement' && (
+                <div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '0.75rem',
+                    marginBottom: '1rem'
+                  }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-highlight)' }}>
+                        Official Borrower Loan Statement of Account — {selectedLoan.facility_number}
+                      </h4>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                        Chronological Principal, Interest, 5% Penalty &amp; Repayment Ledger with Running Exposure Balance
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => handleDownloadLoanStatementCsv(selectedLoan.case_id)}
+                        className="btn-secondary"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.78rem', padding: '6px 12px' }}
+                      >
+                        <Download size={13} /> Download CSV Statement
+                      </button>
+                      <button
+                        onClick={() => handlePrintLoanStatementPdf(selectedLoan.case_id)}
+                        className="btn-primary"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.78rem', padding: '6px 12px' }}
+                      >
+                        <Printer size={13} /> Print / Save PDF Statement
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+                    <div style={{ background: 'var(--bg-card)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Debits (Principal + Int + Pen)</div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#b45309' }}>
+                        {formatNaira(selectedLoan.statement_totals?.total_debits ?? 0)}
+                      </div>
+                    </div>
+                    <div style={{ background: 'var(--bg-card)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Credits (Repayments)</div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#059669' }}>
+                        {formatNaira(selectedLoan.statement_totals?.total_credits ?? 0)}
+                      </div>
+                    </div>
+                    <div style={{ background: 'var(--bg-card)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Statement Closing Balance</div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-highlight)' }}>
+                        {formatNaira(selectedLoan.statement_totals?.closing_balance ?? selectedLoan.outstanding_total)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="table-wrapper" tabIndex={0} role="region" aria-label="Individual Loan Statement Ledger">
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
                       <thead>
-                        <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
-                          <th style={{ padding: '8px 12px' }}>Payment Date</th>
-                          <th style={{ padding: '8px 12px' }}>Reference</th>
-                          <th style={{ padding: '8px 12px' }}>Amount Paid</th>
-                          <th style={{ padding: '8px 12px' }}>Principal Credit</th>
-                          <th style={{ padding: '8px 12px' }}>Interest Credit</th>
-                          <th style={{ padding: '8px 12px' }}>Channel</th>
-                          <th style={{ padding: '8px 12px' }}>Rem. Balance</th>
+                        <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+                          <th style={{ padding: '9px 12px' }}>Date</th>
+                          <th style={{ padding: '9px 12px' }}>Reference</th>
+                          <th style={{ padding: '9px 12px' }}>Entry Type</th>
+                          <th style={{ padding: '9px 12px' }}>Description</th>
+                          <th style={{ padding: '9px 12px', textAlign: 'right' }}>Debit</th>
+                          <th style={{ padding: '9px 12px', textAlign: 'right' }}>Credit</th>
+                          <th style={{ padding: '9px 12px', textAlign: 'right' }}>Running Balance</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {selectedLoan.repayment_history.map((rep: any, idx: number) => (
+                        {(selectedLoan.statement_entries || []).map((entry: any, idx: number) => (
                           <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                            <td style={{ padding: '8px 12px' }}>{new Date(rep.payment_date).toLocaleString()}</td>
-                            <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>{rep.reference}</td>
-                            <td style={{ padding: '8px 12px', fontWeight: 700, color: '#10b981' }}>{formatNaira(rep.amount)}</td>
-                            <td style={{ padding: '8px 12px' }}>{formatNaira(rep.principal_credited)}</td>
-                            <td style={{ padding: '8px 12px' }}>{formatNaira(rep.interest_credited)}</td>
-                            <td style={{ padding: '8px 12px' }}>{rep.payment_method}</td>
-                            <td style={{ padding: '8px 12px', fontWeight: 600 }}>{formatNaira(rep.outstanding_balance_after)}</td>
+                            <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>{entry.entry_date}</td>
+                            <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontWeight: 600 }}>{entry.reference}</td>
+                            <td style={{ padding: '8px 12px' }}>{entry.entry_type}</td>
+                            <td style={{ padding: '8px 12px' }}>{entry.description}</td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', color: entry.debit > 0 ? '#b45309' : 'var(--text-muted)' }}>
+                              {entry.debit > 0 ? formatNaira(entry.debit) : '—'}
+                            </td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: entry.credit > 0 ? '#059669' : 'var(--text-muted)' }}>
+                              {entry.credit > 0 ? formatNaira(entry.credit) : '—'}
+                            </td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: 'var(--text-highlight)' }}>
+                              {formatNaira(entry.running_balance)}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* TAB 3: AMORTIZATION SCHEDULE TABLE */}
+              {activeDossierTab === 'schedule' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '8px' }}>
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
+                      Loan Amortization &amp; Servicing Schedule ({selectedLoan.repayment_schedule?.length || 0} Periods)
+                    </h4>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      Serviced: {selectedLoan.installments_serviced} / {selectedLoan.total_installments_count} • Remaining: {selectedLoan.installments_remaining}
+                    </span>
+                  </div>
+
+                  <div className="table-wrapper" tabIndex={0} role="region" aria-label="Amortization Schedule Table">
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+                          <th style={{ padding: '8px 12px' }}>Inst. #</th>
+                          <th style={{ padding: '8px 12px' }}>Due Date</th>
+                          <th style={{ padding: '8px 12px' }}>Principal Due</th>
+                          <th style={{ padding: '8px 12px' }}>Interest Due</th>
+                          <th style={{ padding: '8px 12px' }}>Total Installment</th>
+                          <th style={{ padding: '8px 12px' }}>Closing Principal</th>
+                          <th style={{ padding: '8px 12px' }}>Status</th>
+                          <th style={{ padding: '8px 12px' }}>Serviced At</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(selectedLoan.repayment_schedule || []).map((item: any, idx: number) => {
+                          const pDue = item.principal_component ?? item.principal_due ?? 0;
+                          const iDue = item.interest_component ?? item.interest_due ?? 0;
+                          const totalInst = item.total_due ?? item.total_installment ?? (pDue + iDue);
+                          const paidDt = item.paid_date || item.serviced_at;
+                          const isPaid = ['SERVICED', 'PAID_ON_TIME', 'PAID_IN_GRACE', 'PAID_LATE_WITH_PENALTY'].includes(item.status);
+                          return (
+                            <tr
+                              key={idx}
+                              style={{
+                                borderBottom: '1px solid var(--border-color)',
+                                background: isPaid ? 'rgba(16, 185, 129, 0.04)' : item.status === 'DUE_CURRENT' ? 'rgba(0, 150, 204, 0.04)' : 'transparent'
+                              }}
+                            >
+                              <td style={{ padding: '8px 12px', fontWeight: 600 }}>Period {item.installment_no}</td>
+                              <td style={{ padding: '8px 12px' }}>{item.due_date}</td>
+                              <td style={{ padding: '8px 12px' }}>{formatNaira(pDue)}</td>
+                              <td style={{ padding: '8px 12px' }}>{formatNaira(iDue)}</td>
+                              <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-highlight)' }}>{formatNaira(totalInst)}</td>
+                              <td style={{ padding: '8px 12px' }}>{formatNaira(item.closing_balance ?? 0)}</td>
+                              <td style={{ padding: '8px 12px' }}>
+                                {isPaid ? (
+                                  <span style={{ color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <CheckCircle2 size={12} /> {item.status === 'PAID_LATE_WITH_PENALTY' ? 'Paid Late' : item.status === 'PAID_IN_GRACE' ? 'Paid (Grace)' : 'Serviced'}
+                                  </span>
+                                ) : item.status === 'OVERDUE' ? (
+                                  <span style={{ color: '#dc2626', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <AlertTriangle size={12} /> Overdue
+                                  </span>
+                                ) : item.status === 'DUE_CURRENT' ? (
+                                  <span style={{ color: '#0096cc', fontWeight: 700 }}>Due Next</span>
+                                ) : (
+                                  <span style={{ color: 'var(--text-muted)' }}>Upcoming</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>
+                                {paidDt ? paidDt : '—'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: REPAYMENTS & SURVEILLANCE LOGS */}
+              {activeDossierTab === 'servicing' && (
+                <div>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 0.75rem', color: 'var(--text-highlight)' }}>
+                    Audit Trail &amp; Repayment History Ledger
+                  </h4>
+                  {(!selectedLoan.repayment_history || selectedLoan.repayment_history.length === 0) ? (
+                    <div style={{ padding: '1.25rem', textAlign: 'center', color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                      No payment transactions recorded yet. Use &ldquo;Record Repayment&rdquo; above to credit an installment.
+                    </div>
+                  ) : (
+                    <div className="table-wrapper" tabIndex={0} role="region" aria-label="Repayment History Ledger" style={{ marginBottom: '1.5rem' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+                            <th style={{ padding: '8px 12px' }}>Payment Date</th>
+                            <th style={{ padding: '8px 12px' }}>Reference</th>
+                            <th style={{ padding: '8px 12px' }}>Amount Paid</th>
+                            <th style={{ padding: '8px 12px' }}>Principal</th>
+                            <th style={{ padding: '8px 12px' }}>Interest</th>
+                            <th style={{ padding: '8px 12px' }}>Penalty</th>
+                            <th style={{ padding: '8px 12px' }}>Channel / Note</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedLoan.repayment_history.map((rep: any, idx: number) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                              <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>{rep.payment_date}</td>
+                              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontWeight: 600 }}>{rep.reference || rep.payment_id}</td>
+                              <td style={{ padding: '8px 12px', fontWeight: 700, color: '#059669' }}>{formatNaira(rep.amount)}</td>
+                              <td style={{ padding: '8px 12px' }}>{formatNaira(rep.principal_portion ?? rep.principal_credited ?? 0)}</td>
+                              <td style={{ padding: '8px 12px' }}>{formatNaira(rep.interest_portion ?? rep.interest_credited ?? 0)}</td>
+                              <td style={{ padding: '8px 12px', color: (rep.penalty_portion ?? 0) > 0 ? '#dc2626' : 'var(--text-muted)' }}>
+                                {formatNaira(rep.penalty_portion ?? rep.penalty_applied ?? 0)}
+                              </td>
+                              <td style={{ padding: '8px 12px' }}>
+                                <strong>{rep.payment_method || 'DIRECT_DEBIT'}</strong>
+                                {rep.note ? <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{rep.note}</div> : null}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Post-Disbursement Surveillance Note Form */}
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 0.75rem', color: 'var(--text-highlight)' }}>
+                    Post-Disbursement Monitoring, Call Logs &amp; Promise-to-Pay
+                  </h4>
+                  <form onSubmit={handleAddMonitoringNote} style={{
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    marginBottom: '1.25rem'
+                  }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '4px' }}>SURVEILLANCE ACTIVITY</label>
+                        <select value={noteType} onChange={(e) => setNoteType(e.target.value)} className="form-select" style={{ width: '100%', fontSize: '0.82rem' }}>
+                          <option value="CALL_LOG">Borrower Call Log</option>
+                          <option value="FIELD_VISIT">Site / Collateral Inspection</option>
+                          <option value="PROMISE_TO_PAY">Promise-to-Pay Commitment</option>
+                          <option value="GUARANTOR_CONTACT">Guarantor Engagement</option>
+                          <option value="RESTRUCTURE_REVIEW">Restructure / Tenor Review</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '4px' }}>PROMISE-TO-PAY DATE (OPTIONAL)</label>
+                        <input
+                          type="date"
+                          value={promiseToPayDate}
+                          onChange={(e) => setPromiseToPayDate(e.target.value)}
+                          className="form-input"
+                          style={{ width: '100%', fontSize: '0.82rem' }}
+                        />
+                      </div>
+                    </div>
+                    <textarea
+                      required
+                      rows={2}
+                      value={monitoringNoteText}
+                      onChange={(e) => setMonitoringNoteText(e.target.value)}
+                      placeholder="Record call summary, collateral status check, or borrower commitment..."
+                      className="form-input"
+                      style={{ width: '100%', marginBottom: '0.75rem', fontSize: '0.82rem' }}
+                    />
+                    <button type="submit" disabled={isAddingNote} className="btn-primary" style={{ fontSize: '0.8rem', padding: '6px 14px' }}>
+                      {isAddingNote ? 'Saving Log...' : 'Save Surveillance Entry'}
+                    </button>
+                  </form>
+
+                  {/* Monitoring Logs Timeline */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(selectedLoan.monitoring_logs || []).length === 0 ? (
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No monitoring notes logged for this facility yet.</div>
+                    ) : (
+                      (selectedLoan.monitoring_logs || []).map((log: any, idx: number) => (
+                        <div key={idx} style={{
+                          padding: '0.75rem 1rem',
+                          borderRadius: '8px',
+                          background: 'var(--bg-card)',
+                          border: '1px solid var(--border-color)',
+                          fontSize: '0.8rem'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '4px' }}>
+                            <strong style={{ color: '#0096cc' }}>{log.note_type || log.event}</strong>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{log.timestamp} • {log.actor} ({log.role})</span>
+                          </div>
+                          <div>{log.note}</div>
+                          {log.promise_to_pay_date && (
+                            <div style={{ fontSize: '0.74rem', color: '#d97706', fontWeight: 600, marginTop: '4px' }}>
+                              Promise-to-Pay Date: {log.promise_to_pay_date}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

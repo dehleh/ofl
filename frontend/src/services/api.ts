@@ -195,6 +195,31 @@ export async function triggerYouverifyKyc(caseId: string, actor: string = 'Credi
   return res.json();
 }
 
+export async function pullCreditBureauReport(
+  caseId: string,
+  payload: {
+    bvn?: string;
+    guarantor_bvn?: string;
+    consent_confirmed?: boolean;
+    force_refresh?: boolean;
+    actor?: string;
+  } = {}
+) {
+  const res = await fetch(`${API_BASE}/cases/${encodeURIComponent(caseId)}/credit-bureau/pull`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({
+      consent_confirmed: true,
+      force_refresh: false,
+      actor: 'Credit Analyst',
+      ...payload
+    })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
 export async function submitApprovalDecision(caseId: string, data: { decision: string; actor: string; role: string; comments: string; conditions_mandated?: string[]; target_role?: string }) {
   const res = await fetch(`${API_BASE}/cases/${caseId}/approval`, {
     method: 'POST',
@@ -678,6 +703,65 @@ export async function fetchTelemetryReportData(period: string = 'quarterly') {
 
 export function getTelemetryExportUrl(period: string = 'quarterly', format: 'csv' | 'html' = 'csv') {
   return `${API_BASE}/telemetry/reports/export?period=${encodeURIComponent(period)}&format=${encodeURIComponent(format)}`;
+}
+
+export async function waiveLoanPenalty(caseId: string, reason: string, actor: string = 'Head of Risk Management') {
+  const res = await fetch(`${API_BASE}/telemetry/loan-performance/${encodeURIComponent(caseId)}/waive-penalty`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ reason, actor })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function sendLoanReminder(
+  caseId: string,
+  includeGuarantor: boolean = false,
+  customNote?: string,
+  actor: string = 'Credit Monitoring Desk'
+) {
+  const res = await fetch(`${API_BASE}/telemetry/loan-performance/${encodeURIComponent(caseId)}/send-reminder`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({
+      include_guarantor: includeGuarantor,
+      custom_note: customNote,
+      actor
+    })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function addLoanMonitoringNote(
+  caseId: string,
+  noteType: string,
+  note: string,
+  promiseToPayDate?: string,
+  actor: string = 'Credit Monitoring Officer',
+  role: string = 'ANALYST'
+) {
+  const res = await fetch(`${API_BASE}/telemetry/loan-performance/${encodeURIComponent(caseId)}/monitoring-note`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({
+      note_type: noteType,
+      note,
+      promise_to_pay_date: promiseToPayDate || null,
+      actor,
+      role
+    })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export function getLoanStatementExportUrl(caseId: string, format: 'csv' | 'html' = 'csv') {
+  return `${API_BASE}/telemetry/loan-performance/${encodeURIComponent(caseId)}/statement/export?format=${encodeURIComponent(format)}`;
 }
 
 

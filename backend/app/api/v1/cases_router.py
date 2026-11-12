@@ -2,6 +2,7 @@
 Credit Cases API Router (PRD FR-04, FR-02, FR-03, Section 11 Case Workspace)
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Optional
 import hashlib
@@ -149,6 +150,8 @@ def get_case_workspace(case_id: str, db: Session = Depends(get_db)):
         "members": board_members_status
     }
     
+    latest_bureau = next((k for k in kyc_checks if k.provider == "YOUVERIFY_CRC_BUREAU"), None)
+
     return {
         "case": {
             "id": credit_case.id,
@@ -209,6 +212,16 @@ def get_case_workspace(case_id: str, db: Session = Depends(get_db)):
             }
             for k in kyc_checks
         ],
+        "latest_credit_bureau": {
+            "id": latest_bureau.id,
+            "provider": latest_bureau.provider,
+            "provider_ref": latest_bureau.provider_ref,
+            "status": latest_bureau.status,
+            "result_summary": latest_bureau.result_summary,
+            "reviewed_by": latest_bureau.reviewed_by,
+            "reviewed_at": latest_bureau.reviewed_at.isoformat() if latest_bureau.reviewed_at else None,
+            "created_at": latest_bureau.created_at.isoformat()
+        } if latest_bureau else None,
         "financial_assessment": financials[0] if financials else None,
         "cam_versions": [
             {
@@ -384,6 +397,95 @@ def trigger_kyc_verification(
         actor=actor
     )
     return result
+
+
+class CreditBureauPullPayload(BaseModel):
+    bvn: Optional[str] = None
+    guarantor_bvn: Optional[str] = None
+    consent_confirmed: bool = True
+    force_refresh: bool = False
+    actor: str = "Credit Analyst"
+
+
+@router.post("/{case_id}/credit-bureau/pull")
+def pull_credit_bureau_endpoint(
+    case_id: str,
+    payload: CreditBureauPullPayload,
+    db: Session = Depends(get_db)
+):
+    """
+    Pulls Option B Credit Bureau / CRC report via Youverify v2 (/v2/api/identity/credit-report/ng/individual)
+    for the borrower (and guarantor if configured), and re-evaluates FinancialEngine bureau rules.
+    """
+    credit_case = db.query(CreditCase).filter(
+        (CreditCase.id == case_id) | (CreditCase.case_number == case_id)
+    ).first()
+    if not credit_case:
+        raise HTTPException(status_code=404, detail="Case not found.")
+
+    ok, result = YouverifyAdapter.pull_credit_report(
+        db=db,
+        credit_case=credit_case,
+        bvn=payload.bvn,
+        guarantor_bvn=payload.guarantor_bvn,
+        consent_confirmed=payload.consent_confirmed,
+        force_refresh=payload.force_refresh,
+        actor=payload.actor
+    )
+
+    bureau_report = result.get("bureau_report") or {}
+    updated_financial = None
+    if result.get("status") in ("PASSED", "WARNING", "FLAGGED") and bureau_report:
+        from ...core.config_manager import ConfigManager
+        bureau_cfg = ConfigManager.get_config_value(db, "CREDIT_BUREAU_CONFIG") or {}
+        latest_fa = (
+            db.query(FinancialAssessment)
+            .filter(FinancialAssessment.case_id == credit_case.id)
+            .order_by(FinancialAssessment.created_at.desc())
+            .first()
+        )
+        base_inputs = dict(latest_fa.input_snapshot) if (latest_fa and isinstance(latest_fa.input_snapshot, dict)) else {
+            "requested_amount": credit_case.application.amount if credit_case.application else 0.0,
+            "tenor_months": credit_case.application.tenor if credit_case.application else 12,
+            "applicant_type": credit_case.application.applicant_type if credit_case.application else "CORPORATE",
+            "verified_monthly_income": 0.0,
+            "existing_monthly_debt": 0.0,
+            "estimated_monthly_expenses": 0.0,
+            "collateral_value": 0.0,
+        }
+        eval_inputs = {
+            **base_inputs,
+            "bureau_report": bureau_report,
+            "min_bureau_score": int(bureau_cfg.get("min_acceptable_score", 600) or 600),
+            "max_delinquency_days_allowed": int(bureau_cfg.get("max_delinquency_days_allowed", 30) or 30),
+        }
+        evaluation = FinancialEngine.evaluate(eval_inputs)
+        fa = FinancialAssessment(
+            case_id=credit_case.id,
+            formula_version=evaluation["formula_version"],
+            input_snapshot={k: v for k, v in eval_inputs.items() if k != "bureau_report"} | {
+                "bureau_provider_ref": result.get("provider_ref"),
+                "bureau_score": bureau_report.get("score"),
+            },
+            calculated_ratios=evaluation["calculated_ratios"],
+            policy_flags=evaluation["policy_flags"],
+            performed_by=f"Financial Engine + CRC Credit Bureau ({payload.actor})"
+        )
+        db.add(fa)
+        db.commit()
+        db.refresh(fa)
+        updated_financial = {
+            "id": fa.id,
+            "calculated_ratios": fa.calculated_ratios,
+            "policy_flags": fa.policy_flags,
+            "deterministic_verdict": evaluation["deterministic_verdict"]
+        }
+
+    return {
+        **result,
+        "eligible": ok,
+        "financial_assessment": updated_financial
+    }
 
 # ==============================================================================
 # BANK STATEMENT INTELLIGENT INGESTION & CREDIT ANALYSIS ENDPOINTS

@@ -1018,5 +1018,109 @@ class NotificationService:
         )
 
     @classmethod
+    def notify_post_disbursement_reminder(
+        cls,
+        case_number: str,
+        facility_number: str,
+        borrower_name: str,
+        borrower_email: str,
+        monthly_installment: float,
+        outstanding_total: float,
+        penalty_accrued: float,
+        days_overdue: int,
+        next_due_date: str,
+        guarantor_name: Optional[str] = None,
+        guarantor_email: Optional[str] = None,
+        include_guarantor: bool = False,
+        custom_note: Optional[str] = None,
+        actor: str = "Credit Monitoring Desk"
+    ) -> Dict[str, Any]:
+        """
+        Dispatches a post-disbursement repayment reminder, 7-day grace alert,
+        or overdue demand notice to the borrower (and optionally the guarantor),
+        plus an in-app audit notification.
+        """
+        total_now_due = monthly_installment + penalty_accrued
+        if days_overdue > 7:
+            notice_tier = "OVERDUE DEMAND NOTICE (5% PENALTY ACTIVE)"
+            notif_type = "WARNING"
+            badge_color = "#dc2626"
+        elif days_overdue > 0:
+            notice_tier = f"7-DAY GRACE PERIOD ALERT ({days_overdue}D OVERDUE)"
+            notif_type = "WARNING"
+            badge_color = "#d97706"
+        else:
+            notice_tier = "UPCOMING REPAYMENT REMINDER"
+            notif_type = "INFO"
+            badge_color = "#0096cc"
+
+        subject = f"[Opticom Servicing] {notice_tier} - {facility_number} ({borrower_name})"
+        note_block = (
+            f'<p style="background: #f8fafc; border-left: 3px solid {badge_color}; padding: 10px 12px; font-size: 12.5px; color: #334155;">'
+            f'<strong>Monitoring Officer Note:</strong> {custom_note}</p>'
+            if custom_note else ""
+        )
+        html_body = f"""
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; max-width: 640px; border: 1px solid #cbd5e1; padding: 24px; border-radius: 8px;">
+          <h2 style="color: #0f172a; margin-top: 0;">Opticom Finance Limited &bull; Post-Disbursement Servicing Notice</h2>
+          <div style="display: inline-block; background: {badge_color}; color: #ffffff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 700;">
+            {notice_tier}
+          </div>
+          <p style="font-size: 13.5px; line-height: 1.5; margin-top: 14px;">
+            Dear <strong>{borrower_name}</strong>, please find the current servicing status of your credit facility <strong>{facility_number}</strong> (Case <strong>{case_number}</strong>):
+          </p>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; margin: 14px 0;">
+            <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+              <tr><td style="padding: 4px 0; color: #64748b;">Installment Due:</td><td style="font-weight: bold;">₦{monthly_installment:,.2f}</td></tr>
+              <tr><td style="padding: 4px 0; color: #64748b;">5% Overdue Penalty Accrued:</td><td style="font-weight: bold; color: #dc2626;">₦{penalty_accrued:,.2f}</td></tr>
+              <tr><td style="padding: 4px 0; color: #64748b;">Total Immediate Remittance:</td><td style="font-weight: bold; color: #0f172a;">₦{total_now_due:,.2f}</td></tr>
+              <tr><td style="padding: 4px 0; color: #64748b;">Total Facility Outstanding:</td><td style="font-weight: bold;">₦{outstanding_total:,.2f}</td></tr>
+              <tr><td style="padding: 4px 0; color: #64748b;">Scheduled / Current Due Date:</td><td style="font-weight: bold;">{next_due_date}</td></tr>
+            </table>
+          </div>
+          {note_block}
+          <p style="font-size: 12.5px; color: #475569; line-height: 1.5;">
+            Kindly ensure your repayment account is funded or remit via direct transfer quoting <strong>{facility_number}</strong>. Opticom grants a 7-calendar-day grace period from each due date before a 5% default penalty applies.
+          </p>
+        </div>
+        """
+
+        dispatched_to: List[str] = []
+        if borrower_email:
+            cls.send_email(
+                to_email=borrower_email,
+                subject=subject,
+                html_body=html_body,
+                template="POST_DISBURSEMENT_REMINDER",
+                metadata={"case_number": case_number, "facility_number": facility_number, "days_overdue": days_overdue, "actor": actor}
+            )
+            dispatched_to.append(borrower_email)
+
+        if include_guarantor and guarantor_email and guarantor_email.lower() != (borrower_email or "").lower():
+            g_subject = f"[Guarantor Demand Notice] {facility_number} - {borrower_name} ({days_overdue}d Overdue)"
+            g_body = html_body.replace(
+                f"Dear <strong>{borrower_name}</strong>",
+                f"Dear <strong>{guarantor_name or 'Facility Guarantor'}</strong> (Surety for {borrower_name})"
+            )
+            cls.send_email(
+                to_email=guarantor_email,
+                subject=g_subject,
+                html_body=g_body,
+                template="GUARANTOR_SERVICING_NOTICE",
+                metadata={"case_number": case_number, "facility_number": facility_number, "guarantor": guarantor_name, "actor": actor}
+            )
+            dispatched_to.append(guarantor_email)
+
+        cls.create_in_app_notification(
+            title=f"Servicing Reminder Sent: {facility_number}",
+            message=f"{notice_tier} dispatched by {actor} to {', '.join(dispatched_to) or 'borrower record'} (₦{total_now_due:,.2f} due).",
+            notification_type=notif_type,
+            category="SERVICING_REMINDER",
+            case_number=case_number,
+            recipient_role="ALL"
+        )
+        return {"notice_tier": notice_tier, "dispatched_to": dispatched_to}
+
+    @classmethod
     def get_delivery_logs(cls, limit: int = 50) -> List[Dict[str, Any]]:
         return cls._delivery_log[:limit]

@@ -337,7 +337,40 @@ class FinancialEngine:
                 "severity": "HIGH",
                 "message": f"Bank statement turnover (₦{average_monthly_turnover:,.2f}) is materially below declared monthly income (₦{monthly_income:,.2f})."
             })
-            
+
+        # Credit Bureau Integration Checks (Option B: Youverify Credit Report / CRC)
+        bureau_report = inputs.get("bureau_report") or {}
+        bureau_score = bureau_report.get("score")
+        min_bureau_score = int(inputs.get("min_bureau_score", 600) or 600)
+        max_delinq_allowed = int(inputs.get("max_delinquency_days_allowed", 30) or 30)
+        bureau_summary = bureau_report.get("summary") or {}
+        bureau_overdue = float(bureau_summary.get("total_overdue_balance", 0.0) or 0.0)
+        bureau_max_dpd = int(bureau_summary.get("max_days_overdue", 0) or 0)
+        bureau_est_monthly_debt = float(bureau_summary.get("estimated_monthly_bureau_debt", 0.0) or 0.0)
+        bureau_outstanding = float(bureau_summary.get("total_outstanding_balance", 0.0) or 0.0)
+
+        if bureau_score is not None and int(bureau_score) < min_bureau_score:
+            policy_flags.append({
+                "code": "LOW_BUREAU_SCORE",
+                "severity": "HIGH",
+                "message": f"Credit Bureau score ({bureau_score}/850) is below Opticom policy cut-off of {min_bureau_score}."
+            })
+
+        if bureau_overdue > 0 or bureau_max_dpd > max_delinq_allowed:
+            severity = "CRITICAL" if (bureau_max_dpd > 90 or bureau_overdue >= 500_000) else "HIGH"
+            policy_flags.append({
+                "code": "ACTIVE_NPL_OR_ARREARS",
+                "severity": severity,
+                "message": f"Credit Bureau shows active overdue balance of ₦{bureau_overdue:,.2f} (max {bureau_max_dpd}d past due across external facilities)."
+            })
+
+        if bureau_est_monthly_debt > max(existing_monthly_debt * 1.25, existing_monthly_debt + 25_000.0):
+            policy_flags.append({
+                "code": "UNDISCLOSED_BUREAU_DEBT",
+                "severity": "HIGH",
+                "message": f"Bureau active facilities indicate ~₦{bureau_est_monthly_debt:,.2f}/mo debt service vs ₦{existing_monthly_debt:,.2f}/mo declared."
+            })
+
         # Overall deterministic eligibility recommendation
         eligible = len([f for f in policy_flags if f["severity"] in ["HIGH", "CRITICAL"]]) == 0
         
@@ -364,7 +397,12 @@ class FinancialEngine:
                 "upfront_fees": upfront_fees,
                 "opticom_profitability": opticom_profitability,
                 "stress_tests": stress_tests,
-                "amortization_schedule": schedule
+                "amortization_schedule": schedule,
+                "bureau_score": bureau_score,
+                "bureau_score_band": bureau_report.get("score_band"),
+                "bureau_provider": bureau_report.get("bureau_provider"),
+                "bureau_total_outstanding": bureau_outstanding if bureau_report else None,
+                "bureau_overdue_balance": bureau_overdue if bureau_report else None
             },
             "policy_flags": policy_flags,
             "deterministic_verdict": "COMPLIANT" if eligible else "POLICY_EXCEPTION",

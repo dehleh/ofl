@@ -207,9 +207,39 @@ class VertexAICamService:
             }
         ]
 
-        # Credit Check & History (Page 2)
-        credit_checks = {
-            "external_report": [
+        # Credit Check & History (Page 2) — Live Youverify CRC Bureau when available
+        bureau_checks = [
+            k for k in (getattr(credit_case, "kyc_checks", None) or [])
+            if getattr(k, "provider", None) == "YOUVERIFY_CRC_BUREAU"
+            and getattr(k, "status", None) in ("PASSED", "WARNING", "FLAGGED")
+        ]
+        bureau_checks.sort(key=lambda x: str(getattr(x, "created_at", "") or ""), reverse=True)
+        latest_bureau = (bureau_checks[0].result_summary or {}) if bureau_checks else {}
+        b_summary = latest_bureau.get("summary") or {}
+        b_score = latest_bureau.get("score")
+        b_band = latest_bureau.get("score_band")
+        b_guarantor = latest_bureau.get("guarantor_bureau") or {}
+
+        if latest_bureau:
+            b_overdue = float(b_summary.get("total_overdue_balance", 0.0) or 0.0)
+            b_outstanding = float(b_summary.get("total_outstanding_balance", 0.0) or 0.0)
+            b_active = int(b_summary.get("total_active_loans", 0) or 0)
+            promoter_search_text = (
+                f"{latest_bureau.get('bureau_provider', 'CRC Credit Bureau (via Youverify)')} Ref "
+                f"{latest_bureau.get('report_reference', 'N/A')} for {promoter_name}: "
+                f"Bureau Score {b_score if b_score is not None else 'NO-HIT'}/850 ({b_band or 'N/A'}), "
+                f"{b_active} active external loan(s) totaling ₦{b_outstanding:,.2f} "
+                f"with ₦{b_overdue:,.2f} overdue arrears ({b_summary.get('worst_delinquency_status', 'Performing')})."
+            )
+            if b_guarantor.get("checked"):
+                promoter_search_text += (
+                    f" Guarantor ({b_guarantor.get('name')}) bureau score: "
+                    f"{b_guarantor.get('score')}/850 ({b_guarantor.get('score_band')})."
+                )
+            external_report_rows = latest_bureau.get("accounts") or []
+        else:
+            promoter_search_text = f"The Credit Registry shows {promoter_name} has no adverse loan obligations with other financial institutions."
+            external_report_rows = [
                 {
                     "institution": "UBA",
                     "facility_type": "Overdraft",
@@ -220,8 +250,17 @@ class VertexAICamService:
                     "outstanding_balance": 8_576_374.79,
                     "status": "Performing"
                 }
-            ],
-            "promoter_search": f"The Credit Registry shows {promoter_name} has no adverse loan obligations with other financial institutions.",
+            ]
+
+        credit_checks = {
+            "external_report": external_report_rows,
+            "promoter_search": promoter_search_text,
+            "bureau_score": b_score,
+            "bureau_score_band": b_band,
+            "bureau_provider": latest_bureau.get("bureau_provider"),
+            "bureau_ref": latest_bureau.get("report_reference"),
+            "bureau_summary": b_summary,
+            "guarantor_bureau": b_guarantor,
             "opticom_history": [
                 {
                     "institution": "Opticom Finance Limited",
@@ -399,8 +438,9 @@ class VertexAICamService:
                 f"backed by registration of legal charges and physical perfection."
             ),
             "character_and_credit_search": (
-                f"The promoter, {promoter_name}, has no reported personal loan obligations with other financial institutions on Credit Registry. "
-                f"Previous ₦20m credit facility with Opticom Finance was fully liquidated on schedule with zero arrears."
+                credit_checks["promoter_search"]
+                if latest_bureau
+                else f"The promoter, {promoter_name}, has no reported personal loan obligations with other financial institutions on Credit Registry. Previous ₦20m credit facility with Opticom Finance was fully liquidated on schedule with zero arrears."
             ),
             "lucrative_nature_of_business": (
                 f"The business operates in the high-demand haulage and construction support sector within the Lekki-Epe economic corridor. "

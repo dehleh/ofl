@@ -666,3 +666,517 @@ class YouverifyAdapter:
             "verification_provider": "CAC / Youverify Instant Corporate Verification",
             "message": f"CAC status ACTIVE confirmed for {formatted_rc}."
         }
+
+    # ==========================================================================
+    # OPTION B: CRC CREDIT BUREAU LOOKUP VIA YOUVERIFY v2 CREDIT REPORT API
+    # ==========================================================================
+    @staticmethod
+    def _bureau_score_band(score: Optional[int]) -> str:
+        if score is None:
+            return "NO_HIT"
+        if score >= 720:
+            return "PRIME"
+        if score >= 650:
+            return "GOOD"
+        if score >= 600:
+            return "FAIR"
+        return "SUBPRIME"
+
+    @classmethod
+    def _normalize_youverify_bureau_response(
+        cls,
+        raw_payload: Dict[str, Any],
+        bvn: str,
+        subject_name: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Normalizes Youverify v2 /v2/api/identity/credit-report/ng/individual JSON responses
+        into Opticom's canonical CRC Credit Bureau structure.
+        """
+        data = raw_payload.get("data") or raw_payload
+        cb = data.get("creditBureau") or data.get("credit_bureau") or data
+        score_details = cb.get("scoreDetails") or cb.get("score_details") or {}
+        raw_score = score_details.get("score") if isinstance(score_details, dict) else None
+        if raw_score is None:
+            raw_score = cb.get("score") or cb.get("creditScore")
+        score = int(raw_score) if raw_score is not None else None
+
+        raw_summary = cb.get("summary") or {}
+        raw_accounts = cb.get("accounts") or cb.get("creditAccounts") or cb.get("tradelines") or []
+
+        accounts = []
+        est_monthly_debt = 0.0
+        max_dpd = 0
+        total_overdue = float(raw_summary.get("totalOverdueBalance", raw_summary.get("total_overdue_balance", 0.0)) or 0.0)
+        total_outstanding = float(raw_summary.get("totalOutstandingBalance", raw_summary.get("total_outstanding_balance", 0.0)) or 0.0)
+
+        for acc in raw_accounts:
+            bal = float(acc.get("currentBalance", acc.get("outstandingBalance", acc.get("outstanding_balance", 0.0))) or 0.0)
+            orig = float(acc.get("originalAmount", acc.get("loanAmount", acc.get("loan_amount", 0.0))) or 0.0)
+            pmt = float(acc.get("installmentAmount", acc.get("monthlyInstallment", acc.get("repayment_amount", 0.0))) or 0.0)
+            dpd = int(acc.get("daysOverdue", acc.get("daysInArrears", acc.get("days_overdue", 0))) or 0)
+            overdue_amt = float(acc.get("overdueAmount", acc.get("arrearsBalance", 0.0)) or 0.0)
+            status_val = str(acc.get("status", acc.get("accountStatus", "Performing")))
+            if bal > 0 and pmt == 0.0:
+                pmt = round(bal / 12.0, 2)
+            if "performing" in status_val.lower() or "active" in status_val.lower() or bal > 0:
+                est_monthly_debt += pmt
+            max_dpd = max(max_dpd, dpd)
+            accounts.append({
+                "institution": acc.get("institution") or acc.get("subscriberName") or "Nigerian Financial Institution",
+                "facility_type": acc.get("accountType") or acc.get("facilityType") or acc.get("facility_type") or "Commercial / Consumer Credit",
+                "loan_amount": round(orig, 2),
+                "effective_date": acc.get("dateOpened") or acc.get("effective_date") or "N/A",
+                "expiry_date": acc.get("maturityDate") or acc.get("expiry_date") or "N/A",
+                "repayment_amount": round(pmt, 2),
+                "outstanding_balance": round(bal, 2),
+                "overdue_balance": round(overdue_amt, 2),
+                "days_overdue": dpd,
+                "status": status_val
+            })
+
+        if total_outstanding == 0.0 and accounts:
+            total_outstanding = round(sum(a["outstanding_balance"] for a in accounts), 2)
+        if total_overdue == 0.0 and accounts:
+            total_overdue = round(sum(a["overdue_balance"] for a in accounts), 2)
+
+        active_count = int(raw_summary.get("totalActiveAccounts", len([a for a in accounts if a["outstanding_balance"] > 0 or "active" in a["status"].lower() or "performing" in a["status"].lower()])))
+        closed_count = int(raw_summary.get("totalClosedAccounts", len([a for a in accounts if a["outstanding_balance"] == 0])))
+        enquiries = cb.get("enquiries") or cb.get("inquiries") or []
+
+        provider_name = str(cb.get("provider") or "CRC Credit Bureau (via Youverify)")
+        if provider_name.lower() == "crc":
+            provider_name = "CRC Credit Bureau (via Youverify)"
+
+        return {
+            "mode": "LIVE_YOUVERIFY_BUREAU",
+            "bureau_provider": provider_name,
+            "report_reference": cb.get("reportReference") or data.get("searchId") or f"YV-CRC-{generate_uuid()[:8].upper()}",
+            "report_date": cb.get("reportDate") or utc_now().isoformat(),
+            "subject": {
+                "name": (data.get("subject") or {}).get("consumerName") or subject_name or "Verified Obligor",
+                "bvn": bvn,
+                "dob": (data.get("subject") or {}).get("dateOfBirth")
+            },
+            "score": score,
+            "score_band": score_details.get("scoreBand") or cls._bureau_score_band(score),
+            "risk_grading": score_details.get("grading") or ("Low Risk" if (score or 0) >= 650 else "Elevated Risk"),
+            "factors": score_details.get("factors") or [],
+            "summary": {
+                "total_active_loans": active_count,
+                "total_closed_loans": closed_count,
+                "total_outstanding_balance": round(total_outstanding, 2),
+                "total_overdue_balance": round(total_overdue, 2),
+                "worst_delinquency_status": raw_summary.get("worstPaymentStatus") or ("Delinquent" if total_overdue > 0 else "00 - Performing"),
+                "max_days_overdue": max_dpd,
+                "estimated_monthly_bureau_debt": round(est_monthly_debt, 2),
+                "inquiries_last_90_days": len(enquiries)
+            },
+            "accounts": accounts,
+            "enquiries": enquiries
+        }
+
+    @classmethod
+    def _build_sandbox_bureau_report(
+        cls,
+        bvn: str,
+        subject_name: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Deterministic CRC-via-Youverify Sandbox Simulator:
+        - BVN starting with '999': Subprime Score 510 + Active Overdue NPL (₦1.85M arrears, 120 DPD)
+        - BVN starting with '888': Fair Score 615 + Heavy External Monthly Debt (₦620k/mo undisclosed)
+        - All other test BVNs: Prime/Good Score 728 + clean servicing history
+        """
+        clean_bvn = (bvn or "").strip()
+        if clean_bvn.startswith("999"):
+            score = 510
+            accounts = [
+                {
+                    "institution": "Access Bank Plc",
+                    "facility_type": "Working Capital Overdraft",
+                    "loan_amount": 5_000_000.0,
+                    "effective_date": "2024-04-12",
+                    "expiry_date": "2025-04-12",
+                    "repayment_amount": 450_000.0,
+                    "outstanding_balance": 2_400_000.0,
+                    "overdue_balance": 1_850_000.0,
+                    "days_overdue": 120,
+                    "status": "Non-Performing / Doubtful (120 DPD)"
+                }
+            ]
+            summary = {
+                "total_active_loans": 1,
+                "total_closed_loans": 1,
+                "total_outstanding_balance": 2_400_000.0,
+                "total_overdue_balance": 1_850_000.0,
+                "worst_delinquency_status": "120+ Days Past Due (Doubtful)",
+                "max_days_overdue": 120,
+                "estimated_monthly_bureau_debt": 450_000.0,
+                "inquiries_last_90_days": 5
+            }
+            factors = ["Active non-performing facility reported on CRC", "High recent credit enquiry velocity (5 enquiries in 90d)"]
+            grading = "High Default Risk"
+        elif clean_bvn.startswith("888"):
+            score = 615
+            accounts = [
+                {
+                    "institution": "Zenith Bank Plc",
+                    "facility_type": "Asset Lease Facility",
+                    "loan_amount": 9_500_000.0,
+                    "effective_date": "2025-02-01",
+                    "expiry_date": "2027-02-01",
+                    "repayment_amount": 620_000.0,
+                    "outstanding_balance": 6_400_000.0,
+                    "overdue_balance": 0.0,
+                    "days_overdue": 0,
+                    "status": "Performing"
+                }
+            ]
+            summary = {
+                "total_active_loans": 1,
+                "total_closed_loans": 2,
+                "total_outstanding_balance": 6_400_000.0,
+                "total_overdue_balance": 0.0,
+                "worst_delinquency_status": "00 - Performing",
+                "max_days_overdue": 0,
+                "estimated_monthly_bureau_debt": 620_000.0,
+                "inquiries_last_90_days": 2
+            }
+            factors = ["Elevated external debt utilization across reporting institutions"]
+            grading = "Moderate Risk"
+        else:
+            score = 728
+            accounts = [
+                {
+                    "institution": "United Bank for Africa (UBA)",
+                    "facility_type": "Commercial Working Capital Line",
+                    "loan_amount": 15_000_000.0,
+                    "effective_date": "2024-06-15",
+                    "expiry_date": "2026-06-15",
+                    "repayment_amount": 185_000.0,
+                    "outstanding_balance": 3_120_000.0,
+                    "overdue_balance": 0.0,
+                    "days_overdue": 0,
+                    "status": "Performing"
+                },
+                {
+                    "institution": "Stanbic IBTC Bank",
+                    "facility_type": "Fleet Asset Finance",
+                    "loan_amount": 12_000_000.0,
+                    "effective_date": "2023-03-01",
+                    "expiry_date": "2025-03-01",
+                    "repayment_amount": 0.0,
+                    "outstanding_balance": 0.0,
+                    "overdue_balance": 0.0,
+                    "days_overdue": 0,
+                    "status": "Closed / Fully Liquidated"
+                }
+            ]
+            summary = {
+                "total_active_loans": 1,
+                "total_closed_loans": 3,
+                "total_outstanding_balance": 3_120_000.0,
+                "total_overdue_balance": 0.0,
+                "worst_delinquency_status": "00 - Performing (Zero Arrears)",
+                "max_days_overdue": 0,
+                "estimated_monthly_bureau_debt": 185_000.0,
+                "inquiries_last_90_days": 1
+            }
+            factors = ["Consistent zero-arrears repayment track record on CRC", "Healthy debt utilization & prior liquidated facilities"]
+            grading = "Prime Low Risk"
+
+        return {
+            "mode": "SANDBOX_YOUVERIFY_CRC",
+            "bureau_provider": "CRC Credit Bureau (via Youverify Sandbox)",
+            "report_reference": f"YV-CRC-SBX-{generate_uuid()[:8].upper()}",
+            "report_date": utc_now().isoformat(),
+            "subject": {
+                "name": subject_name or "Verified Obligor",
+                "bvn": clean_bvn,
+                "dob": None
+            },
+            "score": score,
+            "score_band": cls._bureau_score_band(score),
+            "risk_grading": grading,
+            "factors": factors,
+            "summary": summary,
+            "accounts": accounts,
+            "enquiries": []
+        }
+
+    @classmethod
+    def _fetch_single_subject_bureau(
+        cls,
+        bvn: str,
+        subject_name: Optional[str],
+        case_number: str,
+        sandbox_mode: bool,
+        base_url: str
+    ) -> Tuple[str, Dict[str, Any]]:
+        clean_bvn = (bvn or "").strip()
+        if not clean_bvn or len(clean_bvn) not in (10, 11) or not clean_bvn.isdigit():
+            return "FAILED", {
+                "error": f"Valid 11-digit BVN is required for Credit Bureau lookup (received '{bvn}').",
+                "retryable": False
+            }
+
+        is_test_trigger = clean_bvn.startswith("999") or clean_bvn.startswith("888") or clean_bvn.startswith("000")
+        if clean_bvn.startswith("000"):
+            return "FAILED", {
+                "error": "Simulated Youverify Credit Bureau gateway timeout.",
+                "retryable": True,
+                "mode": "SANDBOX_YOUVERIFY_CRC"
+            }
+
+        if sandbox_mode or not settings.YOUVERIFY_API_KEY or is_test_trigger:
+            return "OK", cls._build_sandbox_bureau_report(clean_bvn, subject_name)
+
+        headers = {
+            "token": settings.YOUVERIFY_API_KEY,
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "id": clean_bvn,
+            "isSubjectConsent": True,
+            "metadata": {
+                "caseNumber": case_number,
+                "purpose": "CREDIT_UNDERWRITING",
+                "preferredBureau": "crc"
+            }
+        }
+        try:
+            with httpx.Client(timeout=25.0) as client:
+                res = client.post(
+                    f"{base_url.rstrip('/')}/v2/api/identity/credit-report/ng/individual",
+                    headers=headers,
+                    json=payload
+                )
+                body = res.json() if res.content else {}
+                if res.status_code in (200, 201) and body.get("success", True):
+                    return "OK", cls._normalize_youverify_bureau_response(body, clean_bvn, subject_name)
+                if res.status_code == 404:
+                    return "NO_HIT", {
+                        "mode": "LIVE_YOUVERIFY_BUREAU",
+                        "bureau_provider": "CRC Credit Bureau (via Youverify)",
+                        "report_reference": f"YV-CRC-NOHIT-{generate_uuid()[:8].upper()}",
+                        "report_date": utc_now().isoformat(),
+                        "subject": {"name": subject_name, "bvn": clean_bvn},
+                        "score": None,
+                        "score_band": "NO_HIT",
+                        "risk_grading": "Thin File / No Bureau History",
+                        "factors": ["No active or historical credit tradelines found in bureau registry."],
+                        "summary": {
+                            "total_active_loans": 0,
+                            "total_closed_loans": 0,
+                            "total_outstanding_balance": 0.0,
+                            "total_overdue_balance": 0.0,
+                            "worst_delinquency_status": "No Hit",
+                            "max_days_overdue": 0,
+                            "estimated_monthly_bureau_debt": 0.0,
+                            "inquiries_last_90_days": 0
+                        },
+                        "accounts": [],
+                        "enquiries": []
+                    }
+                if res.status_code in (401, 403):
+                    return "PERMISSION_REQUIRED", {
+                        "error": body.get("message") or "Credit Report endpoint not yet enabled on Youverify merchant account.",
+                        "action_required": "Enable 'Credit Report / Credit Bureau' API permission on Youverify Dashboard & verify wallet balance, or enable Sandbox Mode in Platform Admin.",
+                        "status_code": res.status_code,
+                        "retryable": True
+                    }
+                return "FAILED", {
+                    "error": body.get("message") or f"Youverify Credit Bureau returned HTTP {res.status_code}.",
+                    "status_code": res.status_code,
+                    "retryable": res.status_code >= 500
+                }
+        except httpx.RequestError as exc:
+            return "FAILED", {
+                "error": f"Youverify Credit Bureau connection failure: {str(exc)}",
+                "retryable": True
+            }
+
+    @classmethod
+    def pull_credit_report(
+        cls,
+        db: Session,
+        credit_case: CreditCase,
+        bvn: Optional[str] = None,
+        guarantor_bvn: Optional[str] = None,
+        consent_confirmed: bool = True,
+        force_refresh: bool = False,
+        actor: str = "Credit Analyst"
+    ) -> Tuple[bool, Dict[str, Any]]:
+        """
+        Pulls Option B Credit Bureau / CRC report via Youverify v2 (/v2/api/identity/credit-report/ng/individual)
+        for the applicant (and guarantor if supplied/configured), caches result in KYCCheck to prevent
+        duplicate billing, and logs NDPA consent + audit event.
+        """
+        if not consent_confirmed:
+            return False, {
+                "status": "CONSENT_REQUIRED",
+                "error": "Explicit borrower NDPA/FCRA credit bureau enquiry consent is required before pulling CRC Credit Bureau records."
+            }
+
+        # Reuse cached bureau pull unless force_refresh=True
+        if not force_refresh:
+            cached = (
+                db.query(KYCCheck)
+                .filter(
+                    KYCCheck.case_id == credit_case.id,
+                    KYCCheck.provider == "YOUVERIFY_CRC_BUREAU",
+                    KYCCheck.status.in_(["PASSED", "WARNING", "FLAGGED"])
+                )
+                .order_by(KYCCheck.created_at.desc())
+                .first()
+            )
+            if cached:
+                return (cached.status in ["PASSED", "WARNING"]), {
+                    "cached": True,
+                    "provider": cached.provider,
+                    "provider_ref": cached.provider_ref,
+                    "status": cached.status,
+                    "bureau_report": cached.result_summary
+                }
+
+        from ..core.config_manager import ConfigManager
+        bureau_cfg = ConfigManager.get_config_value(db, "CREDIT_BUREAU_CONFIG") or {}
+        sandbox_mode = bool(bureau_cfg.get("sandbox_mode", settings.MOCK_YOUVERIFY_SANDBOX))
+        min_score = int(bureau_cfg.get("min_acceptable_score", 600) or 600)
+        max_dpd_allowed = int(bureau_cfg.get("max_delinquency_days_allowed", 30) or 30)
+        auto_pull_guarantor = bool(bureau_cfg.get("auto_pull_guarantor", True))
+
+        app = credit_case.application
+        cust = app.customer if app else None
+        raw = (app.raw_payload or {}) if app else {}
+
+        target_bvn = (bvn or (cust.bvn if cust else None) or raw.get("bvn") or "").strip()
+        target_name = cust.name if cust else raw.get("applicant_name") or "Verified Obligor"
+        target_guarantor_bvn = (guarantor_bvn or raw.get("guarantor_bvn") or "").strip()
+        target_guarantor_name = raw.get("guarantor_name") or "Facility Guarantor"
+
+        outcome, report = cls._fetch_single_subject_bureau(
+            bvn=target_bvn,
+            subject_name=target_name,
+            case_number=credit_case.case_number,
+            sandbox_mode=sandbox_mode,
+            base_url=settings.YOUVERIFY_BASE_URL
+        )
+
+        provider_ref = f"YV-CRC-{utc_now().strftime('%Y%m%d%H%M%S')}-{generate_uuid()[:6].upper()}"
+
+        if outcome not in ("OK", "NO_HIT"):
+            check = KYCCheck(
+                case_id=credit_case.id,
+                provider="YOUVERIFY_CRC_BUREAU",
+                provider_ref=provider_ref,
+                status="FAILED",
+                result_summary=report,
+                reviewed_by=actor,
+                reviewed_at=utc_now()
+            )
+            db.add(check)
+            db.add(AuditEvent(
+                actor=actor,
+                role="ANALYST",
+                event="CREDIT_BUREAU_PULL_FAILED",
+                entity="KYCCheck",
+                entity_id=provider_ref,
+                correlation_id=credit_case.case_number,
+                reason=report.get("error", outcome),
+                details=report
+            ))
+            db.commit()
+            return False, {
+                "provider": "YOUVERIFY_CRC_BUREAU",
+                "provider_ref": provider_ref,
+                "status": outcome,
+                "error": report.get("error"),
+                "bureau_report": report
+            }
+
+        # Pull guarantor bureau report if enabled and different BVN supplied
+        guarantor_summary: Dict[str, Any] = {"checked": False}
+        if auto_pull_guarantor and target_guarantor_bvn and target_guarantor_bvn != target_bvn:
+            guarantor_sandbox = sandbox_mode or report.get("mode") == "SANDBOX_YOUVERIFY_CRC"
+            g_outcome, g_report = cls._fetch_single_subject_bureau(
+                bvn=target_guarantor_bvn,
+                subject_name=target_guarantor_name,
+                case_number=credit_case.case_number,
+                sandbox_mode=guarantor_sandbox,
+                base_url=settings.YOUVERIFY_BASE_URL
+            )
+            if g_outcome in ("OK", "NO_HIT"):
+                guarantor_summary = {
+                    "checked": True,
+                    "name": target_guarantor_name,
+                    "bvn": target_guarantor_bvn,
+                    "score": g_report.get("score"),
+                    "score_band": g_report.get("score_band"),
+                    "active_loans": (g_report.get("summary") or {}).get("total_active_loans", 0),
+                    "overdue_balance": (g_report.get("summary") or {}).get("total_overdue_balance", 0.0),
+                    "status": "NO_HIT" if g_outcome == "NO_HIT" else (
+                        "FLAGGED" if ((g_report.get("summary") or {}).get("total_overdue_balance", 0.0) > 0 or (g_report.get("score") or 999) < min_score) else "PASSED"
+                    )
+                }
+
+        report["guarantor_bureau"] = guarantor_summary
+        report["consent_recorded"] = {
+            "granted": True,
+            "actor": actor,
+            "timestamp": utc_now().isoformat()
+        }
+        report["policy_thresholds"] = {
+            "min_acceptable_score": min_score,
+            "max_delinquency_days_allowed": max_dpd_allowed
+        }
+
+        score = report.get("score")
+        b_summary = report.get("summary") or {}
+        overdue = float(b_summary.get("total_overdue_balance", 0.0) or 0.0)
+        max_dpd = int(b_summary.get("max_days_overdue", 0) or 0)
+
+        if overdue > 0 or max_dpd > max_dpd_allowed or (score is not None and int(score) < min_score):
+            kyc_status = "FLAGGED"
+        elif outcome == "NO_HIT" or guarantor_summary.get("status") == "FLAGGED":
+            kyc_status = "WARNING"
+        else:
+            kyc_status = "PASSED"
+
+        check = KYCCheck(
+            case_id=credit_case.id,
+            provider="YOUVERIFY_CRC_BUREAU",
+            provider_ref=provider_ref,
+            status=kyc_status,
+            result_summary=report,
+            reviewed_by=actor,
+            reviewed_at=utc_now()
+        )
+        db.add(check)
+        db.add(AuditEvent(
+            actor=actor,
+            role="ANALYST",
+            event="CREDIT_BUREAU_PULLED",
+            entity="KYCCheck",
+            entity_id=provider_ref,
+            correlation_id=credit_case.case_number,
+            reason=f"CRC Bureau Pull via Youverify: Score={score}, Overdue=₦{overdue:,.2f}, Status={kyc_status}",
+            details={
+                "bvn": target_bvn,
+                "score": score,
+                "score_band": report.get("score_band"),
+                "overdue_balance": overdue,
+                "guarantor_checked": guarantor_summary.get("checked", False)
+            }
+        ))
+        db.commit()
+        db.refresh(check)
+
+        return (kyc_status in ["PASSED", "WARNING"]), {
+            "cached": False,
+            "provider": check.provider,
+            "provider_ref": provider_ref,
+            "status": kyc_status,
+            "bureau_report": report
+        }

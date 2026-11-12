@@ -9,6 +9,7 @@ import {
   fetchCaseWorkspace, generateAICam, updateCam, submitApprovalDecision,
   generateOffer, takeOfferAction, updateCondition, confirmNavDisbursement,
   executeOneClickLoandiscDisbursement, syncLoanDisc, raiseException, triggerYouverifyKyc,
+  pullCreditBureauReport,
   fetchCaseFees, updateCaseFees, calculateCaseFeesPreview,
   fetchSingleLoanPerformance, recordLoanRepayment, simulateLoanPerformanceStatus,
   fetchCaseOfferDocuments, fetchBccStatus
@@ -97,8 +98,11 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
   const [raiseComments, setRaiseComments] = useState('');
   const [raiseSla, setRaiseSla] = useState(24);
 
-  // Youverify Verification State
+  // Youverify Verification & Credit Bureau State
   const [kycLoading, setKycLoading] = useState(false);
+  const [bureauLoading, setBureauLoading] = useState(false);
+  const [bureauConsent, setBureauConsent] = useState(true);
+  const [guarantorBvnOverride, setGuarantorBvnOverride] = useState('');
 
   // Post-Approval Legal Documents State
   const [offerDocuments, setOfferDocuments] = useState<any[]>([]);
@@ -195,6 +199,44 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
       });
     } finally {
       setKycLoading(false);
+    }
+  };
+
+  const handlePullCreditBureau = async (forceRefresh: boolean = false) => {
+    if (!workspace) return;
+    if (!bureauConsent) {
+      setMessageBanner({ type: 'error', text: 'NDPA Borrower Consent confirmation is required before querying CRC Credit Bureau.' });
+      return;
+    }
+    setBureauLoading(true);
+    try {
+      const res = await pullCreditBureauReport(workspace.case.id, {
+        bvn: workspace.customer?.bvn || undefined,
+        guarantor_bvn: guarantorBvnOverride.trim() || undefined,
+        consent_confirmed: bureauConsent,
+        force_refresh: forceRefresh,
+        actor: `${currentPersona} Officer`
+      });
+      if (res.status === 'FAILED' || res.status === 'PERMISSION_REQUIRED') {
+        setMessageBanner({
+          type: 'error',
+          text: res.bureau_report?.action_required || res.error || 'Credit Bureau lookup failed.'
+        });
+      } else {
+        const bScore = res.bureau_report?.score;
+        setMessageBanner({
+          type: res.status === 'FLAGGED' ? 'error' : 'success',
+          text: `CRC Credit Bureau Report (${res.status}): Score ${bScore ?? 'NO-HIT'}/850 • Ref: ${res.provider_ref}${res.cached ? ' (Cached)' : ''}`
+        });
+      }
+      await loadWorkspace();
+    } catch (err: any) {
+      setMessageBanner({
+        type: 'error',
+        text: err?.detail || err?.message || 'Credit Bureau pull failed.'
+      });
+    } finally {
+      setBureauLoading(false);
     }
   };
 
@@ -302,7 +344,7 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
     );
   }
 
-  const { case: caseData, customer, application, documents, kyc_checks, financial_assessment, cam_versions, exceptions, approvals, offers, conditions, disbursements } = workspace;
+  const { case: caseData, customer, application, documents, kyc_checks, latest_credit_bureau, financial_assessment, cam_versions, exceptions, approvals, offers, conditions, disbursements } = workspace;
   const latestCam = cam_versions && cam_versions.length > 0 ? cam_versions[selectedCamIndex] : null;
   const activeOffer = offers && offers.length > 0 ? offers[0] : null;
   const ratios = financial_assessment ? financial_assessment.calculated_ratios : {};
@@ -914,6 +956,174 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
                 </div>
               )}
             </div>
+
+            {/* Option B: CRC Credit Bureau Pull via Youverify v2 */}
+            <div style={{
+              marginTop: '1.25rem',
+              paddingTop: '1rem',
+              borderTop: '1px solid var(--border-subtle)'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.6rem',
+                marginBottom: '0.75rem'
+              }}>
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-highlight)', margin: 0 }}>
+                    CRC Credit Bureau Report &amp; Score (via Youverify)
+                  </h4>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    FICO 300–850 Score, Active External Facilities, Overdue NPL Check &amp; Guarantor Surety Pull
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => handlePullCreditBureau(false)}
+                    disabled={bureauLoading}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', padding: '0.35rem 0.8rem' }}
+                  >
+                    <Award size={14} />
+                    <span>{bureauLoading ? 'Pulling CRC Report...' : (latest_credit_bureau ? 'View / Load Bureau' : 'Pull CRC Bureau Report')}</span>
+                  </button>
+                  {latest_credit_bureau && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => handlePullCreditBureau(true)}
+                      disabled={bureauLoading}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', padding: '0.35rem 0.7rem' }}
+                      title="Force live re-query from Youverify Credit Report API"
+                    >
+                      <RefreshCw size={12} /> Refresh
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem', fontSize: '0.75rem' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                  <input type="checkbox" checked={bureauConsent} onChange={(e) => setBureauConsent(e.target.checked)} />
+                  NDPA Credit Enquiry Consent Confirmed
+                </label>
+                <input
+                  type="text"
+                  value={guarantorBvnOverride}
+                  onChange={(e) => setGuarantorBvnOverride(e.target.value)}
+                  placeholder="Optional Guarantor BVN (11 digits)"
+                  className="form-input"
+                  style={{ maxWidth: '230px', fontSize: '0.75rem', padding: '4px 8px' }}
+                />
+              </div>
+
+              {!latest_credit_bureau ? (
+                <div style={{
+                  padding: '0.9rem',
+                  background: 'var(--bg-dark)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px dashed var(--border-subtle)',
+                  fontSize: '0.78rem',
+                  color: 'var(--text-muted)'
+                }}>
+                  No CRC Credit Bureau report pulled yet for BVN <strong>{customer?.bvn || 'N/A'}</strong>. Click <strong>Pull CRC Bureau Report</strong> to fetch external credit score &amp; active debt obligations.
+                </div>
+              ) : latest_credit_bureau.result_summary?.action_required || latest_credit_bureau.status === 'FAILED' ? (
+                <div style={{
+                  padding: '0.9rem',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  fontSize: '0.78rem',
+                  color: '#dc2626'
+                }}>
+                  <strong>Notice ({latest_credit_bureau.provider_ref}):</strong> {latest_credit_bureau.result_summary?.error}
+                  {latest_credit_bureau.result_summary?.action_required && (
+                    <div style={{ marginTop: '4px', color: 'var(--text-secondary)' }}>
+                      {latest_credit_bureau.result_summary.action_required}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{
+                  padding: '0.9rem',
+                  background: 'var(--bg-surface)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-subtle)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.84rem', color: 'var(--text-highlight)' }}>
+                        {latest_credit_bureau.result_summary?.bureau_provider || 'CRC Credit Bureau (via Youverify)'}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                        Ref: {latest_credit_bureau.result_summary?.report_reference || latest_credit_bureau.provider_ref}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{
+                        fontWeight: 800,
+                        fontSize: '0.95rem',
+                        padding: '3px 10px',
+                        borderRadius: '6px',
+                        background: (latest_credit_bureau.result_summary?.score || 0) >= 650 ? 'rgba(16,185,129,0.14)' : (latest_credit_bureau.result_summary?.score || 0) >= 600 ? 'rgba(245,158,11,0.14)' : 'rgba(220,38,38,0.14)',
+                        color: (latest_credit_bureau.result_summary?.score || 0) >= 650 ? '#059669' : (latest_credit_bureau.result_summary?.score || 0) >= 600 ? '#d97706' : '#dc2626'
+                      }}>
+                        Score: {latest_credit_bureau.result_summary?.score ?? 'NO-HIT'} / 850 ({latest_credit_bureau.result_summary?.score_band})
+                      </span>
+                      <span className={`status-pill ${latest_credit_bureau.status === 'PASSED' ? 'pill-green' : latest_credit_bureau.status === 'WARNING' ? 'pill-amber' : 'pill-red'}`}>
+                        {latest_credit_bureau.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.6rem', fontSize: '0.75rem', marginBottom: '0.65rem' }}>
+                    <div><strong>Active Loans:</strong> {latest_credit_bureau.result_summary?.summary?.total_active_loans ?? 0}</div>
+                    <div><strong>External Debt:</strong> ₦{(latest_credit_bureau.result_summary?.summary?.total_outstanding_balance ?? 0).toLocaleString()}</div>
+                    <div style={{ color: (latest_credit_bureau.result_summary?.summary?.total_overdue_balance ?? 0) > 0 ? '#dc2626' : '#059669', fontWeight: 700 }}>
+                      Overdue Arrears: ₦{(latest_credit_bureau.result_summary?.summary?.total_overdue_balance ?? 0).toLocaleString()}
+                    </div>
+                    <div><strong>Est. Bureau PMT:</strong> ₦{(latest_credit_bureau.result_summary?.summary?.estimated_monthly_bureau_debt ?? 0).toLocaleString()}/mo</div>
+                  </div>
+
+                  {latest_credit_bureau.result_summary?.guarantor_bureau?.checked && (
+                    <div style={{ fontSize: '0.74rem', padding: '5px 8px', background: 'rgba(0,150,204,0.08)', borderRadius: '4px', marginBottom: '0.65rem' }}>
+                      <strong>Guarantor Bureau ({latest_credit_bureau.result_summary.guarantor_bureau.name}):</strong> Score {latest_credit_bureau.result_summary.guarantor_bureau.score ?? 'NO-HIT'}/850 ({latest_credit_bureau.result_summary.guarantor_bureau.score_band}) • Overdue: ₦{(latest_credit_bureau.result_summary.guarantor_bureau.overdue_balance ?? 0).toLocaleString()}
+                    </div>
+                  )}
+
+                  {(latest_credit_bureau.result_summary?.accounts || []).length > 0 && (
+                    <div className="table-wrapper" tabIndex={0} role="region" aria-label="CRC Credit Bureau Tradelines">
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.74rem', textAlign: 'left' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
+                            <th style={{ padding: '6px 8px' }}>Institution</th>
+                            <th style={{ padding: '6px 8px' }}>Facility</th>
+                            <th style={{ padding: '6px 8px' }}>Outstanding</th>
+                            <th style={{ padding: '6px 8px' }}>Overdue</th>
+                            <th style={{ padding: '6px 8px' }}>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {latest_credit_bureau.result_summary.accounts.map((acc: any, idx: number) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                              <td style={{ padding: '6px 8px', fontWeight: 600 }}>{acc.institution}</td>
+                              <td style={{ padding: '6px 8px' }}>{acc.facility_type}</td>
+                              <td style={{ padding: '6px 8px' }}>₦{(acc.outstanding_balance ?? 0).toLocaleString()}</td>
+                              <td style={{ padding: '6px 8px', color: (acc.overdue_balance ?? 0) > 0 ? '#dc2626' : 'var(--text-muted)', fontWeight: 600 }}>
+                                ₦{(acc.overdue_balance ?? 0).toLocaleString()}
+                              </td>
+                              <td style={{ padding: '6px 8px' }}>{acc.status}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
@@ -991,6 +1201,21 @@ export const CaseWorkspace: React.FC<CaseWorkspaceProps> = ({ caseId, currentPer
               <div className="metric-label">Collateral Coverage Ratio</div>
               <div className="metric-value">{ratios.collateral_coverage_percentage || '0'}%</div>
               <div className="metric-footer">Policy Min: 120% for &gt;₦5m</div>
+            </div>
+            <div className="metric-card">
+              <div className="metric-label">CRC Bureau Score (300–850)</div>
+              <div className="metric-value" style={{
+                color: ratios.bureau_score === undefined || ratios.bureau_score === null
+                  ? 'var(--text-muted)'
+                  : ratios.bureau_score >= 600 ? 'var(--color-success)' : 'var(--color-danger)'
+              }}>
+                {ratios.bureau_score !== undefined && ratios.bureau_score !== null
+                  ? `${ratios.bureau_score}`
+                  : (latest_credit_bureau?.result_summary?.score ?? 'Not Pulled')}
+              </div>
+              <div className="metric-footer">
+                {ratios.bureau_score_band || latest_credit_bureau?.result_summary?.score_band || 'Run CRC Bureau Check in Overview'}
+              </div>
             </div>
           </div>
 

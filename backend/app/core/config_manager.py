@@ -168,11 +168,28 @@ DEFAULT_CONFIGS: Dict[str, Dict[str, Any]] = {
             "youverify_webhook_secret": getattr(settings, "YOUVERIFY_WEBHOOK_SECRET", "tKQglemsJkFw4Ci6HoVMQstDsm13ZwfuYXNG"),
             "require_hmac_in_dev": False
         }
+    },
+    "CREDIT_BUREAU_CONFIG": {
+        "category": "BUREAU",
+        "description": "Credit Bureau Integration (Option B: Youverify Credit Report / CRC LiveConnect) & Cut-Off Policy",
+        "is_secret": True,
+        "value": {
+            "provider": "YOUVERIFY_BUREAU",  # YOUVERIFY_BUREAU | DIRECT_CRC_LIVECONNECT
+            "sandbox_mode": getattr(settings, "MOCK_YOUVERIFY_SANDBOX", False),
+            "preferred_bureau": "crc",
+            "min_acceptable_score": 600,  # CRC FICO 300-850 range
+            "max_delinquency_days_allowed": 30,
+            "auto_pull_guarantor": True,
+            "direct_crc_base_url": "",
+            "direct_crc_subscriber_code": "",
+            "direct_crc_client_id": "",
+            "direct_crc_secret_key": ""
+        }
     }
 }
 
 SECRET_MASK = "••••••••••••"
-SECRET_KEYS = {"client_secret", "password", "api_key", "besto_webhook_secret", "youverify_webhook_secret"}
+SECRET_KEYS = {"client_secret", "password", "api_key", "besto_webhook_secret", "youverify_webhook_secret", "direct_crc_secret_key"}
 
 class ConfigManager:
     """

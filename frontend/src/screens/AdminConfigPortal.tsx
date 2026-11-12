@@ -15,6 +15,7 @@ import {
   Users,
   Key,
   Mail,
+  Shield,
   ShieldCheck,
   Sliders,
   Send,
@@ -181,6 +182,18 @@ export const AdminConfigPortal: React.FC = () => {
     youverify_webhook_secret: 'tKQglemsJkFw4Ci6HoVMQstDsm13ZwfuYXNG',
     require_hmac_in_dev: false
   });
+  const [bureauForm, setBureauForm] = useState<any>({
+    provider: 'YOUVERIFY_BUREAU',
+    sandbox_mode: false,
+    preferred_bureau: 'crc',
+    min_acceptable_score: 600,
+    max_delinquency_days_allowed: 30,
+    auto_pull_guarantor: true,
+    direct_crc_base_url: '',
+    direct_crc_subscriber_code: '',
+    direct_crc_client_id: '',
+    direct_crc_secret_key: ''
+  });
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
@@ -209,6 +222,17 @@ export const AdminConfigPortal: React.FC = () => {
       if (configData.MFA_CONFIG?.value) setMfaForm({ ...configData.MFA_CONFIG.value });
       if (configData.EMAIL_CLIENT?.value) setEmailForm({ ...configData.EMAIL_CLIENT.value });
       if (configData.SMS_GATEWAY?.value) setSmsForm({ ...configData.SMS_GATEWAY.value });
+      if (configData.CREDIT_BUREAU_CONFIG?.value) {
+        setBureauForm({
+          provider: 'YOUVERIFY_BUREAU',
+          sandbox_mode: false,
+          preferred_bureau: 'crc',
+          min_acceptable_score: 600,
+          max_delinquency_days_allowed: 30,
+          auto_pull_guarantor: true,
+          ...configData.CREDIT_BUREAU_CONFIG.value
+        });
+      }
       if (configData.WEBHOOK_INTEGRATIONS?.value) {
         setWebhookForm({
           besto_webhook_secret: 'OPTICOM_DEFAULT_WEBHOOK_SECRET_2026',
@@ -1625,6 +1649,149 @@ export const AdminConfigPortal: React.FC = () => {
                 disabled={savingKey === 'WEBHOOK_INTEGRATIONS'}
               >
                 {savingKey === 'WEBHOOK_INTEGRATIONS' ? 'Saving Webhooks...' : 'Save Webhook Security Parameters'}
+              </button>
+            </div>
+          </div>
+
+          {/* SECTION 3: CRC CREDIT BUREAU GATEWAY (OPTION B: YOUVERIFY / LIVECONNECT) */}
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1.25rem' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '8px',
+                background: 'rgba(16, 185, 129, 0.12)',
+                color: '#059669',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Shield size={22} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-highlight)' }}>
+                  CRC Credit Bureau Gateway &amp; Score Policy (Option B: Youverify)
+                </h2>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
+                  Configure CRC Credit Bureau checks via Youverify v2 (`/v2/api/identity/credit-report/ng/individual`), minimum score cut-offs, and guarantor auto-checks.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600 }}>Integration Route</label>
+                <select
+                  className="form-input"
+                  value={bureauForm.provider || 'YOUVERIFY_BUREAU'}
+                  onChange={(e) => setBureauForm({ ...bureauForm, provider: e.target.value })}
+                >
+                  <option value="YOUVERIFY_BUREAU">Option B: Youverify Credit Report (CRC / FirstCentral)</option>
+                  <option value="DIRECT_CRC_LIVECONNECT">Option A: Direct CRC LiveConnect (Future Corporate + Reporting)</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600 }}>Execution Mode</label>
+                <select
+                  className="form-input"
+                  value={bureauForm.sandbox_mode ? 'SANDBOX' : 'LIVE'}
+                  onChange={(e) => setBureauForm({ ...bureauForm, sandbox_mode: e.target.value === 'SANDBOX' })}
+                >
+                  <option value="LIVE">Live Youverify API (api.youverify.co)</option>
+                  <option value="SANDBOX">Deterministic UAT Sandbox Simulator</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600 }}>Minimum Acceptable Bureau Score (300–850)</label>
+                <input
+                  type="number"
+                  min={300}
+                  max={850}
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}
+                  value={bureauForm.min_acceptable_score ?? 600}
+                  onChange={(e) => setBureauForm({ ...bureauForm, min_acceptable_score: parseInt(e.target.value || '600', 10) })}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Scores below this cut-off trigger LOW_BUREAU_SCORE exception</span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontWeight: 600 }}>Max Allowed Delinquency Days</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={365}
+                  className="form-input"
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                  value={bureauForm.max_delinquency_days_allowed ?? 30}
+                  onChange={(e) => setBureauForm({ ...bureauForm, max_delinquency_days_allowed: parseInt(e.target.value || '30', 10) })}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Flags active arrears / NPL past threshold</span>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', fontWeight: 600, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={bureauForm.auto_pull_guarantor !== false}
+                  onChange={(e) => setBureauForm({ ...bureauForm, auto_pull_guarantor: e.target.checked })}
+                />
+                Automatically pull Guarantor BVN credit report alongside Applicant when Guarantor BVN is provided
+              </label>
+            </div>
+
+            {bureauForm.provider === 'DIRECT_CRC_LIVECONNECT' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', padding: '1rem', background: 'var(--bg-dark)', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginBottom: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 600 }}>Direct CRC Base URL</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="https://api.crccreditbureau.com/..."
+                    value={bureauForm.direct_crc_base_url || ''}
+                    onChange={(e) => setBureauForm({ ...bureauForm, direct_crc_base_url: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 600 }}>Subscriber / Institution Code</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={bureauForm.direct_crc_subscriber_code || ''}
+                    onChange={(e) => setBureauForm({ ...bureauForm, direct_crc_subscriber_code: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 600 }}>CRC Client ID</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={bureauForm.direct_crc_client_id || ''}
+                    onChange={(e) => setBureauForm({ ...bureauForm, direct_crc_client_id: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 600 }}>CRC Secret Key</label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    value={bureauForm.direct_crc_secret_key || ''}
+                    onChange={(e) => setBureauForm({ ...bureauForm, direct_crc_secret_key: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)' }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => handleSaveConfig('CREDIT_BUREAU_CONFIG', bureauForm)}
+                disabled={savingKey === 'CREDIT_BUREAU_CONFIG'}
+              >
+                {savingKey === 'CREDIT_BUREAU_CONFIG' ? 'Saving Bureau Policy...' : 'Save Credit Bureau Settings'}
               </button>
             </div>
           </div>

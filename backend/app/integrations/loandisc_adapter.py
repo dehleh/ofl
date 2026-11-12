@@ -11,11 +11,12 @@ from sqlalchemy.orm import Session
 import httpx
 
 from ..models import (
-    CreditCase, Disbursement, IntegrationEvent, CaseState, AuditEvent
+    CreditCase, Disbursement, IntegrationEvent, CaseState, AuditEvent, LoanPerformance
 )
 from ..database import utc_now, generate_uuid
 from ..core.state_machine import TransitionService
 from ..core.config_manager import ConfigManager
+from ..core.loan_performance_engine import LoanPerformanceEngine
 from ..config import settings
 from .notification_service import NotificationService
 
@@ -215,6 +216,11 @@ class LoanDiscAdapter:
                 "amount": amount
             }
         )
+
+        # 6b. Initialize Post-Disbursement LoanPerformance telemetry & repayment schedule
+        existing_perf = db.query(LoanPerformance).filter(LoanPerformance.case_id == credit_case.id).first()
+        if not existing_perf:
+            LoanPerformanceEngine.initialize_loan_performance(credit_case, db)
 
         # 7. Notify Borrower of Disbursement & Loandisc schedule
         NotificationService.notify_case_disbursed(

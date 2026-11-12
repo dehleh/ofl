@@ -163,18 +163,58 @@ from fastapi import HTTPException
 class RecordRepaymentPayload(BaseModel):
     amount: float
     payment_date: Optional[str] = None
+    payment_method: str = "DIRECT_DEBIT"
+    reference: Optional[str] = None
+    note: Optional[str] = None
+    recorded_by: str = "Treasury / Credit Operations"
 
 class SimulateStatusPayload(BaseModel):
     scenario: str # CURRENT, GRACE_PERIOD, OVERDUE_PENALTY, CRITICAL
+
+class WaivePenaltyPayload(BaseModel):
+    reason: str
+    actor: str = "Head of Risk Management"
+
+class SendReminderPayload(BaseModel):
+    include_guarantor: bool = False
+    custom_note: Optional[str] = None
+    actor: str = "Credit Monitoring Desk"
+
+class MonitoringNotePayload(BaseModel):
+    note_type: str = "CALL_LOG"  # CALL_LOG, FIELD_VISIT, PROMISE_TO_PAY, ESCALATION, RESTRUCTURE_REVIEW
+    note: str
+    promise_to_pay_date: Optional[str] = None
+    actor: str = "Credit Monitoring Officer"
+    role: str = "ANALYST"
+
+
+def _resolve_loan_performance_or_404(case_id: str, db: Session) -> LoanPerformance:
+    record = db.query(LoanPerformance).filter(
+        (LoanPerformance.case_id == case_id) |
+        (LoanPerformance.facility_number == case_id)
+    ).first()
+    if not record:
+        case = db.query(CreditCase).filter(
+            (CreditCase.id == case_id) | (CreditCase.case_number == case_id)
+        ).first()
+        if case and case.state in ["Disbursed/Monitoring", "Ready for Disbursement"]:
+            record = LoanPerformanceEngine.initialize_loan_performance(case, db)
+            db.commit()
+            db.refresh(record)
+        else:
+            raise HTTPException(status_code=404, detail="Loan performance record not found.")
+    return record
 
 @router.get("/loan-performance")
 def get_loan_portfolio_performance(db: Session = Depends(get_db)):
     """
     Returns portfolio-wide loan servicing telemetry:
+    - Automatically ensures any Disbursed/Monitoring cases have active LoanPerformance records
     - How each funded obligor is performing
     - Total serviced vs remaining exposure
     - Delinquency breakdown (Current, 1-7 days Grace, >7 days 5% Penalty)
     """
+    LoanPerformanceEngine.ensure_disbursed_cases_initialized(db)
     records = db.query(LoanPerformance).all()
 
     # Re-evaluate all performance statuses
@@ -197,11 +237,16 @@ def get_loan_portfolio_performance(db: Session = Depends(get_db)):
 
     accounts = []
     for r in records:
+        score_meta = LoanPerformanceEngine._compute_individual_score(r, list(r.repayment_history or []))
+        app_raw = (r.credit_case.application.raw_payload or {}) if (r.credit_case and r.credit_case.application) else {}
         accounts.append({
             "id": r.id,
             "case_id": r.case_id,
             "facility_number": r.facility_number,
             "borrower_name": r.borrower_name,
+            "facility_classification": app_raw.get("facility_classification") or "Working Capital",
+            "guarantor_name": app_raw.get("guarantor_name") or "Not Specified",
+            "guarantor_phone": app_raw.get("guarantor_phone") or "N/A",
             "disbursed_principal": r.disbursed_principal,
             "interest_rate_apr": r.interest_rate_apr,
             "tenor_months": r.tenor_months,
@@ -220,6 +265,9 @@ def get_loan_portfolio_performance(db: Session = Depends(get_db)):
             "penalty_rate_pct": r.penalty_rate_pct,
             "penalty_accrued": r.penalty_accrued,
             "performance_status": r.performance_status,
+            "performance_score": score_meta["performance_score"],
+            "health_grade": score_meta["health_grade"],
+            "principal_completion_pct": score_meta["principal_completion_pct"],
             "disbursed_at": r.disbursed_at.isoformat() if r.disbursed_at else None,
             "last_payment_date": r.last_payment_date.isoformat() if r.last_payment_date else None,
             "updated_at": r.updated_at.isoformat() if r.updated_at else None
@@ -260,56 +308,13 @@ def get_loan_portfolio_performance(db: Session = Depends(get_db)):
 @router.get("/loan-performance/{case_id}")
 def get_single_loan_performance(case_id: str, db: Session = Depends(get_db)):
     """
-    Returns full servicing dossier, amortization status, and payment schedule for a specific loan.
+    Returns full individual servicing dossier, performance score, statement of account ledger,
+    amortization schedule, guarantor/collateral details, and monitoring logs.
     """
-    record = db.query(LoanPerformance).filter(
-        (LoanPerformance.case_id == case_id) | 
-        (LoanPerformance.facility_number == case_id)
-    ).first()
-
-    if not record:
-        # Check if case exists and is in DISBURSED state, initialize if needed
-        case = db.query(CreditCase).filter(
-            (CreditCase.id == case_id) | (CreditCase.case_number == case_id)
-        ).first()
-        if case and case.state in ["Disbursed/Monitoring", "Ready for Disbursement"]:
-            record = LoanPerformanceEngine.initialize_loan_performance(case, db)
-            db.commit()
-            db.refresh(record)
-        else:
-            raise HTTPException(status_code=404, detail="Loan performance record not found.")
-
-    LoanPerformanceEngine.evaluate_performance(record)
+    record = _resolve_loan_performance_or_404(case_id, db)
+    dossier = LoanPerformanceEngine.build_individual_loan_dossier(record, db)
     db.commit()
-
-    return {
-        "id": record.id,
-        "case_id": record.case_id,
-        "facility_number": record.facility_number,
-        "borrower_name": record.borrower_name,
-        "disbursed_principal": record.disbursed_principal,
-        "interest_rate_apr": record.interest_rate_apr,
-        "tenor_months": record.tenor_months,
-        "monthly_installment": record.monthly_installment,
-        "total_installments_count": record.total_installments_count,
-        "installments_serviced": record.installments_serviced,
-        "installments_remaining": record.installments_remaining,
-        "principal_serviced": record.principal_serviced,
-        "interest_serviced": record.interest_serviced,
-        "total_amount_serviced": record.total_amount_serviced,
-        "outstanding_principal": record.outstanding_principal,
-        "outstanding_total": record.outstanding_total,
-        "next_due_date": record.next_due_date.isoformat() if record.next_due_date else None,
-        "days_overdue": record.days_overdue,
-        "grace_period_days": record.grace_period_days,
-        "penalty_rate_pct": record.penalty_rate_pct,
-        "penalty_accrued": record.penalty_accrued,
-        "performance_status": record.performance_status,
-        "repayment_schedule": record.repayment_schedule or [],
-        "repayment_history": record.repayment_history or [],
-        "disbursed_at": record.disbursed_at.isoformat() if record.disbursed_at else None,
-        "last_payment_date": record.last_payment_date.isoformat() if record.last_payment_date else None
-    }
+    return dossier
 
 @router.post("/loan-performance/{case_id}/record-repayment")
 def record_repayment_endpoint(
@@ -318,18 +323,30 @@ def record_repayment_endpoint(
     db: Session = Depends(get_db)
 ):
     """
-    Records an official loan repayment, reconciles schedules, and advances installment pointers.
+    Records an official loan repayment, reconciles schedules, advances installment pointers,
+    and preserves channel/reference/note metadata on the borrower statement.
     """
-    record = db.query(LoanPerformance).filter(
-        (LoanPerformance.case_id == case_id) | 
-        (LoanPerformance.facility_number == case_id)
-    ).first()
+    if payload.amount <= 0:
+        raise HTTPException(status_code=400, detail="Repayment amount must be greater than zero.")
+    record = _resolve_loan_performance_or_404(case_id, db)
 
-    if not record:
-        raise HTTPException(status_code=404, detail="Loan performance record not found.")
+    parsed_date = None
+    if payload.payment_date:
+        try:
+            parsed_date = datetime.fromisoformat(payload.payment_date.replace("Z", "+00:00"))
+        except ValueError:
+            parsed_date = None
 
-    res = LoanPerformanceEngine.record_repayment(record, payload.amount, db=db)
-    return res
+    return LoanPerformanceEngine.record_repayment(
+        record,
+        amount_paid=payload.amount,
+        payment_date=parsed_date,
+        db=db,
+        payment_method=payload.payment_method,
+        reference=payload.reference,
+        note=payload.note,
+        recorded_by=payload.recorded_by,
+    )
 
 @router.post("/loan-performance/{case_id}/simulate-status")
 def simulate_status_endpoint(
@@ -344,13 +361,7 @@ def simulate_status_endpoint(
     - OVERDUE_PENALTY: 10 days overdue (> 7 days grace, triggers 5% default penalty!)
     - CRITICAL: 35 days overdue
     """
-    record = db.query(LoanPerformance).filter(
-        (LoanPerformance.case_id == case_id) | 
-        (LoanPerformance.facility_number == case_id)
-    ).first()
-
-    if not record:
-        raise HTTPException(status_code=404, detail="Loan performance record not found.")
+    record = _resolve_loan_performance_or_404(case_id, db)
 
     res = LoanPerformanceEngine.simulate_status(record, payload.scenario, db=db)
     return {
@@ -360,6 +371,113 @@ def simulate_status_endpoint(
         "penalty_accrued": res.penalty_accrued,
         "outstanding_total": res.outstanding_total
     }
+
+@router.post("/loan-performance/{case_id}/waive-penalty")
+def waive_loan_penalty_endpoint(
+    case_id: str,
+    payload: WaivePenaltyPayload,
+    db: Session = Depends(get_db)
+):
+    """
+    Waives accrued 5% default penalty on an individual facility with an audit trail.
+    """
+    if not payload.reason or not payload.reason.strip():
+        raise HTTPException(status_code=400, detail="A waiver justification reason is required.")
+    record = _resolve_loan_performance_or_404(case_id, db)
+    return LoanPerformanceEngine.waive_penalty(record, reason=payload.reason.strip(), actor=payload.actor, db=db)
+
+@router.post("/loan-performance/{case_id}/send-reminder")
+def send_loan_reminder_endpoint(
+    case_id: str,
+    payload: SendReminderPayload,
+    db: Session = Depends(get_db)
+):
+    """
+    Sends a post-disbursement repayment reminder / 7-day grace notice / overdue demand alert
+    to the borrower (and optionally guarantor) plus an in-app audit notification.
+    """
+    from ...integrations.notification_service import NotificationService
+    record = _resolve_loan_performance_or_404(case_id, db)
+    dossier = LoanPerformanceEngine.build_individual_loan_dossier(record, db)
+    db.commit()
+
+    guarantor = dossier.get("guarantor") or {}
+    result = NotificationService.notify_post_disbursement_reminder(
+        case_number=dossier.get("case_number") or record.facility_number,
+        facility_number=record.facility_number,
+        borrower_name=record.borrower_name,
+        borrower_email=dossier.get("borrower_email") or "borrower@example.ng",
+        monthly_installment=record.monthly_installment,
+        outstanding_total=record.outstanding_total,
+        penalty_accrued=record.penalty_accrued,
+        days_overdue=record.days_overdue,
+        next_due_date=dossier.get("next_due_date") or "N/A",
+        guarantor_name=guarantor.get("name"),
+        guarantor_email=guarantor.get("email") if guarantor.get("email") != "N/A" else None,
+        include_guarantor=payload.include_guarantor,
+        custom_note=payload.custom_note,
+        actor=payload.actor,
+    )
+    LoanPerformanceEngine.add_monitoring_note(
+        record,
+        note_type="REMINDER_DISPATCHED",
+        note=f"{result['notice_tier']} sent to {', '.join(result['dispatched_to']) or 'borrower record'}" + (
+            f" — {payload.custom_note}" if payload.custom_note else ""
+        ),
+        actor=payload.actor,
+        role="TREASURY",
+        db=db,
+    )
+    return {"message": f"{result['notice_tier']} dispatched.", **result}
+
+@router.post("/loan-performance/{case_id}/monitoring-note")
+def add_loan_monitoring_note_endpoint(
+    case_id: str,
+    payload: MonitoringNotePayload,
+    db: Session = Depends(get_db)
+):
+    """
+    Logs a post-disbursement surveillance entry (Call Log, Field Visit, Promise-to-Pay, Escalation).
+    """
+    if not payload.note or not payload.note.strip():
+        raise HTTPException(status_code=400, detail="Monitoring note content cannot be empty.")
+    record = _resolve_loan_performance_or_404(case_id, db)
+    entry = LoanPerformanceEngine.add_monitoring_note(
+        record,
+        note_type=payload.note_type,
+        note=payload.note.strip(),
+        actor=payload.actor,
+        role=payload.role,
+        promise_to_pay_date=payload.promise_to_pay_date,
+        db=db,
+    )
+    return {"message": "Monitoring surveillance log recorded.", "entry": entry}
+
+@router.get("/loan-performance/{case_id}/statement/export")
+def export_individual_loan_statement(
+    case_id: str,
+    format: str = Query("csv", description="Export format: csv or html"),
+    db: Session = Depends(get_db)
+):
+    """
+    Exports an individual facility's Loan Statement of Account as downloadable CSV or printable HTML/PDF.
+    """
+    record = _resolve_loan_performance_or_404(case_id, db)
+    dossier = LoanPerformanceEngine.build_individual_loan_dossier(record, db)
+    db.commit()
+
+    if format.lower().strip() == "html":
+        html_content = LoanPerformanceEngine.generate_loan_statement_html(dossier)
+        return Response(content=html_content, media_type="text/html")
+
+    csv_content = LoanPerformanceEngine.generate_loan_statement_csv(dossier)
+    safe_fac = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in record.facility_number)
+    filename = f"OFL_Loan_Statement_{safe_fac}_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 # ==============================================================================
 # TELEMETRY PERIODIC REPORTING & EXPORT ENGINE (MONTHLY, QUARTERLY, BIANNUAL, ANNUAL)
