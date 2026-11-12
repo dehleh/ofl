@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   Lock,
@@ -15,7 +15,7 @@ import {
   RefreshCw,
   Sparkles
 } from 'lucide-react';
-import { loginStaff } from '../services/api';
+import { loginStaff, inspectInviteToken, activateStaffInvite } from '../services/api';
 
 interface StaffLoginScreenProps {
   onLoginSuccess: (user: any) => void;
@@ -38,6 +38,72 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
   const [mfaMethod, setMfaMethod] = useState<'TOTP' | 'EMAIL_OTP'>('TOTP');
   const [mfaError, setMfaError] = useState<string | null>(null);
   const [mfaVerifying, setMfaVerifying] = useState(false);
+
+  // Staff Email Invite Activation State (?invite=<token>)
+  const [inviteToken, setInviteToken] = useState<string | null>(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('invite');
+    } catch {
+      return null;
+    }
+  });
+  const [inviteLoading, setInviteLoading] = useState<boolean>(false);
+  const [inviteProfile, setInviteProfile] = useState<any>(null);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [invitePassword, setInvitePassword] = useState<string>('');
+  const [inviteConfirm, setInviteConfirm] = useState<string>('');
+  const [activatingInvite, setActivatingInvite] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!inviteToken) return;
+    setInviteLoading(true);
+    setInviteError(null);
+    inspectInviteToken(inviteToken)
+      .then((res) => {
+        setInviteProfile(res.user || null);
+      })
+      .catch((err: any) => {
+        setInviteError(err?.detail || 'Activation link is invalid, already used, or expired.');
+      })
+      .finally(() => {
+        setInviteLoading(false);
+      });
+  }, [inviteToken]);
+
+  const clearInviteMode = () => {
+    setInviteToken(null);
+    setInviteProfile(null);
+    setInviteError(null);
+    try {
+      window.history.replaceState({}, '', window.location.pathname);
+    } catch { }
+  };
+
+  const handleActivateInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteToken) return;
+    if (invitePassword.trim().length < 4) {
+      setInviteError('Please choose a password or security PIN of at least 4 characters.');
+      return;
+    }
+    if (invitePassword.trim() !== inviteConfirm.trim()) {
+      setInviteError('Password / Security PIN confirmation does not match.');
+      return;
+    }
+    setActivatingInvite(true);
+    setInviteError(null);
+    try {
+      const res = await activateStaffInvite(inviteToken, invitePassword.trim());
+      clearInviteMode();
+      if (res?.user) {
+        onLoginSuccess(res.user);
+      }
+    } catch (err: any) {
+      setInviteError(err?.detail || 'Failed to activate staff account.');
+    } finally {
+      setActivatingInvite(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -301,7 +367,11 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
               </div>
               <div>
                 <div style={{ fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em' }}>
-                  {isMfaStage ? 'Multi-Factor Authentication (MFA)' : 'Restricted Staff Gate'}
+                  {inviteToken
+                    ? 'Staff Account Activation'
+                    : isMfaStage
+                      ? 'Multi-Factor Authentication (MFA)'
+                      : 'Restricted Staff Gate'}
                 </div>
                 <div style={{ fontSize: '0.74rem', opacity: 0.9 }}>
                   Central Bank of Nigeria (CBN) Regulated Environment
@@ -316,11 +386,142 @@ export const StaffLoginScreen: React.FC<StaffLoginScreenProps> = ({ onLoginSucce
               borderRadius: '9999px',
               border: '1px solid rgba(255, 255, 255, 0.25)'
             }}>
-              {isMfaStage ? 'MFA CHALLENGE' : 'TLS 1.3 ENCRYPTED'}
+              {inviteToken ? 'INVITE ACTIVATION' : isMfaStage ? 'MFA CHALLENGE' : 'TLS 1.3 ENCRYPTED'}
             </span>
           </div>
 
-          {isMfaStage ? (
+          {inviteToken ? (
+            <div style={{ padding: '2.25rem' }}>
+              <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  color: '#059669',
+                  marginBottom: '0.85rem',
+                  border: '1px solid rgba(16, 185, 129, 0.25)'
+                }}>
+                  <UserCheck size={28} />
+                </div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.25rem', fontFamily: 'var(--font-display)' }}>
+                  Activate Your Opticom Staff Account
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', maxWidth: '400px', margin: '0 auto' }}>
+                  Create your personal password or security PIN to activate your workspace access.
+                </p>
+              </div>
+
+              {inviteLoading && (
+                <div style={{ textAlign: 'center', padding: '1.5rem', color: '#475569', fontSize: '0.9rem' }}>
+                  Validating activation link...
+                </div>
+              )}
+
+              {inviteError && (
+                <div style={{
+                  padding: '0.85rem 1rem',
+                  borderRadius: '8px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#b91c1c',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.65rem',
+                  marginBottom: '1.25rem'
+                }}>
+                  <AlertCircle size={18} />
+                  <span>{inviteError}</span>
+                </div>
+              )}
+
+              {!inviteLoading && inviteProfile && (
+                <form onSubmit={handleActivateInvite}>
+                  <div style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '0.85rem 1.15rem',
+                    marginBottom: '1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#0f172a' }}>{inviteProfile.name}</div>
+                      <div style={{ fontSize: '0.76rem', color: '#0096cc', fontWeight: 600 }}>{inviteProfile.email}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        Username: <code>{inviteProfile.username}</code> &bull; {inviteProfile.department || 'Credit Operations'}
+                      </div>
+                    </div>
+                    <span className="status-pill pill-cyan" style={{ fontSize: '0.7rem' }}>
+                      {inviteProfile.role}
+                    </span>
+                  </div>
+
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
+                      New Personal Password or Security PIN *
+                    </label>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      className="form-input"
+                      placeholder="Minimum 4 characters (e.g. strong password or PIN)"
+                      value={invitePassword}
+                      onChange={(e) => setInvitePassword(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
+                      Confirm Password or Security PIN *
+                    </label>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      className="form-input"
+                      placeholder="Re-enter your password or PIN"
+                      value={inviteConfirm}
+                      onChange={(e) => setInviteConfirm(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={activatingInvite}
+                    className="btn btn-primary"
+                    style={{ width: '100%', padding: '0.85rem', fontSize: '0.95rem', fontWeight: 700 }}
+                  >
+                    {activatingInvite ? 'Activating Account...' : 'Activate Account & Sign In'}
+                  </button>
+                </form>
+              )}
+
+              <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
+                <button
+                  type="button"
+                  onClick={clearInviteMode}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  &larr; Return to Staff Sign In
+                </button>
+              </div>
+            </div>
+          ) : isMfaStage ? (
             <div style={{ padding: '2.25rem' }}>
               <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
                 <div style={{

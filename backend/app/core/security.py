@@ -3,6 +3,9 @@ Security & Enterprise Identity Module (OAuth2 / JWT / RBAC)
 Supports Google Workspace / Microsoft Entra ID SSO claims and role enforcement.
 """
 from datetime import timedelta, datetime, timezone
+import hashlib
+import hmac
+import os
 from typing import List, Optional, Dict, Any
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -141,6 +144,55 @@ STAFF_DIRECTORY: Dict[str, Dict[str, Any]] = {
         "permissions": ["audit:read", "audit:export", "case:read"]
     }
 }
+
+def hash_pin_or_password(secret: str) -> str:
+    """Hashes a staff password or PIN using salted PBKDF2-HMAC-SHA256."""
+    salt = os.urandom(16).hex()
+    digest = hashlib.pbkdf2_hmac("sha256", secret.encode("utf-8"), salt.encode("utf-8"), 100_000).hex()
+    return f"pbkdf2_sha256${salt}${digest}"
+
+def verify_pin_or_password(submitted: str, stored_hash: Optional[str]) -> bool:
+    """Verifies a submitted PIN/password against PBKDF2 hash or legacy seeded PIN."""
+    if not submitted or not stored_hash or stored_hash.startswith("INVITE_PENDING:"):
+        return False
+    if stored_hash.startswith("pbkdf2_sha256$"):
+        parts = stored_hash.split("$", 2)
+        if len(parts) != 3:
+            return False
+        _, salt, expected_digest = parts
+        candidate = hashlib.pbkdf2_hmac("sha256", submitted.encode("utf-8"), salt.encode("utf-8"), 100_000).hex()
+        return hmac.compare_digest(candidate, expected_digest)
+    return hmac.compare_digest(submitted, stored_hash)
+
+def create_invite_token(user_id: str, email: str, invite_jti: str, expires_hours: int = 72) -> str:
+    """Creates a signed single-use staff activation invite JWT."""
+    expire = datetime.now(timezone.utc) + timedelta(hours=expires_hours)
+    payload = {
+        "type": "STAFF_INVITE",
+        "sub": user_id,
+        "email": email,
+        "jti": invite_jti,
+        "exp": int(expire.timestamp()),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+def decode_invite_token(token: str) -> Dict[str, Any]:
+    """Validates and decodes a signed staff activation invite JWT."""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "STAFF_INVITE" or not payload.get("sub") or not payload.get("jti"):
+            raise ValueError("Malformed invite payload")
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This activation invite link has expired. Ask an Administrator to resend your invite."
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid activation invite link."
+        )
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """

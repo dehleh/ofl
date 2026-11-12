@@ -5,6 +5,7 @@ import {
   sendTestEmail,
   fetchStaffUsers,
   createStaffUser,
+  sendStaffInvite,
   updateStaffUser,
   deactivateStaffUser,
   fetchFeeCatalog,
@@ -33,7 +34,8 @@ import {
   DollarSign,
   Percent,
   Edit3,
-  Save
+  Save,
+  Copy
 } from 'lucide-react';
 
 export const DEFAULT_FEE_CATALOG = [
@@ -138,10 +140,19 @@ export const AdminConfigPortal: React.FC = () => {
     email: '',
     name: '',
     role: 'ANALYST',
+    customRole: '',
     department: 'Credit Underwriting',
-    pin: '1988'
+    pin: '',
+    send_invite: true
   });
   const [creatingUser, setCreatingUser] = useState<boolean>(false);
+  const [latestInvite, setLatestInvite] = useState<{
+    name: string;
+    email: string;
+    invite_url: string;
+  } | null>(null);
+  const [copiedInvite, setCopiedInvite] = useState<boolean>(false);
+  const [invitingUserId, setInvitingUserId] = useState<string | null>(null);
 
   // Fee catalog modal & edit states
   const [isAddFeeOpen, setIsAddFeeOpen] = useState<boolean>(false);
@@ -274,22 +285,49 @@ export const AdminConfigPortal: React.FC = () => {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUser.username || !newUser.email || !newUser.name) {
-      showToast('Please fill all required user fields.', 'error');
+    const resolvedRole = newUser.role === 'CUSTOM'
+      ? newUser.customRole.trim().toUpperCase().replace(/\s+/g, '_')
+      : newUser.role;
+    if (!newUser.username || !newUser.email || !newUser.name || !resolvedRole) {
+      showToast('Please fill all required user fields and role.', 'error');
+      return;
+    }
+    if (!newUser.send_invite && !newUser.pin.trim()) {
+      showToast('Enter an initial PIN/password or enable email activation invite link.', 'error');
       return;
     }
     setCreatingUser(true);
     try {
-      await createStaffUser(newUser);
-      showToast(`Staff account for ${newUser.name} created successfully.`);
+      const res = await createStaffUser({
+        username: newUser.username,
+        email: newUser.email,
+        name: newUser.name,
+        role: resolvedRole,
+        department: newUser.department,
+        pin: newUser.send_invite ? undefined : newUser.pin,
+        send_invite: newUser.send_invite
+      });
+      if (res.invite_url) {
+        setLatestInvite({
+          name: newUser.name,
+          email: newUser.email,
+          invite_url: res.invite_url
+        });
+        setCopiedInvite(false);
+        showToast(`Account provisioned for ${newUser.name}. Activation invite emailed to ${newUser.email}.`);
+      } else {
+        showToast(`Staff account for ${newUser.name} created successfully.`);
+      }
       setIsAddUserOpen(false);
       setNewUser({
         username: '',
         email: '',
         name: '',
         role: 'ANALYST',
+        customRole: '',
         department: 'Credit Underwriting',
-        pin: '1988'
+        pin: '',
+        send_invite: true
       });
       const updatedUsers = await fetchStaffUsers();
       setUsers(updatedUsers);
@@ -297,6 +335,28 @@ export const AdminConfigPortal: React.FC = () => {
       showToast(err.detail || 'Failed to create user account.', 'error');
     } finally {
       setCreatingUser(false);
+    }
+  };
+
+  const handleSendInvite = async (u: any) => {
+    setInvitingUserId(u.id);
+    try {
+      const res = await sendStaffInvite(u.id);
+      if (res.invite_url) {
+        setLatestInvite({
+          name: u.name,
+          email: u.email,
+          invite_url: res.invite_url
+        });
+        setCopiedInvite(false);
+      }
+      showToast(`Activation invite link sent to ${u.email}.`);
+      const updatedUsers = await fetchStaffUsers();
+      setUsers(updatedUsers);
+    } catch (err: any) {
+      showToast(err.detail || 'Failed to send activation invite.', 'error');
+    } finally {
+      setInvitingUserId(null);
     }
   };
 
@@ -471,6 +531,59 @@ export const AdminConfigPortal: React.FC = () => {
             </button>
           </div>
 
+          {/* Generated Activation Invite Link Banner */}
+          {latestInvite && (
+            <div style={{
+              marginBottom: '1.25rem',
+              padding: '1rem 1.25rem',
+              borderRadius: '8px',
+              background: 'rgba(0, 150, 204, 0.08)',
+              border: '1px solid rgba(0, 150, 204, 0.35)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.55rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--brand-cerulean)' }}>
+                  Activation Invite Link Ready for {latestInvite.name} ({latestInvite.email})
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLatestInvite(null)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                >
+                  ✕
+                </button>
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                An email containing this single-use 72-hour activation link has been dispatched. You can also copy it below:
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  readOnly
+                  className="form-input"
+                  value={latestInvite.invite_url}
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: '0.76rem', flex: 1 }}
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}
+                  onClick={() => {
+                    navigator.clipboard?.writeText(latestInvite.invite_url);
+                    setCopiedInvite(true);
+                    setTimeout(() => setCopiedInvite(false), 2500);
+                  }}
+                >
+                  <Copy size={13} />
+                  {copiedInvite ? 'Copied!' : 'Copy Invite Link'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Add User Modal */}
           {isAddUserOpen && (
             <div className="card" style={{ marginBottom: '1.5rem', background: 'rgba(0, 196, 159, 0.04)', border: '1px solid var(--brand-teal)' }}>
@@ -531,16 +644,34 @@ export const AdminConfigPortal: React.FC = () => {
                       value={newUser.role}
                       onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                     >
-                      <option value="ANALYST">Credit Analyst (Recommend & Review)</option>
-                      <option value="HRM">Head of Risk Management (Risk Review & Endorsement)</option>
+                      <option value="BDO">Business Development Officer (BDO)</option>
+                      <option value="ANALYST">Credit Analyst (Recommend &amp; Review)</option>
                       <option value="HEAD_OF_BD">Head of Business Development (Commercial Sanction)</option>
+                      <option value="HRM">Head of Risk Management (Risk Review &amp; Endorsement)</option>
                       <option value="MD">Managing Director (Final Sanction &le; ₦20m)</option>
-                      <option value="BCC">BCC Chair / Authoriser (Board Sanction &gt; ₦20m)</option>
-                      <option value="TREASURY">Treasury & Loan Ops (NAV / LOAN-DISC)</option>
+                      <option value="BCC">BCC Chair / Member (Board Sanction &gt; ₦20m)</option>
+                      <option value="OPERATIONS">Credit Operations (Offer &amp; CPs)</option>
+                      <option value="TREASURY">Treasury &amp; Loan Ops (LOAN-DISC)</option>
+                      <option value="AUDITOR">Compliance Auditor (Read-Only Inspection)</option>
                       <option value="IT_OWNER">IT Integration Owner / DevOps</option>
                       <option value="ADMIN">System Administrator (Full Settings)</option>
+                      <option value="CUSTOM">+ Custom Internal Role Title...</option>
                     </select>
                   </div>
+
+                  {newUser.role === 'CUSTOM' && (
+                    <div className="form-group">
+                      <label className="form-label">Custom Role Identifier *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. LEGAL_COUNSEL or COMPLIANCE_OFFICER"
+                        value={newUser.customRole}
+                        onChange={(e) => setNewUser({ ...newUser, customRole: e.target.value })}
+                        required
+                      />
+                    </div>
+                  )}
 
                   <div className="form-group">
                     <label className="form-label">Department</label>
@@ -554,14 +685,27 @@ export const AdminConfigPortal: React.FC = () => {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Access PIN (Default: 1988)</label>
-                    <input
-                      type="password"
-                      className="form-input"
-                      placeholder="1988"
-                      value={newUser.pin}
-                      onChange={(e) => setNewUser({ ...newUser, pin: e.target.value })}
-                    />
+                    <label className="form-label">Account Onboarding Mode</label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.45rem', cursor: 'pointer', fontSize: '0.84rem', fontWeight: 600 }}>
+                      <input
+                        type="checkbox"
+                        checked={newUser.send_invite}
+                        onChange={(e) => setNewUser({ ...newUser, send_invite: e.target.checked })}
+                      />
+                      <span>Send Activation Invite Link via Email</span>
+                    </label>
+                    {!newUser.send_invite && (
+                      <input
+                        type="password"
+                        autoComplete="new-password"
+                        className="form-input"
+                        style={{ marginTop: '0.45rem' }}
+                        placeholder="Set initial PIN / Password (e.g. 2026)"
+                        value={newUser.pin}
+                        onChange={(e) => setNewUser({ ...newUser, pin: e.target.value })}
+                        required={!newUser.send_invite}
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -622,7 +766,11 @@ export const AdminConfigPortal: React.FC = () => {
                       {u.department || 'Credit Operations'}
                     </td>
                     <td>
-                      {u.is_active ? (
+                      {u.activation_status === 'PENDING_ACTIVATION' ? (
+                        <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Mail size={11} /> PENDING INVITE
+                        </span>
+                      ) : u.is_active ? (
                         <span className="badge badge-teal" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                           <CheckCircle2 size={11} /> ACTIVE
                         </span>
@@ -631,13 +779,24 @@ export const AdminConfigPortal: React.FC = () => {
                       )}
                     </td>
                     <td>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
-                        onClick={() => handleToggleUserActive(u.id, u.is_active)}
-                      >
-                        {u.is_active ? 'Deactivate' : 'Activate'}
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        <button
+                          className="btn btn-primary btn-sm"
+                          style={{ fontSize: '0.74rem', padding: '0.25rem 0.55rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                          disabled={invitingUserId === u.id}
+                          onClick={() => handleSendInvite(u)}
+                        >
+                          <Send size={11} />
+                          {invitingUserId === u.id ? 'Sending...' : u.activation_status === 'PENDING_ACTIVATION' ? 'Resend Invite' : 'Send Invite'}
+                        </button>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          style={{ fontSize: '0.74rem', padding: '0.25rem 0.6rem' }}
+                          onClick={() => handleToggleUserActive(u.id, u.is_active)}
+                        >
+                          {u.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

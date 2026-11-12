@@ -475,14 +475,52 @@ export async function createStaffUser(userData: {
   department?: string;
   pin?: string;
   permissions?: string[];
+  send_invite?: boolean;
+  frontend_base_url?: string;
 }) {
   const res = await fetch(`${API_BASE}/admin/users`, {
     method: 'POST',
     headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify(userData)
+    body: JSON.stringify({
+      ...userData,
+      frontend_base_url: userData.frontend_base_url || window.location.origin
+    })
   });
   const json = await res.json();
   if (!res.ok) throw json;
+  return json;
+}
+
+export async function sendStaffInvite(userId: string) {
+  const res = await fetch(`${API_BASE}/admin/users/${encodeURIComponent(userId)}/invite`, {
+    method: 'POST',
+    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ frontend_base_url: window.location.origin })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function inspectInviteToken(token: string) {
+  const res = await fetch(`${API_BASE}/auth/invite/${encodeURIComponent(token)}`);
+  const json = await res.json();
+  if (!res.ok) throw json;
+  return json;
+}
+
+export async function activateStaffInvite(token: string, password: string) {
+  const res = await fetch(`${API_BASE}/auth/activate-invite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password })
+  });
+  const json = await res.json();
+  if (!res.ok) throw json;
+  if (json.access_token) {
+    localStorage.setItem('ofl_jwt_token', json.access_token);
+    localStorage.setItem('ofl_user_profile', JSON.stringify(json.user));
+  }
   return json;
 }
 

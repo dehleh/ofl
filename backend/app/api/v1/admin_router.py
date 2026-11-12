@@ -3,17 +3,25 @@ Opticom Administration & Internal Configuration Router
 Provides endpoints for User & Role Management, SSO / SSID Federation,
 MFA policies, Custom Corporate Email Client / SMTP configuration, and System Parameters.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Body
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List, Optional
+import uuid
 from pydantic import BaseModel, Field
 
 from ...database import get_db, utc_now
 from ...models.entities import SystemConfiguration, StaffUser
 from ...core.config_manager import ConfigManager
 from ...core.email_gateway import dispatch_email
-from ...core.security import get_current_user, TokenPayload, STAFF_DIRECTORY
+from ...core.security import (
+    get_current_user,
+    TokenPayload,
+    STAFF_DIRECTORY,
+    hash_pin_or_password,
+    create_invite_token,
+)
 from ...core.cloud_logger import GoogleCloudLoggingService
+from ...integrations.notification_service import NotificationService
 
 router = APIRouter(prefix="/admin", tags=["Opticom Administration"])
 
@@ -28,10 +36,15 @@ class CreateUserPayload(BaseModel):
     username: str
     email: str
     name: str
-    role: str  # ANALYST, HRM, BCC, MD, TREASURY, IT_OWNER, BDO, ADMIN
+    role: str  # ANALYST, HEAD_OF_BD, BDO, HRM, BCC, MD, OPERATIONS, TREASURY, AUDITOR, IT_OWNER, ADMIN, or custom role
     department: Optional[str] = "Credit Operations"
-    pin: Optional[str] = "1988"
+    pin: Optional[str] = None
     permissions: Optional[List[str]] = None
+    send_invite: Optional[bool] = None
+    frontend_base_url: Optional[str] = None
+
+class SendInvitePayload(BaseModel):
+    frontend_base_url: Optional[str] = None
 
 class UpdateUserPayload(BaseModel):
     name: Optional[str] = None
@@ -175,6 +188,76 @@ def test_email_configuration(
 
     return result
 
+def _activation_status(u: StaffUser) -> str:
+    if (u.pin_hash or "").startswith("INVITE_PENDING:"):
+        return "PENDING_ACTIVATION"
+    return "ACTIVE" if u.is_active else "DEACTIVATED"
+
+
+def _resolve_portal_base_url(request: Request, explicit_base_url: Optional[str] = None) -> str:
+    if explicit_base_url and explicit_base_url.strip():
+        return explicit_base_url.strip().rstrip("/")
+    origin = request.headers.get("origin")
+    if origin:
+        return origin.rstrip("/")
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    if host:
+        return f"{proto}://{host}".rstrip("/")
+    return str(request.base_url).rstrip("/")
+
+
+def _issue_staff_invite(
+    db: Session,
+    user: StaffUser,
+    request: Request,
+    frontend_base_url: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Generates a single-use 72-hour activation invite link and dispatches it via Email + In-App."""
+    invite_jti = uuid.uuid4().hex
+    user.pin_hash = f"INVITE_PENDING:{invite_jti}"
+    user.is_active = False
+    user.updated_at = utc_now()
+    db.flush()
+
+    token = create_invite_token(user_id=user.id, email=user.email, invite_jti=invite_jti, expires_hours=72)
+    base_url = _resolve_portal_base_url(request, frontend_base_url)
+    invite_url = f"{base_url}/staff?invite={token}"
+
+    NotificationService.send_email(
+        to_email=user.email,
+        subject="Opticom Finance Limited — Activate Your Staff Underwriting Account",
+        html_body=(
+            f"<p>Dear <strong>{user.name}</strong>,</p>"
+            f"<p>An internal staff account has been provisioned for you on the "
+            f"<strong>Opticom Finance Credit Automation &amp; Underwriting Platform</strong>.</p>"
+            f"<p><strong>Username:</strong> {user.username}<br/>"
+            f"<strong>Assigned Role:</strong> {user.role}<br/>"
+            f"<strong>Department:</strong> {user.department or 'Credit Operations'}</p>"
+            f"<p>Please click the activation link below to set your personal password/PIN and activate your access "
+            f"(valid for 72 hours, single use):</p>"
+            f"<p><a href=\"{invite_url}\" style=\"display:inline-block;padding:10px 18px;background:#0096cc;color:#ffffff;"
+            f"text-decoration:none;border-radius:6px;font-weight:bold;\">Activate My Staff Account</a></p>"
+            f"<p style=\"font-size:12px;color:#475569;\">Or copy this URL into your browser:<br/>{invite_url}</p>"
+        ),
+        template="STAFF_INVITE_ACTIVATION",
+        metadata={"user_id": user.id, "username": user.username, "role": user.role},
+        db=db,
+    )
+    NotificationService.create_in_app_notification(
+        title=f"Staff Activation Invite Sent: {user.name}",
+        message=f"Activation invite emailed to {user.email} ({user.role}). Awaiting user password setup.",
+        notification_type="INFO",
+        category="USER_INVITE",
+        recipient_role="ADMIN",
+    )
+    return {
+        "invite_url": invite_url,
+        "invite_token": token,
+        "expires_hours": 72,
+    }
+
+
 @router.get("/users")
 def list_staff_users(
     db: Session = Depends(get_db),
@@ -195,6 +278,7 @@ def list_staff_users(
             "role": u.role,
             "department": u.department,
             "is_active": u.is_active,
+            "activation_status": _activation_status(u),
             "permissions": u.permissions or [],
             "mfa_enabled": u.mfa_enabled,
             "created_at": u.created_at.isoformat() if u.created_at else None,
@@ -206,11 +290,13 @@ def list_staff_users(
 @router.post("/users", status_code=status.HTTP_201_CREATED)
 def create_staff_user(
     payload: CreateUserPayload,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: TokenPayload = Depends(get_current_user)
 ):
     """
     Creates a new internal Opticom staff or administrator account.
+    Supports either direct PIN provisioning or generating a single-use email activation invite link.
     """
     # Check if username or email exists
     existing = db.query(StaffUser).filter(
@@ -229,26 +315,44 @@ def create_staff_user(
     if not default_perms:
         role_map = {
             "ANALYST": ["cam:create", "cam:edit", "case:read", "exception:raise", "statement:analyze"],
-            "HRM": ["approval:recommend", "approval:approve_5m", "exception:coordinate", "case:read"],
-            "BCC": ["approval:approve_15m", "rejection:recommend", "case:read"],
-            "MD": ["approval:approve_unlimited", "rejection:final", "disbursement:sanction"],
+            "BDO": ["intake:assisted", "case:read", "intake:originate"],
+            "HEAD_OF_BD": ["approval:recommend", "bd:endorse", "fees:manage", "case:read"],
+            "HRM": ["approval:recommend", "approval:risk_review", "exception:coordinate", "case:read"],
+            "BCC": ["approval:approve_unlimited", "rejection:recommend", "case:read"],
+            "MD": ["admin:config", "admin:users", "approval:approve_20m", "approval:approve_unlimited", "rejection:final", "disbursement:sanction", "fees:manage", "*"],
+            "OPERATIONS": ["offer:generate", "conditions:verify", "case:read"],
             "TREASURY": ["treasury:nav_confirm", "treasury:loandisc_sync"],
+            "AUDITOR": ["audit:read", "audit:export", "case:read"],
             "IT_OWNER": ["integration:retry", "exception:technical_restore", "telemetry:admin"],
             "ADMIN": ["admin:config", "admin:users", "admin:audit", "*"]
         }
-        default_perms = role_map.get(payload.role.upper(), ["case:read"])
+        default_perms = role_map.get(payload.role.upper().strip(), ["case:read", "telemetry:read"])
+
+    should_invite = payload.send_invite if payload.send_invite is not None else not bool(payload.pin and payload.pin.strip())
+    initial_pin_hash = "INVITE_PENDING:INIT" if should_invite else hash_pin_or_password((payload.pin or "1988").strip())
 
     user = StaffUser(
         username=payload.username.lower().strip(),
         email=payload.email.lower().strip(),
         name=payload.name.strip(),
-        role=payload.role.upper(),
+        role=payload.role.upper().strip(),
         department=payload.department or "Credit Operations",
-        pin_hash=payload.pin or "1988",
-        is_active=True,
+        pin_hash=initial_pin_hash,
+        is_active=not should_invite,
         permissions=default_perms
     )
     db.add(user)
+    db.flush()
+
+    invite_info = None
+    if should_invite:
+        invite_info = _issue_staff_invite(
+            db=db,
+            user=user,
+            request=request,
+            frontend_base_url=payload.frontend_base_url,
+        )
+
     db.commit()
     db.refresh(user)
 
@@ -258,13 +362,17 @@ def create_staff_user(
         event="STAFF_USER_CREATED",
         entity="STAFF_USER",
         entity_id=user.id,
-        reason=f"Admin created account for {user.name} ({user.role})",
+        reason=f"Admin created account for {user.name} ({user.role})" + (" [Invite Sent]" if should_invite else ""),
         correlation_id=user.id,
-        details={"username": user.username, "role": user.role, "email": user.email}
+        details={"username": user.username, "role": user.role, "email": user.email, "invited": should_invite}
     )
 
-    return {
-        "message": f"User {user.name} successfully created.",
+    resp: Dict[str, Any] = {
+        "message": (
+            f"User {user.name} provisioned. Activation invite emailed to {user.email}."
+            if should_invite
+            else f"User {user.name} successfully created."
+        ),
         "user": {
             "id": user.id,
             "username": user.username,
@@ -273,6 +381,62 @@ def create_staff_user(
             "role": user.role,
             "department": user.department,
             "is_active": user.is_active,
+            "activation_status": _activation_status(user),
+            "permissions": user.permissions
+        }
+    }
+    if invite_info:
+        resp["invite_url"] = invite_info["invite_url"]
+        resp["invite_expires_hours"] = invite_info["expires_hours"]
+    return resp
+
+
+@router.post("/users/{user_id}/invite")
+def resend_staff_invite(
+    user_id: str,
+    request: Request,
+    payload: Optional[SendInvitePayload] = Body(default=None),
+    db: Session = Depends(get_db),
+    current_user: TokenPayload = Depends(get_current_user)
+):
+    """Issues a fresh single-use activation invite link for a new or existing staff account."""
+    user = db.query(StaffUser).filter(StaffUser.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Staff user not found.")
+
+    invite_info = _issue_staff_invite(
+        db=db,
+        user=user,
+        request=request,
+        frontend_base_url=payload.frontend_base_url if payload else None,
+    )
+    db.commit()
+    db.refresh(user)
+
+    GoogleCloudLoggingService.emit_audit_event(
+        actor=current_user.name,
+        role=current_user.role,
+        event="STAFF_INVITE_SENT",
+        entity="STAFF_USER",
+        entity_id=user.id,
+        reason=f"Admin dispatched activation invite link to {user.email}",
+        correlation_id=user.id,
+        details={"username": user.username, "email": user.email}
+    )
+
+    return {
+        "message": f"Activation invite sent to {user.email}.",
+        "invite_url": invite_info["invite_url"],
+        "invite_expires_hours": invite_info["expires_hours"],
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "name": user.name,
+            "role": user.role,
+            "department": user.department,
+            "is_active": user.is_active,
+            "activation_status": _activation_status(user),
             "permissions": user.permissions
         }
     }
@@ -302,7 +466,7 @@ def update_staff_user(
     if payload.is_active is not None:
         user.is_active = payload.is_active
     if payload.pin is not None and payload.pin.strip():
-        user.pin_hash = payload.pin.strip()
+        user.pin_hash = hash_pin_or_password(payload.pin.strip())
     if payload.permissions is not None:
         user.permissions = payload.permissions
 
@@ -331,6 +495,7 @@ def update_staff_user(
             "role": user.role,
             "department": user.department,
             "is_active": user.is_active,
+            "activation_status": _activation_status(user),
             "permissions": user.permissions
         }
     }
